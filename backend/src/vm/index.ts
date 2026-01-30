@@ -1,48 +1,60 @@
 export class VirtualMachine {
   private stack: number[] = [];
   private bytecodeIndex = 0;
+  private bytecode: Uint8Array = new Uint8Array();
 
   execute(bytecode: Uint8Array) {
+    this.bytecode = bytecode;
     this.bytecodeIndex = 0;
-    for (const opcode of bytecode) {
-      this.executeOpcode(opcode);
+    this.stack = [];
+    
+    while (this.bytecodeIndex < bytecode.length) {
+      this.executeOpcode(bytecode[this.bytecodeIndex]);
+      this.bytecodeIndex++;
     }
+    
+    return this.stack;
   }
 
   private executeOpcode(opcode: number) {
     switch (opcode) {
       case 0x01: // PUSH
-        this.stack.push(this.readNextByte());
+        this.bytecodeIndex++;
+        this.stack.push(this.bytecode[this.bytecodeIndex] || 0);
         break;
       case 0x02: // POP
         this.stack.pop();
         break;
       case 0x03: // ADD
-        this.stack.push(this.stack.pop() + this.stack.pop());
+        const a = this.stack.pop() || 0;
+        const b = this.stack.pop() || 0;
+        this.stack.push(a + b);
         break;
       case 0x04: // MUL
-        this.stack.push(this.stack.pop() * this.stack.pop());
+        const x = this.stack.pop() || 0;
+        const y = this.stack.pop() || 0;
+        this.stack.push(x * y);
         break;
       case 0x05: // JMP
-        this.bytecodeIndex = this.readNextByte();
+        this.bytecodeIndex++;
+        this.bytecodeIndex = (this.bytecode[this.bytecodeIndex] || 0) - 1;
         break;
       case 0x06: // JMPZ
-        const condition = this.stack.pop();
+        const condition = this.stack.pop() || 0;
+        this.bytecodeIndex++;
         if (condition === 0) {
-          this.bytecodeIndex = this.readNextByte();
+          this.bytecodeIndex = (this.bytecode[this.bytecodeIndex] || 0) - 1;
         }
         break;
-      // Add more opcodes as needed
+      case 0x00: // NOP
+        break;
       default:
-        throw new Error(`Unknown opcode: ${opcode}`);
+        // Unknown opcode - ignore
+        break;
     }
   }
 
-  private readNextByte(): number {
-    const byte = this.bytecodeIndex < this.bytecode.length ? this.bytecode[this.bytecodeIndex] : 0;
-    this.bytecodeIndex++;
-    return byte;
+  getStack(): number[] {
+    return [...this.stack];
   }
-
-  private bytecode: Uint8Array;
 }

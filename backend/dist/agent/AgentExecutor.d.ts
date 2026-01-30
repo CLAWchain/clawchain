@@ -403,6 +403,7 @@ export declare class AgentExecutor {
     private commandTimeout;
     constructor(projectRoot?: string);
     private isPathSafe;
+    private isWritePathSafe;
     private isCommandSafe;
     private getFullPath;
     readFile(filePath: string): Promise<FileResult>;

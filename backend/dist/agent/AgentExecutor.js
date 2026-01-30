@@ -244,6 +244,13 @@ const BLOCKED_PATHS = [
     '.git/objects',
     '.git/hooks'
 ];
+// ONLY these directories are allowed for agent writes
+// This prevents the agent from deleting deployment configs
+const ALLOWED_WRITE_DIRS = [
+    'backend/src/claw-generated',
+    'claw-generated',
+    'src/claw-generated'
+];
 class AgentExecutor {
     constructor(projectRoot) {
         this.maxOutputLength = 10000;
@@ -268,7 +275,7 @@ class AgentExecutor {
         }
         console.log(`[EXECUTOR] Initialized with project root: ${this.projectRoot}`);
     }
-    // Validate path is safe
+    // Validate path is safe for reading
     isPathSafe(filePath) {
         const normalizedPath = path.normalize(filePath);
         // Block absolute paths outside project
@@ -285,6 +292,22 @@ class AgentExecutor {
         }
         return true;
     }
+    // Validate path is safe for WRITING - much more restrictive
+    isWritePathSafe(filePath) {
+        const normalizedPath = path.normalize(filePath);
+        // First check basic safety
+        if (!this.isPathSafe(filePath)) {
+            return false;
+        }
+        // ONLY allow writes to approved directories
+        const isAllowed = ALLOWED_WRITE_DIRS.some(dir => normalizedPath.startsWith(dir) || normalizedPath.includes('/' + dir));
+        if (!isAllowed) {
+            console.log(`[EXECUTOR] BLOCKED write to non-approved path: ${filePath}`);
+            console.log(`[EXECUTOR] Agent can only write to: ${ALLOWED_WRITE_DIRS.join(', ')}`);
+            return false;
+        }
+        return true;
+    }
     // Validate command is safe
     isCommandSafe(command) {
         const lowerCommand = command.toLowerCase();
@@ -295,6 +318,23 @@ class AgentExecutor {
         }
         // Block sudo
         if (lowerCommand.startsWith('sudo ')) {
+            return false;
+        }
+        // Block file deletion commands
+        if (lowerCommand.includes('rm ') || lowerCommand.includes('rm\t')) {
+            console.log('[EXECUTOR] BLOCKED rm command');
+            return false;
+        }
+        // Block git commands that could affect deployment files
+        if (lowerCommand.includes('git rm') || lowerCommand.includes('git mv')) {
+            console.log('[EXECUTOR] BLOCKED git rm/mv command');
+            return false;
+        }
+        // Block commands that write outside claw-generated
+        if ((lowerCommand.includes('echo ') || lowerCommand.includes('cat ')) &&
+            lowerCommand.includes('>') &&
+            !lowerCommand.includes('claw-generated')) {
+            console.log('[EXECUTOR] BLOCKED write redirect outside claw-generated');
             return false;
         }
         return true;
@@ -337,14 +377,15 @@ class AgentExecutor {
             };
         }
     }
-    // Write to a file
+    // Write to a file - RESTRICTED to approved directories only
     async writeFile(filePath, content) {
         const fullPath = this.getFullPath(filePath);
-        if (!this.isPathSafe(filePath)) {
+        // Use strict write path validation
+        if (!this.isWritePathSafe(filePath)) {
             return {
                 success: false,
                 path: filePath,
-                error: 'Path not allowed for security reasons'
+                error: `Write not allowed. Agent can only write to: ${ALLOWED_WRITE_DIRS.join(', ')}`
             };
         }
         try {

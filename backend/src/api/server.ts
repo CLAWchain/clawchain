@@ -552,8 +552,6 @@ async function main() {
         gasUsed: b.header.gasUsed.toString(),
         gasLimit: b.header.gasLimit.toString(),
         stateRoot: b.header.stateRoot,
-        transactionsRoot: b.header.transactionsRoot,
-        receiptsRoot: b.header.receiptsRoot,
         difficulty: b.header.difficulty
       })),
       total: chain.getChainLength()
@@ -590,53 +588,27 @@ async function main() {
     });
   });
   
-  // Get block by hash
-  app.get('/api/chain/block/hash/:hash', async (req, res) => {
-    const block = chain.getBlockByHash(req.params.hash);
-    
-    if (!block) {
-      return res.status(404).json({ error: 'Block not found' });
-    }
-    
-    res.json({
-      height: block.header.height,
-      hash: block.header.hash,
-      parentHash: block.header.parentHash,
-      producer: block.header.producer,
-      timestamp: block.header.timestamp,
-      transactionCount: block.transactions.length,
-      gasUsed: block.header.gasUsed.toString(),
-      gasLimit: block.header.gasLimit.toString(),
-      stateRoot: block.header.stateRoot
-    });
-  });
-  
   // Get chain stats
   app.get('/api/chain/stats', async (req, res) => {
     const stats = chain.getStats();
-    
     res.json({
       height: stats.height,
       totalTransactions: stats.totalTransactions,
       genesisTime: stats.genesisTime,
       latestBlockTime: stats.latestBlockTime,
-      avgBlockTime: stats.avgBlockTime,
-      orphanedBlocks: stats.orphanedBlocks
+      avgBlockTime: stats.avgBlockTime
     });
   });
   
   // Get latest block
   app.get('/api/chain/latest', async (req, res) => {
     const block = chain.getLatestBlock();
-    
     if (!block) {
       return res.status(404).json({ error: 'No blocks found' });
     }
-    
     res.json({
       height: block.header.height,
       hash: block.header.hash,
-      parentHash: block.header.parentHash,
       producer: block.header.producer,
       timestamp: block.header.timestamp,
       transactionCount: block.transactions.length
