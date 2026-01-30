@@ -1,22 +1,54 @@
 import { hash } from 'crypto';
+import { Mutex } from 'async-mutex';
 
 export class MerklePatriciaTrie {
   private root: TrieNode | null = null;
+  private trieMutex: Mutex;
 
   constructor() {
-    // Initialize the trie root
+    this.trieMutex = new Mutex();
   }
 
-  public get(key: string): any {
-    // Implement get operation
+  public async get(key: string): Promise<any> {
+    const release = await this.trieMutex.acquire();
+    try {
+      // Implement get operation
+      return this.getInternal(key, this.root);
+    } finally {
+      release();
+    }
   }
 
-  public put(key: string, value: any): void {
-    // Implement put operation
+  private getInternal(key: string, node: TrieNode | null): any {
+    // Implement the actual get operation
   }
 
-  public delete(key: string): void {
-    // Implement delete operation
+  public async put(key: string, value: any): Promise<void> {
+    const release = await this.trieMutex.acquire();
+    try {
+      // Implement put operation
+      this.root = this.putInternal(key, value, this.root);
+    } finally {
+      release();
+    }
+  }
+
+  private putInternal(key: string, value: any, node: TrieNode | null): TrieNode {
+    // Implement the actual put operation
+  }
+
+  public async delete(key: string): Promise<void> {
+    const release = await this.trieMutex.acquire();
+    try {
+      // Implement delete operation
+      this.root = this.deleteInternal(key, this.root);
+    } finally {
+      release();
+    }
+  }
+
+  private deleteInternal(key: string, node: TrieNode | null): TrieNode | null {
+    // Implement the actual delete operation
   }
 
   public generateProof(key: string): any {
@@ -25,6 +57,12 @@ export class MerklePatriciaTrie {
 
   private updateRoot(node: TrieNode): void {
     // Update the trie root
+    const release = await this.trieMutex.acquire();
+    try {
+      this.root = node;
+    } finally {
+      release();
+    }
   }
 }
 
