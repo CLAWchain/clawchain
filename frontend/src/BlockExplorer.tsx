@@ -56,6 +56,13 @@ export default function BlockExplorer() {
       if (response.ok) {
         const data = await response.json();
         setBlocks(data.blocks || []);
+        // Also update stats from blocks response if available
+        if (data.total) {
+          setStats(prev => ({
+            ...prev,
+            blockHeight: data.total
+          }));
+        }
       }
     } catch (e) {
       console.error('Failed to fetch blocks:', e);
@@ -65,6 +72,20 @@ export default function BlockExplorer() {
 
   const fetchStats = async () => {
     try {
+      // Try chain stats first
+      const chainResponse = await fetch(`${API_BASE}/api/chain/stats`);
+      if (chainResponse.ok) {
+        const chainData = await chainResponse.json();
+        setStats({
+          blockHeight: chainData.height || 0,
+          totalTransactions: chainData.totalTransactions || 0,
+          avgBlockTime: Math.round(chainData.avgBlockTime / 1000) || 10,
+          tps: 0
+        });
+        return;
+      }
+      
+      // Fallback to agent status
       const response = await fetch(`${API_BASE}/api/agent/status`);
       if (response.ok) {
         const data = await response.json();
