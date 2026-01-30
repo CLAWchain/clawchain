@@ -1,6 +1,14 @@
 import { Request, Response } from 'express';
+import { Transaction } from '../transaction';
+import { VirtualMachine } from '../vm/virtual_machine';
 
 export class JsonRpcServer {
+  private vm: VirtualMachine;
+
+  constructor(vm: VirtualMachine) {
+    this.vm = vm;
+  }
+
   handleRequest(req: Request, res: Response) {
     // Parse the JSON-RPC request
     const { method, params, id } = req.body;
@@ -27,7 +35,7 @@ export class JsonRpcServer {
   private getHandler(method: string) {
     // Map the method name to a handler function
     switch (method) {
-      case 'eth_sendTransaction':
+      case 'sendTransaction':
         return this.handleSendTransaction;
       case 'eth_call':
         return this.handleCall;
@@ -38,9 +46,20 @@ export class JsonRpcServer {
   }
 
   private handleSendTransaction(params: any) {
-    // Implement the logic to handle the 'eth_sendTransaction' method
-    // This should include validating the transaction, executing it, and returning the result
-    return '0x1234567890abcdef';
+    // Extract the signed transaction from the params
+    const { signedTransaction } = params;
+
+    // Validate the signed transaction
+    const tx = Transaction.fromBase64(signedTransaction);
+    if (!tx.verify()) {
+      throw new Error('Invalid transaction signature');
+    }
+
+    // Execute the transaction
+    this.vm.executeTransaction(tx);
+
+    // Return the transaction hash
+    return tx.hash().toString('hex');
   }
 
   private handleCall(params: any) {
