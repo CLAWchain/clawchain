@@ -1,6 +1,7 @@
 import { Block } from './block';
 import { BlockSyncManager } from '../networking/block_sync_manager';
 import { Peer } from '../networking/peer';
+import { Transaction } from '../transaction';
 
 export class BlockchainManager {
   private blocks: Block[];
@@ -32,7 +33,16 @@ export class BlockchainManager {
   }
 
   async addBlock(block: Block): Promise<void> {
-    // Implement logic to add a block to the blockchain
+    // Calculate the total transaction fees in the block
+    let totalFees = 0;
+    for (const tx of block.transactions) {
+      totalFees += tx.fee;
+    }
+
+    // Add the transaction fees to the block reward
+    block.reward += totalFees;
+
+    // Add the block to the blockchain
     this.blocks.push(block);
   }
 
