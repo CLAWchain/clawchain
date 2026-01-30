@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
-import Playground from './Playground';
 import Wallet from './Wallet';
 import Faucet from './Faucet';
 import AgentTerminal from './AgentTerminal';
 import AdminDashboard from './AdminDashboard';
 
 // Types
-type TabType = 'terminal' | 'genesis' | 'molt' | 'updates' | 'logs' | 'workshop' | 'wallet' | 'faucet' | 'admin';
+type TabType = 'terminal' | 'genesis' | 'molt' | 'updates' | 'logs' | 'wallet' | 'faucet' | 'admin';
 
 // Mobile menu icon component
 const MenuIcon = ({ open }: { open: boolean }) => (
@@ -112,7 +111,7 @@ export default function App() {
   // Sync route to tab
   useEffect(() => {
     const path = location.pathname.slice(1) || 'terminal';
-    const validTabs: TabType[] = ['terminal', 'genesis', 'molt', 'updates', 'logs', 'workshop', 'wallet', 'faucet', 'admin'];
+    const validTabs: TabType[] = ['terminal', 'genesis', 'molt', 'updates', 'logs', 'wallet', 'faucet', 'admin'];
     if (validTabs.includes(path as TabType)) {
       setActiveTab(path as TabType);
     }
@@ -150,7 +149,7 @@ export default function App() {
     
     if (userMessage.startsWith('/')) {
       const cmd = userMessage.slice(1).toLowerCase();
-      const validCmds = ['genesis', 'molt', 'updates', 'logs', 'council', 'workshop', 'agents', 'wallet', 'faucet', 'archive'];
+      const validCmds = ['genesis', 'molt', 'updates', 'logs', 'council', 'agents', 'wallet', 'faucet', 'archive'];
       if (validCmds.includes(cmd)) {
         handleTabChange(cmd as TabType);
         setMessages(prev => [...prev, { role: 'system', content: `Navigating to ${cmd}...` }]);
@@ -188,7 +187,6 @@ export default function App() {
     { id: 'molt', label: 'Claw' },
     { id: 'updates', label: 'Updates' },
     { id: 'logs', label: 'Logs' },
-    { id: 'workshop', label: 'Workshop' },
     { id: 'wallet', label: 'Wallet' },
     { id: 'faucet', label: 'Faucet' },
     { id: 'admin', label: 'Admin' },
@@ -205,8 +203,6 @@ export default function App() {
         return renderUpdates();
       case 'logs':
         return renderLogs();
-      case 'workshop':
-        return <div style={{ padding: isMobile ? 16 : 24 }}><Playground /></div>;
       case 'wallet':
         return <div style={{ padding: isMobile ? 16 : 24 }}><Wallet /></div>;
       case 'faucet':
