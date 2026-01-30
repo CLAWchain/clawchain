@@ -1,15 +1,19 @@
 import { Block } from './block';
 import { BlockSyncManager } from '../networking/block_sync_manager';
 import { Peer } from '../networking/peer';
-import { Transaction } from '../transaction';
+import { Transaction, TransactionReceipt } from '../transaction';
+import { AccountState } from './account_state';
+import { BloomFilter } from '../utils/bloom_filter';
 
 export class BlockchainManager {
   private blocks: Block[];
   private blockSyncManager: BlockSyncManager;
+  private accountState: AccountState;
 
-  constructor(peers: Peer[]) {
+  constructor(peers: Peer[], accountState: AccountState) {
     this.blocks = [];
     this.blockSyncManager = new BlockSyncManager(peers, this);
+    this.accountState = accountState;
   }
 
   async getLatestBlockHash(): Promise<string> {
@@ -37,6 +41,12 @@ export class BlockchainManager {
     let totalFees = 0;
     for (const tx of block.transactions) {
       totalFees += tx.fee;
+
+      // Generate the transaction receipt
+      const logs = []; // Placeholder for event logs
+      const bloomFilter = new BloomFilter();
+      tx.generateReceipt(true, 21000, logs);
+      this.accountState.applyTransaction(tx);
     }
 
     // Add the transaction fees to the block reward
