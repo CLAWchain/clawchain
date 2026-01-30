@@ -47,11 +47,6 @@ COPY --from=builder /app/vercel.json ./
 # Create directories for agent work
 RUN mkdir -p /app/backend/data /app/backend/src/claw-generated
 
-# Initialize git repo for agent commits
-RUN git init && \
-    git config user.name "CLAWchain" && \
-    git config user.email "claw@clawchain.app"
-
 # Expose port
 EXPOSE 4000
 

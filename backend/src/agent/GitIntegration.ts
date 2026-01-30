@@ -75,9 +75,29 @@ export class GitIntegration {
   // Configure git user and remote for commits
   private setupGitConfig(): void {
     try {
-      // Check if .git exists, if not initialize
       const gitDir = path.join(this.projectRoot, '.git');
-      if (!fs.existsSync(gitDir)) {
+      
+      // If no .git and we have credentials, clone the repo
+      if (!fs.existsSync(gitDir) && GITHUB_TOKEN && GITHUB_REPO) {
+        console.log('[GIT] No .git directory found, cloning repo...');
+        const remoteUrl = `https://${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git`;
+        
+        try {
+          // Clone into a temp location then move .git
+          const tempDir = '/tmp/clawchain-clone';
+          execSync(`rm -rf ${tempDir}`, { encoding: 'utf-8', stdio: 'pipe' });
+          execSync(`git clone --depth 1 ${remoteUrl} ${tempDir}`, { encoding: 'utf-8', stdio: 'pipe', timeout: 60000 });
+          
+          // Copy .git directory to project root
+          execSync(`cp -r ${tempDir}/.git ${this.projectRoot}/`, { encoding: 'utf-8', stdio: 'pipe' });
+          execSync(`rm -rf ${tempDir}`, { encoding: 'utf-8', stdio: 'pipe' });
+          
+          console.log('[GIT] Successfully cloned repo');
+        } catch (cloneErr: any) {
+          console.error('[GIT] Clone failed, initializing fresh:', cloneErr.message);
+          execSync('git init', { cwd: this.projectRoot, encoding: 'utf-8', stdio: 'pipe' });
+        }
+      } else if (!fs.existsSync(gitDir)) {
         console.log('[GIT] No .git directory found, initializing...');
         execSync('git init', { cwd: this.projectRoot, encoding: 'utf-8', stdio: 'pipe' });
       }
@@ -103,20 +123,27 @@ export class GitIntegration {
         } catch {
           // Origin might not exist, that's fine
         }
-        execSync(`git remote add origin ${remoteUrl}`, {
-          cwd: this.projectRoot,
-          encoding: 'utf-8',
-          stdio: 'pipe'
-        });
+        try {
+          execSync(`git remote add origin ${remoteUrl}`, {
+            cwd: this.projectRoot,
+            encoding: 'utf-8',
+            stdio: 'pipe'
+          });
+        } catch {
+          // Origin might already exist from clone
+        }
         console.log(`[GIT] Configured remote with token for ${GITHUB_REPO}`);
         
-        // Fetch to get remote refs
+        // Make sure we're on main branch
         try {
-          execSync('git fetch origin main', { cwd: this.projectRoot, encoding: 'utf-8', stdio: 'pipe', timeout: 30000 });
-          // Set upstream tracking
-          execSync('git branch --set-upstream-to=origin/main main', { cwd: this.projectRoot, encoding: 'utf-8', stdio: 'pipe' });
-        } catch (e) {
-          console.log('[GIT] Could not fetch/set upstream (may be new repo)');
+          execSync('git checkout main', { cwd: this.projectRoot, encoding: 'utf-8', stdio: 'pipe' });
+        } catch {
+          // May already be on main or branch doesn't exist
+          try {
+            execSync('git checkout -b main', { cwd: this.projectRoot, encoding: 'utf-8', stdio: 'pipe' });
+          } catch {
+            // Branch may already exist
+          }
         }
       } else {
         console.log('[GIT] No GITHUB_TOKEN configured - push will not work');
@@ -131,10 +158,14 @@ export class GitIntegration {
 
   // Auto-commit and push changes (called after agent makes changes)
   async autoCommitAndPush(message: string, taskId?: string): Promise<GitOperationResult> {
+    console.log('[GIT] autoCommitAndPush called:', message);
+    
     const status = this.getStatus();
+    console.log('[GIT] Status:', JSON.stringify(status));
     
     // Nothing to commit
     if (status.clean) {
+      console.log('[GIT] Working tree clean, nothing to commit');
       return {
         success: true,
         output: 'No changes to commit'
@@ -159,11 +190,25 @@ export class GitIntegration {
 
       // Push to remote if enabled
       if (AUTO_PUSH_ENABLED) {
-        const branch = this.getCurrentBranch();
+        const branch = this.getCurrentBranch() || 'main';
         console.log(`[GIT] Pushing to origin/${branch}...`);
         
         try {
-          this.execGit(`push origin ${branch}`, true);
+          // First try normal push
+          try {
+            this.execGit(`push -u origin ${branch}`, true);
+          } catch (e: any) {
+            // If push fails due to non-fast-forward, try to pull and merge first
+            console.log('[GIT] Normal push failed, trying pull then push...');
+            try {
+              this.execGit('pull origin main --rebase --allow-unrelated-histories', true);
+              this.execGit(`push -u origin ${branch}`, true);
+            } catch (pullError) {
+              // If pull fails too, force push as last resort (new files only)
+              console.log('[GIT] Pull failed, force pushing...');
+              this.execGit(`push -u origin ${branch} --force`, true);
+            }
+          }
           console.log(`[GIT] Successfully pushed to origin/${branch}`);
           
           eventBus.emit('git_action', {
@@ -334,9 +379,24 @@ export class GitIntegration {
   // Get current status
   getStatus(): { branch: string; changes: string[]; staged: string[]; clean: boolean } {
     try {
-      const branch = this.getCurrentBranch();
-      const status = this.execGit('status --porcelain', true);
+      const branch = this.getCurrentBranch() || 'main';
+      let status = '';
+      try {
+        status = this.execGit('status --porcelain', true);
+      } catch (e) {
+        console.log('[GIT] status --porcelain failed, trying alternative');
+        // On fresh repos with no commits, try listing untracked files
+        try {
+          status = this.execGit('ls-files --others --exclude-standard', true);
+          // Convert to porcelain format
+          status = status.split('\n').filter(Boolean).map(f => `?? ${f}`).join('\n');
+        } catch {
+          status = '';
+        }
+      }
+      
       const lines = status.split('\n').filter(Boolean);
+      console.log(`[GIT] Status found ${lines.length} changes`);
       
       const changes: string[] = [];
       const staged: string[] = [];
@@ -363,9 +423,10 @@ export class GitIntegration {
         staged,
         clean: lines.length === 0
       };
-    } catch {
+    } catch (error) {
+      console.error('[GIT] getStatus failed:', error);
       return {
-        branch: 'unknown',
+        branch: 'main',
         changes: [],
         staged: [],
         clean: true
