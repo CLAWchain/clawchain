@@ -7,6 +7,11 @@ export interface TrieNode {
 
 export class MerklePatriciaTrie {
   private root: TrieNode | null = null;
+  private diff: Array<{
+    key: Uint8Array;
+    oldValue: any | null;
+    newValue: any | null;
+  }> = [];
 
   async get(key: Uint8Array): Promise<any | null> {
     // Implement Merkle Patricia Trie get logic
@@ -15,6 +20,20 @@ export class MerklePatriciaTrie {
 
   async set(key: Uint8Array, value: any): Promise<void> {
     // Implement Merkle Patricia Trie set logic
+    const oldValue = await this.get(key);
+    this.diff.push({
+      key,
+      oldValue,
+      newValue: value,
+    });
+  }
+
+  async getDiff(): Promise<Array<{
+    key: Uint8Array;
+    oldValue: any | null;
+    newValue: any | null;
+  }>> {
+    return this.diff;
   }
 
   async getNodesByPrefix(prefix: Uint8Array): Promise<TrieNode[]> {

@@ -1,6 +1,7 @@
 import { Block } from './block';
 import { Transaction } from './transaction';
 import { RewardManager } from './reward-manager';
+import { MerklePatriciaTrie } from '../state/merkle_patricia_trie';
 
 export class BlockchainManager {
   private chain: Block[] = [];
@@ -8,6 +9,7 @@ export class BlockchainManager {
   private maxBlockSize: number = 1000000; // 1 MB
   private blockSizeAdjustmentInterval: number = 10; // Adjust every 10 blocks
   private rewardManager: RewardManager;
+  private stateTrie: MerklePatriciaTrie = new MerklePatriciaTrie();
 
   constructor() {
     this.rewardManager = new RewardManager();
@@ -17,7 +19,7 @@ export class BlockchainManager {
     this.pendingTransactions.push(transaction);
   }
 
-  mineBlock(): Block {
+  async mineBlock(): Promise<Block> {
     const newBlock = new Block(
       this.chain.length,
       Date.now(),
@@ -32,6 +34,9 @@ export class BlockchainManager {
 
     // Validate and process any uncle blocks
     this.processUncleBlocks(newBlock);
+
+    // Process the block and update the state trie
+    await this.processBlock(newBlock);
 
     this.chain.push(newBlock);
     this.pendingTransactions = [];
@@ -48,6 +53,23 @@ export class BlockchainManager {
 
   getChain(): Block[] {
     return this.chain;
+  }
+
+  private async processBlock(block: Block): Promise<void> {
+    // Process the block's transactions and update the state trie
+    for (const tx of block.transactions) {
+      await this.processTransaction(tx);
+    }
+
+    // Generate and store the state diff for this block
+    const diff = await this.stateTrie.getDiff();
+    block.stateDiff = diff;
+  }
+
+  private async processTransaction(tx: Transaction): Promise<void> {
+    // Process the transaction and update the state trie
+    await this.stateTrie.set(tx.from, await this.stateTrie.get(tx.from) - tx.value);
+    await this.stateTrie.set(tx.to, (await this.stateTrie.get(tx.to)) + tx.value);
   }
 
   private adjustBlockSize(): void {
