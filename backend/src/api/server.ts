@@ -407,7 +407,7 @@ async function main() {
   // ========== END BYZANTINE SYSTEM ==========
 
   // ========== AUTONOMOUS AGENT WORKER SYSTEM ==========
-  const { agentWorker, agentEvents } = await import('../agent');
+  const { agentWorker, agentEvents, agentMemory } = await import('../agent');
   
   // Track connected SSE clients
   let agentViewerCount = 0;
@@ -426,6 +426,9 @@ async function main() {
     
     // Send current state to new connection
     const state = agentWorker.getState();
+    // Get persisted tasks from memory (survives restarts)
+    const persistedTasks = agentMemory.getCompletedTasks(5);
+    
     res.write(`data: ${JSON.stringify({
       type: 'init',
       data: {
@@ -437,9 +440,9 @@ async function main() {
           agent: state.currentTask.agent,
         } : null,
         currentOutput: state.currentOutput,
-        completedTasks: state.completedTasks.slice(0, 5).map(t => ({
-          title: t.task.title,
-          agent: t.task.agent,
+        completedTasks: persistedTasks.map(t => ({
+          title: t.title,
+          agent: t.agent,
           completedAt: t.completedAt,
         })),
         viewerCount: agentViewerCount,
@@ -479,6 +482,9 @@ async function main() {
   // Get agent status
   app.get('/api/agent/status', (req, res) => {
     const state = agentWorker.getState();
+    // Get persisted completed tasks from memory
+    const persistedTasks = agentMemory.getCompletedTasks(10);
+    
     res.json({
       isWorking: state.isWorking,
       currentTask: state.currentTask ? {
@@ -487,13 +493,32 @@ async function main() {
         type: state.currentTask.type,
         agent: state.currentTask.agent,
       } : null,
-      completedTaskCount: state.completedTasks.length,
-      recentTasks: state.completedTasks.slice(0, 5).map(t => ({
-        title: t.task.title,
-        agent: t.task.agent,
+      completedTaskCount: persistedTasks.length,
+      recentTasks: persistedTasks.slice(0, 5).map(t => ({
+        title: t.title,
+        agent: t.agent,
         completedAt: t.completedAt,
       })),
       viewerCount: agentViewerCount,
+    });
+  });
+
+  // Get persisted completed tasks
+  app.get('/api/agent/history', (req, res) => {
+    const limit = parseInt(req.query.limit as string) || 20;
+    const tasks = agentMemory.getCompletedTasks(limit);
+    
+    res.json({
+      tasks: tasks.map(t => ({
+        id: t.id,
+        taskId: t.taskId,
+        title: t.title,
+        type: t.taskType,
+        agent: t.agent,
+        output: t.output.substring(0, 500), // Truncate output
+        completedAt: t.completedAt,
+      })),
+      total: tasks.length
     });
   });
 

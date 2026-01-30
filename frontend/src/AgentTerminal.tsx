@@ -88,6 +88,31 @@ const AgentTerminal: React.FC = () => {
     }
   }, [displayedText]);
 
+  // Load persisted tasks on mount
+  useEffect(() => {
+    const loadPersistedTasks = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/agent/status`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.recentTasks && data.recentTasks.length > 0) {
+            setState(prev => ({
+              ...prev,
+              completedTasks: data.recentTasks,
+              isWorking: data.isWorking,
+              currentTask: data.currentTask,
+              viewerCount: data.viewerCount || 0,
+            }));
+          }
+        }
+      } catch (e) {
+        console.error('[AgentTerminal] Failed to load persisted tasks:', e);
+      }
+    };
+    
+    loadPersistedTasks();
+  }, [API_BASE]);
+
   // SSE Connection
   useEffect(() => {
     let eventSource: EventSource | null = null;
