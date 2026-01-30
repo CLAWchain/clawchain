@@ -1,21 +1,14 @@
 import { Block, Transaction } from './Block';
+import { Contract } from '../core/contract';
 
 export class VirtualMachine {
   private chain: Block[] = [];
   private transactionPool: Transaction[] = [];
+  private contracts: Map&lt;Hash, Contract&gt; = new Map();
 
   constructor() {
     // Initialize the chain with a genesis block
-    this.chain.push(
-      new Block(
-        '0x1234abcd',
-        '0x0000000000000000000000000000000000000000000000000000000000000000',
-        [],
-        Date.now(),
-        100,
-        0
-      )
-    );
+    this.chain.push(Block.createGenesis());
   }
 
   addTransaction(transaction: Transaction) {
@@ -30,9 +23,38 @@ export class VirtualMachine {
       this.transactionPool = this.transactionPool.filter(
         (tx) => !block.transactions.some((btx) => btx.hash === tx.hash)
       );
+      // Execute the transactions in the new block
+      this.executeBlockTransactions(block);
     } else {
       throw new Error('Invalid block');
     }
+  }
+
+  private async executeBlockTransactions(block: Block) {
+    for (const tx of block.transactions) {
+      await this.executeTransaction(tx);
+    }
+  }
+
+  private async executeTransaction(tx: Transaction) {
+    // Check if the transaction is a contract deployment
+    if (tx.to === null) {
+      const contract = await this.deployContract(tx);
+      this.contracts.set(contract.address, contract);
+    } else {
+      // Execute the transaction against the target contract
+      const contract = this.contracts.get(tx.to);
+      if (contract) {
+        await contract.call(tx.data.functionName, tx.data.args);
+      } else {
+        throw new Error(`Contract at ${tx.to} does not exist`);
+      }
+    }
+  }
+
+  private async deployContract(tx: Transaction): Promise&lt;Contract&gt; {
+    // Implement contract deployment logic
+    return new Contract(tx.hash, tx.data.code, new Map());
   }
 
   private isValidBlock(block: Block): boolean {
@@ -60,13 +82,7 @@ export class VirtualMachine {
 
   private async replayBlock(block: Block) {
     // Replay the transactions in the block
-    for (const tx of block.transactions) {
-      await this.executeTransaction(tx);
-    }
-  }
-
-  private async executeTransaction(tx: Transaction) {
-    // Execute the transaction and update the state
+    await this.executeBlockTransactions(block);
   }
 
   private findCommonAncestor(
