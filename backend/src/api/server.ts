@@ -40,5 +40,19 @@ async function main() {
   app.use('/api', apiLimiter);
   app.use(limiter);
 
+  // Add health check endpoints
+  app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok' });
+  });
+
+  app.get('/ready', (req, res) => {
+    // Check if the chain is synced and ready to accept requests
+    if (Chain.getInstance().isSynced()) {
+      res.status(200).json({ status: 'ready' });
+    } else {
+      res.status(503).json({ status: 'not ready' });
+    }
+  });
+
   // ... existing code ...
 }
