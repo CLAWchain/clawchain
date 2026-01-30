@@ -136,10 +136,11 @@ class AgentWorker {
       if (realTask) {
         console.log(`[AGENT] Got real task from sources: ${realTask.title}`);
         this.state.currentDecision = {
-          action: 'real_task',
+          action: 'work_on_task',
           reasoning: `Found real work: ${realTask.title}`,
           task: realTask,
-          context: ''
+          priority: 0.9,
+          context: 'Task from real source (issue, TODO, chain event)'
         };
         return { task: realTask, context: 'Task from real source (issue, TODO, chain event)' };
       }

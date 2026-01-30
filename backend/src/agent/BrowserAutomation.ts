@@ -301,7 +301,7 @@ export class BrowserAutomation {
       });
 
       // Check 2: Page has content
-      const hasContent = response.content && response.content.length > 100;
+      const hasContent = !!(response.content && response.content.length > 100);
       checks.push({
         name: 'Page Content',
         passed: hasContent,

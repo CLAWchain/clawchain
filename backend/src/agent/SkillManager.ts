@@ -343,7 +343,7 @@ export class SkillManager {
 
       for (const trigger of skill.triggers) {
         if (trigger.type === 'event') {
-          eventBus.on(trigger.value, (data) => {
+          eventBus.on(trigger.value, (data: any) => {
             this.executeTrigger(skill, trigger, data);
           });
         }

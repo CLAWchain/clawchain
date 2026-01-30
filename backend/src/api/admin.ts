@@ -286,4 +286,4 @@ adminRouter.get('/debug/processes', (req, res) => {
   });
 });
 
-export { adminRouter, logActivity, trackApiCall };
+export { adminRouter };
