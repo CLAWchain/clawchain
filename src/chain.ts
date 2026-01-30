@@ -22,8 +22,11 @@ export class Chain {
       throw new Error('Invalid transaction signature');
     }
 
+    // Calculate transaction fee
+    const fee = this.calculateTransactionFee(tx);
+
     // Process the transaction
-    await this.processTransaction(tx);
+    await this.processTransaction(tx, fee);
   }
 
   private static async getNextNonce(address: string): Promise<number> {
@@ -31,9 +34,25 @@ export class Chain {
     return 0;
   }
 
-  private static async processTransaction(tx: Transaction): Promise<void> {
+  private static async processTransaction(tx: Transaction, fee: number): Promise<void> {
     // Implement transaction processing logic
     console.log('Processing transaction:', tx);
+
+    // Update block reward with transaction fee
+    await this.updateBlockReward(fee);
+  }
+
+  private static calculateTransactionFee(tx: Transaction): number {
+    // Calculate the fee based on transaction size and complexity
+    const baseGasPrice = 0.000001; // 0.001 CLAW per gas
+    const gasUsed = 21000 + tx.data.length; // Estimate gas usage
+    return baseGasPrice * gasUsed;
+  }
+
+  private static async updateBlockReward(fee: number): Promise<void> {
+    // Update the block reward to include the transaction fee
+    // Implement block reward calculation logic
+    console.log('Updating block reward with fee:', fee);
   }
 
   static getTransactionReceipt(txHash: string): any {
