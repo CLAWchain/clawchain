@@ -7,7 +7,7 @@ import AgentTerminal from './AgentTerminal';
 import AdminDashboard from './AdminDashboard';
 
 // Types
-type TabType = 'terminal' | 'genesis' | 'molt' | 'protocol' | 'consensus' | 'workshop' | 'wallet' | 'faucet' | 'admin';
+type TabType = 'terminal' | 'genesis' | 'molt' | 'protocol' | 'logs' | 'workshop' | 'wallet' | 'faucet' | 'admin';
 
 // Mobile menu icon component
 const MenuIcon = ({ open }: { open: boolean }) => (
@@ -142,7 +142,7 @@ export default function App() {
   // Sync route to tab
   useEffect(() => {
     const path = location.pathname.slice(1) || 'terminal';
-    const validTabs: TabType[] = ['terminal', 'genesis', 'molt', 'protocol', 'consensus', 'workshop', 'wallet', 'faucet', 'admin'];
+    const validTabs: TabType[] = ['terminal', 'genesis', 'molt', 'protocol', 'logs', 'workshop', 'wallet', 'faucet', 'admin'];
     if (validTabs.includes(path as TabType)) {
       setActiveTab(path as TabType);
     }
@@ -180,7 +180,7 @@ export default function App() {
     
     if (userMessage.startsWith('/')) {
       const cmd = userMessage.slice(1).toLowerCase();
-      const validCmds = ['genesis', 'molt', 'protocol', 'consensus', 'council', 'workshop', 'agents', 'wallet', 'faucet', 'archive'];
+      const validCmds = ['genesis', 'molt', 'protocol', 'logs', 'council', 'workshop', 'agents', 'wallet', 'faucet', 'archive'];
       if (validCmds.includes(cmd)) {
         handleTabChange(cmd as TabType);
         setMessages(prev => [...prev, { role: 'system', content: `Navigating to ${cmd}...` }]);
@@ -217,7 +217,7 @@ export default function App() {
     { id: 'terminal', label: 'Terminal' },
     { id: 'molt', label: 'Claw' },
     { id: 'protocol', label: 'Protocol' },
-    { id: 'consensus', label: 'Consensus' },
+    { id: 'logs', label: 'Logs' },
     { id: 'workshop', label: 'Workshop' },
     { id: 'wallet', label: 'Wallet' },
     { id: 'faucet', label: 'Faucet' },
@@ -233,8 +233,8 @@ export default function App() {
         return renderChat();
       case 'protocol':
         return renderProtocol();
-      case 'consensus':
-        return renderConsensus();
+      case 'logs':
+        return renderLogs();
       case 'workshop':
         return <div style={{ padding: isMobile ? 16 : 24 }}><Playground /></div>;
       case 'wallet':
@@ -545,43 +545,169 @@ export default function App() {
       </div>
     );
 
-  const renderConsensus = () => (
-    <div style={{ padding: isMobile ? '20px 16px' : '40px 24px', maxWidth: 1000, margin: '0 auto' }}>
-      <h2 className="gradient-text" style={{ fontSize: isMobile ? 24 : 32, marginBottom: isMobile ? 20 : 32 }}>Consensus Metrics</h2>
-        
-        <div style={{ 
-          display: 'grid',
-        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(180px, 1fr))', 
-        gap: isMobile ? 10 : 16, 
-        marginBottom: isMobile ? 24 : 40 
-        }}>
-          {[
-          { value: stats.blockHeight.toLocaleString(), label: 'Block Height', color: 'var(--coral)' },
-          { value: '3.0s', label: 'Avg Block Time', color: 'var(--teal)' },
-          { value: stats.tps, label: 'Network TPS', color: 'var(--coral)' },
-          { value: '0', label: 'Pending Tx', color: 'var(--teal)' },
-          { value: 'BFT', label: 'Consensus Mode', color: 'var(--coral)' },
-        ].map((stat, i) => (
-          <div key={i} className="card" style={{ padding: isMobile ? 16 : 24, textAlign: 'center' }}>
-            <div className="stat-value" style={{ color: stat.color, fontSize: isMobile ? '1.3rem' : '2.5rem' }}>{stat.value}</div>
-            <div className="stat-label" style={{ fontSize: isMobile ? 10 : 12 }}>{stat.label}</div>
-                  </div>
-          ))}
+  const [logs, setLogs] = React.useState<any[]>([]);
+  const [logsConnected, setLogsConnected] = React.useState(false);
+  const logsEndRef = React.useRef<HTMLDivElement>(null);
+
+  // Load and stream logs
+  React.useEffect(() => {
+    if (activeTab !== 'logs') return;
+    
+    let eventSource: EventSource | null = null;
+    
+    const connect = () => {
+      eventSource = new EventSource(`${API_BASE}/api/logs/stream`);
+      
+      eventSource.onopen = () => setLogsConnected(true);
+      
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'init') {
+            setLogs(data.logs || []);
+          } else if (data.type === 'log') {
+            setLogs(prev => [...prev.slice(-200), data.entry]);
+          }
+        } catch (e) {}
+      };
+      
+      eventSource.onerror = () => {
+        setLogsConnected(false);
+        eventSource?.close();
+        setTimeout(connect, 3000);
+      };
+    };
+    
+    connect();
+    return () => eventSource?.close();
+  }, [activeTab, API_BASE]);
+
+  // Auto-scroll logs
+  React.useEffect(() => {
+    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [logs]);
+
+  const formatLogTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  };
+
+  const getLogColor = (type: string) => {
+    switch (type) {
+      case 'task_start': return '#4ade80';
+      case 'task_complete': return '#22c55e';
+      case 'output': return 'var(--text-muted)';
+      case 'tool_use': return '#60a5fa';
+      case 'git_commit': return '#a78bfa';
+      case 'error': return '#f87171';
+      case 'system': return '#fbbf24';
+      default: return 'var(--text)';
+    }
+  };
+
+  const getLogIcon = (type: string) => {
+    switch (type) {
+      case 'task_start': return '>';
+      case 'task_complete': return '[done]';
+      case 'output': return '';
+      case 'tool_use': return '[tool]';
+      case 'git_commit': return '[git]';
+      case 'error': return '[err]';
+      case 'system': return '[sys]';
+      default: return '';
+    }
+  };
+
+  const renderLogs = () => (
+    <div style={{ padding: isMobile ? '20px 16px' : '40px 24px', maxWidth: 1200, margin: '0 auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h2 className="gradient-text" style={{ fontSize: isMobile ? 24 : 32, margin: 0 }}>Activity Logs</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ 
+            width: 8, 
+            height: 8, 
+            borderRadius: '50%', 
+            background: logsConnected ? '#4ade80' : '#f87171',
+            animation: logsConnected ? 'pulse 2s infinite' : 'none'
+          }} />
+          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+            {logsConnected ? 'Live' : 'Connecting...'}
+          </span>
         </div>
-        
-      <h3 style={{ color: 'var(--text-primary)', marginBottom: isMobile ? 12 : 16, fontSize: isMobile ? 16 : 20 }}>Network Status</h3>
-      <div className="card" style={{ padding: isMobile ? 16 : 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 14, marginBottom: isMobile ? 12 : 16, flexWrap: 'wrap' }}>
-          <div className="status-online" />
-          <span style={{ fontSize: isMobile ? 14 : 16, fontWeight: 600 }}>Claw Validator</span>
-          <span style={{ color: 'var(--teal)', fontSize: isMobile ? 12 : 13, marginLeft: 'auto' }}>Online</span>
-        </div>
-        <p style={{ color: 'var(--text-muted)', fontSize: isMobile ? 12 : 13, lineHeight: 1.6, margin: 0 }}>
-          The autonomous Claw validator processes all transactions, produces blocks, and maintains network consensus around the clock.
-        </p>
       </div>
+      
+      <p style={{ color: 'var(--text-muted)', marginBottom: 20, fontSize: 14 }}>
+        Real-time stream of everything Claw is building. Every task, every commit, every line of code.
+      </p>
+      
+      <div style={{
+        background: '#0a0a12',
+        border: '1px solid var(--border)',
+        borderRadius: 12,
+        height: isMobile ? '60vh' : '70vh',
+        overflow: 'auto',
+        fontFamily: 'JetBrains Mono, monospace',
+        fontSize: isMobile ? 11 : 13
+      }}>
+        <div style={{ padding: 16 }}>
+          {logs.length === 0 ? (
+            <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 40 }}>
+              Waiting for agent activity...
+            </div>
+          ) : (
+            logs.map((log, i) => (
+              <div 
+                key={log.id || i} 
+                style={{ 
+                  marginBottom: 4,
+                  padding: '4px 0',
+                  borderBottom: log.type === 'task_complete' ? '1px solid var(--border)' : 'none'
+                }}
+              >
+                <span style={{ color: 'var(--text-muted)', marginRight: 8 }}>
+                  {formatLogTime(log.timestamp)}
+                </span>
+                {getLogIcon(log.type) && (
+                  <span style={{ color: getLogColor(log.type), marginRight: 8, fontWeight: 600 }}>
+                    {getLogIcon(log.type)}
+                  </span>
+                )}
+                <span style={{ color: getLogColor(log.type) }}>
+                  {log.content}
+                </span>
+                {log.taskTitle && log.type !== 'output' && (
+                  <span style={{ color: 'var(--coral)', marginLeft: 8, fontSize: '0.9em' }}>
+                    [{log.taskTitle}]
+                  </span>
+                )}
               </div>
-            );
+            ))
+          )}
+          <div ref={logsEndRef} />
+        </div>
+      </div>
+      
+      <div style={{ 
+        display: 'flex', 
+        gap: 16, 
+        marginTop: 16,
+        flexWrap: 'wrap',
+        fontSize: 12
+      }}>
+        {[
+          { type: 'task_start', label: 'Task Start' },
+          { type: 'task_complete', label: 'Task Complete' },
+          { type: 'tool_use', label: 'Tool Use' },
+          { type: 'git_commit', label: 'Git Commit' },
+        ].map(item => (
+          <div key={item.type} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 12, height: 12, borderRadius: 2, background: getLogColor(item.type) }} />
+            <span style={{ color: 'var(--text-muted)' }}>{item.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>

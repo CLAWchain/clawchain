@@ -283,6 +283,15 @@ async function main() {
   app.use('/api/admin', adminRouter);
   console.log('[ADMIN] Admin dashboard API ready');
 
+  // ========== LOGS SYSTEM ==========
+  const { logsRouter, initializeLogsTable, addLog } = await import('./logs');
+  await initializeLogsTable();
+  app.use('/api/logs', logsRouter);
+  
+  // Make addLog available globally for agent logging
+  (global as any).addLog = addLog;
+  console.log('[LOGS] Logs system ready');
+
   // ========== AUTH SYSTEM ==========
   const { authRouter, initializeAuthTables } = await import('./auth');
   await initializeAuthTables();
@@ -572,6 +581,45 @@ async function main() {
   // Start the autonomous agent worker
   agentWorker.start();
   console.log('[AGENT] Autonomous agent worker started');
+  
+  // Set up logging for agent events
+  let currentTaskId: string | undefined;
+  let currentTaskTitle: string | undefined;
+  
+  agentEvents.on('chunk', (chunk: any) => {
+    try {
+      switch (chunk.type) {
+        case 'task_start':
+          currentTaskId = chunk.data?.task?.id;
+          currentTaskTitle = chunk.data?.task?.title;
+          addLog('task_start', `Starting: ${chunk.data?.task?.title || 'Unknown task'}`, currentTaskId, currentTaskTitle);
+          break;
+        case 'task_complete':
+          addLog('task_complete', `Completed: ${chunk.data?.title || currentTaskTitle || 'Unknown task'}`, chunk.data?.taskId || currentTaskId, chunk.data?.title || currentTaskTitle);
+          currentTaskId = undefined;
+          currentTaskTitle = undefined;
+          break;
+        case 'text':
+          // Only log significant text chunks
+          if (chunk.data && chunk.data.length > 10) {
+            addLog('output', chunk.data, currentTaskId, currentTaskTitle);
+          }
+          break;
+        case 'tool_start':
+          addLog('tool_use', `Using tool: ${chunk.data?.tool}`, currentTaskId, currentTaskTitle, chunk.data);
+          break;
+        case 'git_deploy':
+          addLog('git_commit', `Deployed commit ${chunk.data?.commit} to ${chunk.data?.branch || 'main'}`, chunk.data?.taskId, currentTaskTitle, chunk.data);
+          break;
+        case 'error':
+          addLog('error', chunk.data?.message || 'Unknown error', currentTaskId, currentTaskTitle);
+          break;
+      }
+    } catch (e) {
+      // Ignore logging errors
+    }
+  });
+  
   // ========== END AGENT WORKER SYSTEM ==========
 
   // Serve frontend static files
