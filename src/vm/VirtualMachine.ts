@@ -61,12 +61,40 @@ export class VirtualMachine {
   private async replayBlock(block: Block) {
     // Replay the transactions in the block
     for (const tx of block.transactions) {
-      await this.executeTransaction(tx);
+      try {
+        await this.executeTransaction(tx);
+      } catch (err) {
+        console.error(`Error executing transaction ${tx.hash}: ${err.message}`);
+      }
     }
   }
 
   private async executeTransaction(tx: Transaction) {
+    // Check if there is enough gas
+    if (tx.gas < this.getGasRequired(tx)) {
+      throw new Error('Insufficient gas');
+    }
+
     // Execute the transaction and update the state
+    // ...
+
+    // Deduct the gas used
+    tx.gas -= this.getGasRequired(tx);
+  }
+
+  private getGasRequired(tx: Transaction): number {
+    let gasRequired = 21000; // Base transaction cost
+
+    // Add cost for data/code size
+    gasRequired += tx.data.length * 4; 
+
+    // Add cost for storage operations
+    // ...
+
+    // Add cost for computation operations
+    // ...
+
+    return gasRequired;
   }
 
   private findCommonAncestor(
