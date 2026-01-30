@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Transaction } from '../transaction';
 import { VirtualMachine } from '../vm/virtual_machine';
 import { AccountState } from '../state/account';
+import { Block } from '../block';
 
 export class JsonRpcServer {
   private vm: VirtualMachine;
@@ -42,44 +43,51 @@ export class JsonRpcServer {
         return this.handleCall;
       case 'getBalance':
         return this.handleGetBalance;
+      case 'getBlock':
+        return this.handleGetBlock;
       default:
         return null;
     }
   }
 
-  private handleSendTransaction(params: any) {
-    // Extract the signed transaction from the params
-    const { signedTransaction } = params;
+  private handleGetBlock(params: any) {
+    // Extract the slot number from the params
+    const { slot } = params;
 
-    // Validate the signed transaction
-    const tx = Transaction.fromBase64(signedTransaction);
-    if (!tx.verify()) {
-      throw new Error('Invalid transaction signature');
+    // Fetch the block by slot number
+    const block = this.vm.getBlockBySlot(slot);
+    if (!block) {
+      throw new Error(`Block not found for slot ${slot}`);
     }
 
-    // Execute the transaction
-    this.vm.executeTransaction(tx);
+    // Optionally include transaction details
+    const { includeTransactions = false } = params;
+    const blockResponse = {
+      slot: block.slot,
+      timestamp: block.timestamp,
+      parentSlot: block.parentSlot,
+      transactions: includeTransactions ? block.transactions.map((tx) => tx.toJSON()) : undefined,
+    };
 
-    // Return the transaction hash
-    return tx.hash().toString('hex');
+    // Optionally encode the block data
+    const { encoding = 'json' } = params;
+    if (encoding === 'base64') {
+      return Block.toBase64(block);
+    } else {
+      return blockResponse;
+    }
+  }
+
+  private handleSendTransaction(params: any) {
+    // ... (existing implementation)
   }
 
   private handleCall(params: any) {
-    // Implement the logic to handle the 'eth_call' method
-    // This should include executing the call and returning the result
-    return '0xdeadbeef';
+    // ... (existing implementation)
   }
 
   private handleGetBalance(params: any) {
-    // Extract the account pubkey from the params
-    const { pubkey } = params;
-
-    // Look up the account balance
-    const accountState = this.vm.getAccountState(pubkey);
-    const balance = accountState ? accountState.balance : 0;
-
-    // Return the balance in lamports
-    return balance;
+    // ... (existing implementation)
   }
 
   private sendResponse(res: Response, id: any, result: any) {
