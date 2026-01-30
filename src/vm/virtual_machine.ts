@@ -5,6 +5,7 @@ import { Transaction } from '../transaction';
 class VirtualMachine {
   private stack: any[] = [];
   private memory: Map<number, any> = new Map();
+  private callStack: { stack: any[], memory: Map<number, any>, gas: number }[] = [];
   private trie: MerklePatriciaTrie;
   private accountState: AccountState;
   private gas: number;
@@ -75,19 +76,70 @@ class VirtualMachine {
           this.decrementGas(2);
           break;
         case 0x06: // CALL
-          // Implement CALL instruction
+          // Save the current execution context
+          this.callStack.push({
+            stack: [...this.stack],
+            memory: new Map(this.memory),
+            gas: this.gas
+          });
+
+          // Get the call parameters from the stack
+          const gasLimit = this.pop();
+          const targetAddress = this.pop();
+          const argsLength = this.pop();
+          const args = [];
+          for (let i = 0; i < argsLength; i++) {
+            args.push(this.pop());
+          }
+
+          // Execute the called contract
+          this.gas = gasLimit;
+          const callResult = this.executeContract(targetAddress, args);
+
+          // Restore the original execution context
+          const { stack, memory, gas } = this.callStack.pop()!;
+          this.stack = stack;
+          this.memory = memory;
+          this.gas = gas;
+
+          // Push the call result to the stack
+          this.push(callResult);
+
           this.decrementGas(40);
           break;
         case 0x07: // RETURN
-          // Implement RETURN instruction
-          this.decrementGas(1);
-          break;
+          // Return the top value from the stack
+          return this.pop();
         default:
           throw new Error(`Unknown opcode: ${opcode}`);
       }
       pc++;
     }
     return this.stack[this.stack.length - 1];
+  }
+
+  private executeContract(address: number, args: any[]): any {
+    // Load the contract code from the trie
+    const contractCode = this.trie.get(address);
+    if (!contractCode) {
+      throw new Error(`Contract at address ${address} not found`);
+    }
+
+    // Create a new VM instance to execute the contract
+    const childVM = new VirtualMachine(this.trie, this.accountState, this.gas);
+
+    // Push the arguments to the child VM's stack
+    for (const arg of args.reverse()) {
+      childVM.push(arg);
+    }
+
+    // Execute the contract in the child VM
+    const result = childVM.execute(contractCode);
+
+    // Update the gas usage
+    this.gas = childVM.gas;
+
+    return result;
   }
 
   private push(value: any): void {
