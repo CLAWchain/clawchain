@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import AgentTerminal from './AgentTerminal';
 import AdminDashboard from './AdminDashboard';
+import BlockExplorer from './BlockExplorer';
 
 // Types
-type TabType = 'terminal' | 'genesis' | 'molt' | 'updates' | 'logs' | 'admin';
+type TabType = 'terminal' | 'genesis' | 'molt' | 'updates' | 'logs' | 'explorer' | 'admin';
 
 // Mobile menu icon component
 const MenuIcon = ({ open }: { open: boolean }) => (
@@ -111,7 +112,7 @@ export default function App() {
   // Sync route to tab
   useEffect(() => {
     const path = location.pathname.slice(1) || 'terminal';
-    const validTabs: TabType[] = ['terminal', 'genesis', 'molt', 'updates', 'logs', 'admin'];
+    const validTabs: TabType[] = ['terminal', 'genesis', 'molt', 'updates', 'logs', 'explorer', 'admin'];
     if (validTabs.includes(path as TabType)) {
       setActiveTab(path as TabType);
     }
@@ -215,6 +216,7 @@ export default function App() {
   const tabs = [
     { id: 'terminal', label: 'Terminal' },
     { id: 'molt', label: 'Claw' },
+    { id: 'explorer', label: 'Explorer' },
     { id: 'updates', label: 'Updates' },
     { id: 'logs', label: 'Logs' },
     { id: 'admin', label: 'Admin' },
@@ -227,6 +229,8 @@ export default function App() {
         return renderTerminal();
       case 'molt':
         return renderChat();
+      case 'explorer':
+        return <BlockExplorer />;
       case 'updates':
         return renderUpdates();
       case 'logs':

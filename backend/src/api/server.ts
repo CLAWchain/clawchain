@@ -534,6 +534,115 @@ async function main() {
     });
   });
 
+  // ==================== CHAIN EXPLORER API ====================
+  
+  // Get recent blocks
+  app.get('/api/chain/blocks', async (req, res) => {
+    const limit = parseInt(req.query.limit as string) || 20;
+    const blocks = chain.getAllBlocks().slice(-limit).reverse();
+    
+    res.json({
+      blocks: blocks.map(b => ({
+        height: b.header.height,
+        hash: b.header.hash,
+        parentHash: b.header.parentHash,
+        producer: b.header.producer,
+        timestamp: b.header.timestamp,
+        transactionCount: b.transactions.length,
+        gasUsed: b.header.gasUsed.toString(),
+        gasLimit: b.header.gasLimit.toString(),
+        stateRoot: b.header.stateRoot,
+        transactionsRoot: b.header.transactionsRoot,
+        receiptsRoot: b.header.receiptsRoot,
+        difficulty: b.header.difficulty
+      })),
+      total: chain.getChainLength()
+    });
+  });
+  
+  // Get block by height
+  app.get('/api/chain/block/:height', async (req, res) => {
+    const height = parseInt(req.params.height);
+    const block = chain.getBlockByHeight(height);
+    
+    if (!block) {
+      return res.status(404).json({ error: 'Block not found' });
+    }
+    
+    res.json({
+      height: block.header.height,
+      hash: block.header.hash,
+      parentHash: block.header.parentHash,
+      producer: block.header.producer,
+      timestamp: block.header.timestamp,
+      transactionCount: block.transactions.length,
+      gasUsed: block.header.gasUsed.toString(),
+      gasLimit: block.header.gasLimit.toString(),
+      stateRoot: block.header.stateRoot,
+      transactions: block.transactions.map(tx => ({
+        hash: tx.hash,
+        from: tx.from,
+        to: tx.to,
+        value: tx.value.toString(),
+        gasPrice: tx.gasPrice.toString(),
+        nonce: tx.nonce
+      }))
+    });
+  });
+  
+  // Get block by hash
+  app.get('/api/chain/block/hash/:hash', async (req, res) => {
+    const block = chain.getBlockByHash(req.params.hash);
+    
+    if (!block) {
+      return res.status(404).json({ error: 'Block not found' });
+    }
+    
+    res.json({
+      height: block.header.height,
+      hash: block.header.hash,
+      parentHash: block.header.parentHash,
+      producer: block.header.producer,
+      timestamp: block.header.timestamp,
+      transactionCount: block.transactions.length,
+      gasUsed: block.header.gasUsed.toString(),
+      gasLimit: block.header.gasLimit.toString(),
+      stateRoot: block.header.stateRoot
+    });
+  });
+  
+  // Get chain stats
+  app.get('/api/chain/stats', async (req, res) => {
+    const stats = chain.getStats();
+    
+    res.json({
+      height: stats.height,
+      totalTransactions: stats.totalTransactions,
+      genesisTime: stats.genesisTime,
+      latestBlockTime: stats.latestBlockTime,
+      avgBlockTime: stats.avgBlockTime,
+      orphanedBlocks: stats.orphanedBlocks
+    });
+  });
+  
+  // Get latest block
+  app.get('/api/chain/latest', async (req, res) => {
+    const block = chain.getLatestBlock();
+    
+    if (!block) {
+      return res.status(404).json({ error: 'No blocks found' });
+    }
+    
+    res.json({
+      height: block.header.height,
+      hash: block.header.hash,
+      parentHash: block.header.parentHash,
+      producer: block.header.producer,
+      timestamp: block.header.timestamp,
+      transactionCount: block.transactions.length
+    });
+  });
+
   // Git status endpoint
   app.get('/api/git/status', async (req, res) => {
     const { gitIntegration } = await import('../agent/GitIntegration');
