@@ -244,8 +244,21 @@ export class AgentExecutor {
   private commandTimeout: number = 30000;
 
   constructor(projectRoot?: string) {
-    // Default to parent of backend directory
-    this.projectRoot = projectRoot || path.resolve(__dirname, '../../../../');
+    // Default to /app in production (Docker/Railway), or project root in development
+    if (projectRoot) {
+      this.projectRoot = projectRoot;
+    } else if (process.env.PROJECT_ROOT) {
+      this.projectRoot = process.env.PROJECT_ROOT;
+    } else if (fs.existsSync('/app/backend')) {
+      // Production container
+      this.projectRoot = '/app';
+    } else {
+      // Development - go up from backend/src/agent or backend/dist/agent
+      this.projectRoot = path.resolve(__dirname, '../../../');
+      if (!fs.existsSync(path.join(this.projectRoot, 'backend'))) {
+        this.projectRoot = path.resolve(__dirname, '../../../../');
+      }
+    }
     console.log(`[EXECUTOR] Initialized with project root: ${this.projectRoot}`);
   }
 
