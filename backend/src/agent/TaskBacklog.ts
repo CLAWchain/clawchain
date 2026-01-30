@@ -240,66 +240,66 @@ export const TASK_BACKLOG: BacklogTask[] = [
   },
   {
     id: 'api-002',
-    title: 'Add eth_getBalance RPC method',
-    description: 'Implement balance query with block parameter support (latest, pending, specific block).',
+    title: 'Add getBalance RPC method',
+    description: 'Implement Solana-style balance query. Return lamports for account pubkey.',
     type: 'build',
     priority: 8,
     estimatedMinutes: 20,
-    tags: ['api', 'rpc']
+    tags: ['api', 'rpc', 'solana']
   },
   {
     id: 'api-003',
-    title: 'Add eth_getTransactionByHash RPC',
-    description: 'Query transaction by hash. Return full transaction details or null if not found.',
+    title: 'Add getTransaction RPC method',
+    description: 'Query transaction by signature. Return full transaction with metadata or null.',
     type: 'build',
     priority: 8,
     estimatedMinutes: 20,
-    tags: ['api', 'rpc']
+    tags: ['api', 'rpc', 'solana']
   },
   {
     id: 'api-004',
-    title: 'Add eth_getBlockByNumber RPC',
-    description: 'Query block by number with full transactions or just hashes.',
+    title: 'Add getBlock RPC method',
+    description: 'Query block by slot number. Support transaction details and encoding options.',
     type: 'build',
     priority: 8,
     estimatedMinutes: 25,
-    tags: ['api', 'rpc']
+    tags: ['api', 'rpc', 'solana']
   },
   {
     id: 'api-005',
-    title: 'Implement eth_sendRawTransaction',
-    description: 'Accept signed transactions, validate, and add to mempool.',
+    title: 'Implement sendTransaction RPC',
+    description: 'Accept base64-encoded signed transactions, validate, and broadcast to network.',
     type: 'build',
     priority: 9,
     estimatedMinutes: 30,
-    tags: ['api', 'rpc']
+    tags: ['api', 'rpc', 'solana']
   },
   {
     id: 'api-006',
-    title: 'Add eth_call for read-only execution',
-    description: 'Execute transaction without creating block. Return result without state changes.',
+    title: 'Add simulateTransaction RPC',
+    description: 'Simulate transaction execution without submitting. Return logs and compute units.',
     type: 'build',
     priority: 8,
     estimatedMinutes: 35,
-    tags: ['api', 'rpc', 'smart-contracts']
+    tags: ['api', 'rpc', 'solana', 'programs']
   },
   {
     id: 'api-007',
-    title: 'Implement eth_estimateGas',
-    description: 'Estimate gas needed for transaction by simulating execution.',
+    title: 'Implement getAccountInfo RPC',
+    description: 'Return account data, lamports, owner, and executable flag for pubkey.',
     type: 'build',
     priority: 7,
     estimatedMinutes: 30,
-    tags: ['api', 'rpc', 'gas']
+    tags: ['api', 'rpc', 'solana']
   },
   {
     id: 'api-008',
-    title: 'Add eth_getLogs for event queries',
-    description: 'Query events by address, topics, and block range. Use bloom filters for efficiency.',
+    title: 'Add getSignaturesForAddress RPC',
+    description: 'Query transaction signatures for an address with pagination support.',
     type: 'build',
     priority: 7,
     estimatedMinutes: 40,
-    tags: ['api', 'rpc', 'events']
+    tags: ['api', 'rpc', 'solana']
   },
   {
     id: 'api-009',
@@ -341,8 +341,8 @@ export const TASK_BACKLOG: BacklogTask[] = [
   },
   {
     id: 'wallet-003',
-    title: 'Build keystore file encryption',
-    description: 'Implement encrypted keystore files like Ethereum. Use scrypt for key derivation.',
+    title: 'Build encrypted keypair storage',
+    description: 'Implement encrypted keypair files using Solana CLI format. Use argon2 for key derivation.',
     type: 'build',
     priority: 7,
     estimatedMinutes: 40,
@@ -771,12 +771,12 @@ export const TASK_BACKLOG: BacklogTask[] = [
   },
   {
     id: 'adv-002',
-    title: 'Add cross-chain bridge design',
-    description: 'Design bridge architecture for connecting to Ethereum/other chains.',
+    title: 'Add Wormhole bridge integration',
+    description: 'Design bridge architecture for cross-chain messaging via Wormhole protocol.',
     type: 'build',
     priority: 5,
     estimatedMinutes: 80,
-    tags: ['bridge', 'interoperability']
+    tags: ['wormhole', 'interoperability', 'solana']
   },
   {
     id: 'adv-003',

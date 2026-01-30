@@ -494,27 +494,28 @@ const AgentTerminal: React.FC = () => {
       {/* Current Task Banner */}
       {state.currentTask && (
         <div style={{
-          background: 'linear-gradient(90deg, rgba(232, 90, 79, 0.15), rgba(78, 205, 196, 0.1))',
-          padding: '10px 16px',
+          background: 'var(--bg-secondary)',
+          padding: '8px 12px',
           borderBottom: '1px solid var(--border)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
               background: 'var(--coral)',
               color: 'var(--bg-primary)',
-              padding: '4px 10px',
-              borderRadius: 6,
-              fontSize: 11,
+              padding: '3px 8px',
+              borderRadius: 4,
+              fontSize: 10,
               fontWeight: 700,
               fontFamily: "'JetBrains Mono', monospace",
             }}>
               {state.currentTask.agent}
             </div>
             <div style={{
-              color: 'var(--text-primary)',
-              fontSize: 14,
+              color: 'var(--text-secondary)',
+              fontSize: 12,
               fontWeight: 500,
               flex: 1,
+              fontFamily: "'JetBrains Mono', monospace",
             }}>
               {state.currentTask.title}
             </div>
