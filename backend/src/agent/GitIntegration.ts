@@ -2,6 +2,11 @@ import { execSync, spawn } from 'child_process';
 import * as path from 'path';
 import { eventBus } from '../events/EventBus';
 
+// Auto-deploy configuration
+const AUTO_PUSH_ENABLED = process.env.AUTO_GIT_PUSH !== 'false';
+const GIT_USER_NAME = process.env.GIT_USER_NAME || 'CLAWchain';
+const GIT_USER_EMAIL = process.env.GIT_USER_EMAIL || 'clawchain@users.noreply.github.com';
+
 // Git operation result
 export interface GitOperationResult {
   success: boolean;
@@ -42,10 +47,125 @@ export class GitIntegration {
   private projectRoot: string;
   private mainBranch: string = 'main';
   private branchPrefix: string = 'claw/';
+  private initialized: boolean = false;
 
   constructor(projectRoot?: string) {
     this.projectRoot = projectRoot || path.resolve(__dirname, '../../../../');
     console.log(`[GIT] Initialized with project root: ${this.projectRoot}`);
+    this.setupGitConfig();
+  }
+
+  // Configure git user for commits
+  private setupGitConfig(): void {
+    try {
+      execSync(`git config user.name "${GIT_USER_NAME}"`, {
+        cwd: this.projectRoot,
+        encoding: 'utf-8',
+        stdio: 'pipe'
+      });
+      execSync(`git config user.email "${GIT_USER_EMAIL}"`, {
+        cwd: this.projectRoot,
+        encoding: 'utf-8',
+        stdio: 'pipe'
+      });
+      this.initialized = true;
+      console.log(`[GIT] Configured git user: ${GIT_USER_NAME} <${GIT_USER_EMAIL}>`);
+    } catch (error) {
+      console.error('[GIT] Failed to configure git user:', error);
+    }
+  }
+
+  // Auto-commit and push changes (called after agent makes changes)
+  async autoCommitAndPush(message: string, taskId?: string): Promise<GitOperationResult> {
+    const status = this.getStatus();
+    
+    // Nothing to commit
+    if (status.clean) {
+      return {
+        success: true,
+        output: 'No changes to commit'
+      };
+    }
+
+    console.log(`[GIT] Auto-committing ${status.changes.length} changes...`);
+
+    try {
+      // Stage all changes
+      this.execGit('add -A', true);
+
+      // Create commit with CLAW prefix
+      const fullMessage = taskId 
+        ? `[CLAW-${taskId}] ${message}`
+        : `[CLAW] ${message}`;
+      
+      this.execGit(`commit -m "${fullMessage.replace(/"/g, '\\"')}"`, true);
+      const commitHash = this.execGit('rev-parse --short HEAD', true);
+
+      console.log(`[GIT] Created commit: ${commitHash}`);
+
+      // Push to remote if enabled
+      if (AUTO_PUSH_ENABLED) {
+        const branch = this.getCurrentBranch();
+        console.log(`[GIT] Pushing to origin/${branch}...`);
+        
+        try {
+          this.execGit(`push origin ${branch}`, true);
+          console.log(`[GIT] Successfully pushed to origin/${branch}`);
+          
+          eventBus.emit('git_action', {
+            type: 'auto_deploy',
+            message: fullMessage,
+            commit: commitHash,
+            branch,
+            pushed: true
+          });
+
+          return {
+            success: true,
+            output: `Committed and pushed: ${commitHash}`,
+            commit: commitHash,
+            branch
+          };
+        } catch (pushError: any) {
+          console.error('[GIT] Push failed:', pushError.message);
+          
+          eventBus.emit('git_action', {
+            type: 'commit',
+            message: fullMessage,
+            commit: commitHash,
+            pushed: false,
+            error: pushError.message
+          });
+
+          return {
+            success: true,
+            output: `Committed (push failed): ${commitHash}`,
+            commit: commitHash,
+            error: `Push failed: ${pushError.message}`
+          };
+        }
+      } else {
+        eventBus.emit('git_action', {
+          type: 'commit',
+          message: fullMessage,
+          commit: commitHash,
+          pushed: false
+        });
+
+        return {
+          success: true,
+          output: `Committed: ${commitHash}`,
+          commit: commitHash
+        };
+      }
+    } catch (error: any) {
+      console.error('[GIT] Auto-commit failed:', error.message);
+      return {
+        success: false,
+        output: '',
+        error: error.message
+      };
+    }
   }
 
   // Execute git command safely

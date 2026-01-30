@@ -743,6 +743,23 @@ Ready for council review.`,
         }
 
         console.log(`[AGENT] Completed task: ${task.title}`);
+        
+        // Auto-commit and push changes to GitHub
+        if (useToolExecution) {
+          const commitMessage = `${task.type}: ${task.title}`;
+          const gitResult = await gitIntegration.autoCommitAndPush(commitMessage, task.id);
+          
+          if (gitResult.success && gitResult.commit) {
+            console.log(`[AGENT] Changes deployed: ${gitResult.commit}`);
+            this.broadcast('git_deploy', {
+              taskId: task.id,
+              commit: gitResult.commit,
+              message: commitMessage,
+              branch: gitResult.branch
+            });
+          }
+        }
+        
         this.broadcast('task_complete', { 
           taskId: task.id,
           title: task.title,

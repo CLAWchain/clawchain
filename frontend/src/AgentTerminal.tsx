@@ -175,6 +175,13 @@ const AgentTerminal: React.FC = () => {
               }));
               break;
 
+            case 'git_deploy':
+              // Code deployed to GitHub
+              appendText(`\n[DEPLOYED] Commit ${data.data.commit} pushed to ${data.data.branch || 'main'}\n`);
+              appendText(`  Message: ${data.data.message}\n`);
+              appendText(`  View: https://github.com/CLAWchain/clawchain/commit/${data.data.commit}\n`);
+              break;
+
             case 'status':
               if (data.data.status === 'idle') {
                 setState(prev => ({ ...prev, isWorking: false }));
@@ -237,6 +244,31 @@ const AgentTerminal: React.FC = () => {
         return (
           <div key={i} style={{ color: '#a78bfa', fontStyle: 'italic', background: 'rgba(167, 139, 250, 0.1)', padding: '4px 8px', borderRadius: 4, marginTop: 8 }}>
             {line.replace('[THINKING] ', '')}
+          </div>
+        );
+      }
+      
+      // Git deploy
+      if (line.startsWith('[DEPLOYED]')) {
+        return (
+          <div key={i} style={{ color: '#22c55e', fontWeight: 600, background: 'rgba(34, 197, 94, 0.15)', padding: '6px 10px', borderRadius: 4, marginTop: 8, borderLeft: '3px solid #22c55e' }}>
+            {line}
+          </div>
+        );
+      }
+      
+      // GitHub link
+      if (line.includes('github.com/CLAWchain')) {
+        return (
+          <div key={i} style={{ paddingLeft: 12 }}>
+            <a 
+              href={line.replace('  View: ', '').trim()} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ color: '#60a5fa', textDecoration: 'underline' }}
+            >
+              {line}
+            </a>
           </div>
         );
       }
