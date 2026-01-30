@@ -88,13 +88,15 @@ export default function App() {
   const [agentPanelOpen, setAgentPanelOpen] = useState(true);
   const [agentPanelWidth, setAgentPanelWidth] = useState(420);
   const [stats, setStats] = useState({
-    chainLength: 1337,
-    blockHeight: 309500,
-    tps: 42
+    chainLength: 0,
+    blockHeight: 0,
+    tps: 0
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const lastBlockTime = useRef<number>(Date.now());
+  const recentTxCounts = useRef<number[]>([]);
 
   // Detect mobile
   useEffect(() => {
@@ -115,17 +117,47 @@ export default function App() {
     }
   }, [location]);
 
-  // Live stats
+  // Fetch real chain stats
   useEffect(() => {
-    const interval = setInterval(() => {
-      setStats(prev => ({
-      ...prev,
-        blockHeight: prev.blockHeight + 1,
-        tps: Math.floor(Math.random() * 30) + 35
-      }));
-    }, 3000);
+    const fetchStats = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/agent/status`);
+        if (response.ok) {
+          const data = await response.json();
+          const newBlockHeight = data.blockHeight || 0;
+          const txCount = data.transactionCount || 0;
+          
+          // Calculate TPS based on recent transactions
+          const now = Date.now();
+          const timeDiff = (now - lastBlockTime.current) / 1000;
+          lastBlockTime.current = now;
+          
+          // Track recent tx counts for TPS calculation
+          recentTxCounts.current.push(txCount);
+          if (recentTxCounts.current.length > 10) {
+            recentTxCounts.current.shift();
+          }
+          
+          // Calculate TPS (transactions in last ~30 seconds / time)
+          const avgTx = recentTxCounts.current.length > 1 
+            ? (recentTxCounts.current[recentTxCounts.current.length - 1] - recentTxCounts.current[0]) / (recentTxCounts.current.length * 3)
+            : 0;
+          
+          setStats({
+            chainLength: newBlockHeight,
+            blockHeight: newBlockHeight,
+            tps: Math.max(0, Math.round(avgTx * 10) / 10)
+          });
+        }
+      } catch (e) {
+        // Silently fail - will retry
+      }
+    };
+    
+    fetchStats();
+    const interval = setInterval(fetchStats, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [API_BASE]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -648,7 +680,6 @@ export default function App() {
                   </span>
               </>
             )}
-            <div className="status-online" />
             
             {/* GitHub Link */}
             <a

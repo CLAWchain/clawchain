@@ -509,6 +509,9 @@ async function main() {
         completedAt: t.completedAt,
       })),
       viewerCount: agentViewerCount,
+      // Chain stats
+      blockHeight: chain.getChainLength(),
+      transactionCount: chain.getTotalTransactions(),
     });
   });
 
