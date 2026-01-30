@@ -4,7 +4,8 @@ export interface Task {
   title: string;
   prompt: string;
   agent: string;
-  priority: number;
+  priority?: number;
+  context?: Record<string, any>;
 }
 
 interface TaskTemplate {

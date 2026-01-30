@@ -4,6 +4,7 @@ import * as path from 'path';
 import { Task } from './TaskGenerator';
 import { eventBus } from '../events/EventBus';
 import { db } from '../database/db';
+import { getNextBacklogTask, markBacklogTaskComplete, BacklogTask, getBacklogProgress } from './TaskBacklog';
 
 // Task source types
 export type TaskSourceType = 
@@ -400,29 +401,82 @@ export class TaskSources {
   async getNextTask(): Promise<Task | null> {
     const allTasks = await this.collectAllTasks();
     
-    if (allTasks.length === 0) {
-      return null;
+    // If we have critical/urgent tasks from real sources, use those first
+    if (allTasks.length > 0) {
+      // Sort by priority
+      const priorityOrder: Record<TaskPriority, number> = {
+        'critical': 0,
+        'high': 1,
+        'medium': 2,
+        'low': 3
+      };
+
+      allTasks.sort((a, b) => 
+        priorityOrder[a.priority] - priorityOrder[b.priority]
+      );
+
+      // Only use real sources for critical/high priority
+      const topTask = allTasks[0];
+      if (topTask.priority === 'critical' || topTask.priority === 'high') {
+        this.processedIds.add(topTask.id);
+        return this.convertToAgentTask(topTask);
+      }
+    }
+    
+    // Fall back to the massive task backlog
+    const backlogTask = getNextBacklogTask();
+    if (backlogTask) {
+      const progress = getBacklogProgress();
+      console.log(`[TASKS] Using backlog task ${backlogTask.id} (${progress.completed}/${progress.total} complete)`);
+      return this.convertBacklogTask(backlogTask);
     }
 
-    // Sort by priority
-    const priorityOrder: Record<TaskPriority, number> = {
-      'critical': 0,
-      'high': 1,
-      'medium': 2,
-      'low': 3
-    };
-
-    allTasks.sort((a, b) => 
-      priorityOrder[a.priority] - priorityOrder[b.priority]
-    );
-
-    const sourceTask = allTasks[0];
+    // Use any remaining tasks from other sources
+    if (allTasks.length > 0) {
+      const sourceTask = allTasks[0];
+      this.processedIds.add(sourceTask.id);
+      return this.convertToAgentTask(sourceTask);
+    }
     
-    // Mark as processed
-    this.processedIds.add(sourceTask.id);
+    return null;
+  }
 
-    // Convert to agent Task
-    return this.convertToAgentTask(sourceTask);
+  // Convert backlog task to agent task
+  private convertBacklogTask(backlog: BacklogTask): Task {
+    const prompt = `## Task: ${backlog.title}
+
+${backlog.description}
+
+### Requirements:
+- This is a ${backlog.type} task for ClawChain
+- Priority: ${backlog.priority}/10
+- Tags: ${backlog.tags.join(', ')}
+
+### Instructions:
+1. Think through the implementation carefully
+2. Write clean, well-documented code
+3. Follow existing patterns in the codebase
+4. Test your changes if applicable
+5. Explain your approach as you work
+
+Remember: You are Claw, the autonomous developer building ClawChain. Show your work and reasoning.`;
+
+    // Mark as started
+    markBacklogTaskComplete(backlog.id);
+
+    return {
+      id: backlog.id,
+      type: backlog.type as any,
+      title: backlog.title,
+      agent: 'CLAW',
+      prompt,
+      context: {
+        source: 'backlog',
+        priority: backlog.priority,
+        estimatedMinutes: backlog.estimatedMinutes,
+        tags: backlog.tags
+      }
+    };
   }
 
   // Convert source task to agent task

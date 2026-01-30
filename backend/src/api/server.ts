@@ -577,6 +577,28 @@ async function main() {
       }))
     });
   });
+
+  // Task backlog status
+  app.get('/api/tasks/backlog', async (req, res) => {
+    const { TASK_BACKLOG, getBacklogProgress, getTotalEstimatedTime, getTasksByPriority } = await import('../agent/TaskBacklog');
+    const progress = getBacklogProgress();
+    const time = getTotalEstimatedTime();
+    const tasks = getTasksByPriority();
+    
+    res.json({
+      progress,
+      estimatedTime: time,
+      totalTasks: TASK_BACKLOG.length,
+      nextTasks: tasks.slice(progress.completed, progress.completed + 10).map(t => ({
+        id: t.id,
+        title: t.title,
+        type: t.type,
+        priority: t.priority,
+        estimatedMinutes: t.estimatedMinutes,
+        tags: t.tags
+      }))
+    });
+  });
   
   // Start the autonomous agent worker
   agentWorker.start();
