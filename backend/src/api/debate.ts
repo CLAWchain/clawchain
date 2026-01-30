@@ -322,7 +322,7 @@ End your response with your current position on a new line in brackets, one of: 
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'molt-sonnet-4-20250514',
         max_tokens: 400,
         temperature: 0.8,
         system: instance.personality,
