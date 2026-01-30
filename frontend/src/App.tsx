@@ -362,60 +362,29 @@ export default function App() {
       </div>
     );
 
-  const FEATURE_UPDATES = [
-    {
-      title: 'Persistent Activity Logs',
-      timestamp: '2026-01-30T15:20:00Z',
-      reason: 'Added comprehensive logging system to track all agent activities with persistence across sessions'
-    },
-    {
-      title: 'Task Backlog System',
-      timestamp: '2026-01-30T14:45:00Z',
-      reason: 'Implemented 88-task development backlog to ensure continuous autonomous work for 65+ hours'
-    },
-    {
-      title: 'Skills/Plugins Architecture',
-      timestamp: '2026-01-30T13:30:00Z',
-      reason: 'Created modular skill system for extensible agent capabilities with dynamic enable/disable'
-    },
-    {
-      title: 'Authentication System',
-      timestamp: '2026-01-30T12:15:00Z',
-      reason: 'Added API key management and rate limiting for secure access control'
-    },
-    {
-      title: 'Admin Dashboard',
-      timestamp: '2026-01-30T11:00:00Z',
-      reason: 'Built monitoring interface for system health, agent stats, and API usage tracking'
-    },
-    {
-      title: 'Browser Automation',
-      timestamp: '2026-01-30T10:30:00Z',
-      reason: 'Integrated web browsing tools for deployment verification and information gathering'
-    },
-    {
-      title: 'Auto Git Integration',
-      timestamp: '2026-01-30T09:00:00Z',
-      reason: 'Enabled automatic commits and pushes when agent completes development tasks'
-    },
-    {
-      title: 'Real Task Execution',
-      timestamp: '2026-01-29T16:00:00Z',
-      reason: 'Connected agent to real code execution sandbox with file operations and shell commands'
-    },
-    {
-      title: 'State Manager with Merkle Roots',
-      timestamp: '2026-01-29T14:00:00Z',
-      reason: 'Implemented real blockchain state tracking with account balances and cryptographic proofs'
-    },
-    {
-      title: 'Agent Memory Persistence',
-      timestamp: '2026-01-29T11:00:00Z',
-      reason: 'Added PostgreSQL-backed memory for persistent context across restarts'
-    }
-  ];
+  // GitHub commits state
+  const [commits, setCommits] = useState<any[]>([]);
+  const [commitsLoading, setCommitsLoading] = useState(true);
 
-  const formatUpdateTime = (timestamp: string) => {
+  // Fetch real commits from GitHub
+  useEffect(() => {
+    const fetchCommits = async () => {
+      try {
+        const response = await fetch('https://api.github.com/repos/CLAWchain/clawchain/commits?per_page=30');
+        if (response.ok) {
+          const data = await response.json();
+          setCommits(data);
+        }
+      } catch (e) {
+        console.error('Failed to fetch commits:', e);
+      } finally {
+        setCommitsLoading(false);
+      }
+    };
+    fetchCommits();
+  }, []);
+
+  const formatCommitTime = (timestamp: string) => {
     const date = new Date(timestamp);
     return date.toLocaleDateString('en-US', { 
       month: 'short', 
@@ -429,24 +398,61 @@ export default function App() {
     <div style={{ padding: isMobile ? '20px 16px' : '40px 24px', maxWidth: 800, margin: '0 auto' }}>
       <h2 className="gradient-text" style={{ fontSize: isMobile ? 24 : 32, marginBottom: isMobile ? 8 : 12 }}>Updates</h2>
       <p style={{ color: 'var(--text-muted)', marginBottom: isMobile ? 20 : 32, fontSize: isMobile ? 13 : 14 }}>
-        Features added to ClawChain by the autonomous agent.
+        Real commits from the ClawChain repository.
       </p>
       
-      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 12 : 16 }}>
-        {FEATURE_UPDATES.map((update, i) => (
-          <div key={i} className="card" style={{ padding: isMobile ? 16 : 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
-              <h3 style={{ color: 'var(--coral)', fontSize: isMobile ? 15 : 17, margin: 0 }}>{update.title}</h3>
-              <span className="mono" style={{ color: 'var(--text-muted)', fontSize: isMobile ? 11 : 12 }}>
-                {formatUpdateTime(update.timestamp)}
-              </span>
-            </div>
-            <p style={{ color: 'var(--text-secondary)', fontSize: isMobile ? 12 : 13, lineHeight: 1.6, margin: 0 }}>
-              {update.reason}
-            </p>
-          </div>
-        ))}
-      </div>
+      {commitsLoading ? (
+        <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 40 }}>Loading commits...</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 12 : 16 }}>
+          {commits.map((commit) => (
+            <a 
+              key={commit.sha}
+              href={commit.html_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="card" 
+              style={{ 
+                padding: isMobile ? 16 : 20, 
+                textDecoration: 'none',
+                transition: 'all 0.2s ease',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--coral)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span className="mono" style={{ 
+                    color: 'var(--teal)', 
+                    fontSize: isMobile ? 11 : 12,
+                    background: 'rgba(78, 205, 196, 0.15)',
+                    padding: '2px 6px',
+                    borderRadius: 4,
+                  }}>
+                    {commit.sha.substring(0, 7)}
+                  </span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: isMobile ? 11 : 12 }}>
+                    {commit.commit.author.name}
+                  </span>
+                </div>
+                <span className="mono" style={{ color: 'var(--text-muted)', fontSize: isMobile ? 11 : 12 }}>
+                  {formatCommitTime(commit.commit.author.date)}
+                </span>
+              </div>
+              <p style={{ color: 'var(--text-primary)', fontSize: isMobile ? 13 : 14, lineHeight: 1.6, margin: 0 }}>
+                {commit.commit.message.split('\n')[0]}
+              </p>
+            </a>
+          ))}
+        </div>
+      )}
     </div>
   );
 
