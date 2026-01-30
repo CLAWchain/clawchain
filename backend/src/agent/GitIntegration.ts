@@ -1,11 +1,14 @@
 import { execSync, spawn } from 'child_process';
 import * as path from 'path';
+import * as fs from 'fs';
 import { eventBus } from '../events/EventBus';
 
 // Auto-deploy configuration
 const AUTO_PUSH_ENABLED = process.env.AUTO_GIT_PUSH !== 'false';
 const GIT_USER_NAME = process.env.GIT_USER_NAME || 'CLAWchain';
 const GIT_USER_EMAIL = process.env.GIT_USER_EMAIL || 'clawchain@users.noreply.github.com';
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+const GITHUB_REPO = process.env.GITHUB_REPO || 'CLAWchain/clawchain';
 
 // Git operation result
 export interface GitOperationResult {
@@ -55,9 +58,17 @@ export class GitIntegration {
     this.setupGitConfig();
   }
 
-  // Configure git user for commits
+  // Configure git user and remote for commits
   private setupGitConfig(): void {
     try {
+      // Check if .git exists, if not initialize
+      const gitDir = path.join(this.projectRoot, '.git');
+      if (!fs.existsSync(gitDir)) {
+        console.log('[GIT] No .git directory found, initializing...');
+        execSync('git init', { cwd: this.projectRoot, encoding: 'utf-8', stdio: 'pipe' });
+      }
+
+      // Configure user
       execSync(`git config user.name "${GIT_USER_NAME}"`, {
         cwd: this.projectRoot,
         encoding: 'utf-8',
@@ -68,10 +79,39 @@ export class GitIntegration {
         encoding: 'utf-8',
         stdio: 'pipe'
       });
+
+      // Configure remote with token if available
+      if (GITHUB_TOKEN && GITHUB_REPO) {
+        const remoteUrl = `https://${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git`;
+        try {
+          // Remove existing origin if it exists
+          execSync('git remote remove origin', { cwd: this.projectRoot, encoding: 'utf-8', stdio: 'pipe' });
+        } catch {
+          // Origin might not exist, that's fine
+        }
+        execSync(`git remote add origin ${remoteUrl}`, {
+          cwd: this.projectRoot,
+          encoding: 'utf-8',
+          stdio: 'pipe'
+        });
+        console.log(`[GIT] Configured remote with token for ${GITHUB_REPO}`);
+        
+        // Fetch to get remote refs
+        try {
+          execSync('git fetch origin main', { cwd: this.projectRoot, encoding: 'utf-8', stdio: 'pipe', timeout: 30000 });
+          // Set upstream tracking
+          execSync('git branch --set-upstream-to=origin/main main', { cwd: this.projectRoot, encoding: 'utf-8', stdio: 'pipe' });
+        } catch (e) {
+          console.log('[GIT] Could not fetch/set upstream (may be new repo)');
+        }
+      } else {
+        console.log('[GIT] No GITHUB_TOKEN configured - push will not work');
+      }
+
       this.initialized = true;
       console.log(`[GIT] Configured git user: ${GIT_USER_NAME} <${GIT_USER_EMAIL}>`);
     } catch (error) {
-      console.error('[GIT] Failed to configure git user:', error);
+      console.error('[GIT] Failed to configure git:', error);
     }
   }
 
