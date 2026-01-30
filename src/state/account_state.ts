@@ -28,6 +28,15 @@ class AccountState {
       release();
     }
   }
+
+  public async getStorageValue(address: string, key: string): Promise<string | null> {
+    const value = await this.trie.get(`${address}/storage/${key}`);
+    return value;
+  }
+
+  public async setStorageValue(address: string, key: string, value: string): Promise<void> {
+    await this.trie.put(`${address}/storage/${key}`, value);
+  }
 }
 
 export { AccountState };
