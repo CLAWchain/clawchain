@@ -638,57 +638,15 @@ export class AgentExecutor {
     }
   }
 
-  // Create git commit
+  // Create git commit - DISABLED to prevent file deletions
   async gitCommit(message: string, files?: string[]): Promise<GitResult> {
-    try {
-      // Stage files
-      if (files && files.length > 0) {
-        for (const file of files) {
-          if (this.isPathSafe(file)) {
-            execSync(`git add "${file}"`, {
-              cwd: this.projectRoot,
-              encoding: 'utf-8'
-            });
-          }
-        }
-      } else {
-        // Stage all changes
-        execSync('git add -A', {
-          cwd: this.projectRoot,
-          encoding: 'utf-8'
-        });
-      }
-
-      // Create commit
-      const commitOutput = execSync(`git commit -m "${message.replace(/"/g, '\\"')}"`, {
-        cwd: this.projectRoot,
-        encoding: 'utf-8'
-      });
-
-      // Get new commit hash
-      const commitHash = execSync('git rev-parse --short HEAD', {
-        cwd: this.projectRoot,
-        encoding: 'utf-8'
-      }).trim();
-
-      eventBus.emit('agent_action', {
-        type: 'git_commit',
-        message,
-        commit: commitHash
-      });
-
-      return {
-        success: true,
-        output: commitOutput,
-        commit: commitHash
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        output: '',
-        error: error.message
-      };
-    }
+    // Git operations are disabled for the agent to prevent accidental file deletions
+    console.log('[EXECUTOR] Git commit DISABLED for agent safety');
+    return {
+      success: false,
+      output: '',
+      error: 'Git operations disabled for agent. Changes are logged but not committed.'
+    };
   }
 
   // Execute a tool call from Claude
@@ -725,22 +683,15 @@ export class AgentExecutor {
         break;
       
       case 'git_commit':
-        result = await this.gitCommit(args.message, args.files);
-        break;
-      
       case 'git_branch':
-        result = await gitIntegration.createTaskBranch(
-          Date.now().toString(36),
-          args.name
-        );
-        break;
-      
       case 'git_push':
-        result = await gitIntegration.push();
-        break;
-      
       case 'create_pr':
-        result = await gitIntegration.createPullRequest(args.title, args.body);
+        // ALL GIT OPERATIONS DISABLED - they were causing deployment file deletions
+        console.log(`[EXECUTOR] Git operation ${toolName} DISABLED for safety`);
+        result = { 
+          success: false, 
+          error: 'Git operations disabled. Agent work is logged but changes must be committed manually.' 
+        };
         break;
       
       case 'explain':

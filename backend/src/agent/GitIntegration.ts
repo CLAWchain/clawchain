@@ -156,8 +156,17 @@ export class GitIntegration {
     }
   }
 
-  // Auto-commit and push changes (called after agent makes changes)
+  // Auto-commit and push changes - DISABLED to prevent deployment file deletions
   async autoCommitAndPush(message: string, taskId?: string): Promise<GitOperationResult> {
+    // DISABLED: Git operations were deleting critical deployment files
+    // The agent can still work and generate code, but commits must be done manually
+    console.log('[GIT] autoCommitAndPush DISABLED for safety:', message);
+    return {
+      success: true,
+      output: 'Git auto-commit disabled. Agent work is logged but not pushed to prevent deployment issues.'
+    };
+    
+    /* DISABLED CODE BELOW
     console.log('[GIT] autoCommitAndPush called:', message);
     
     const status = this.getStatus();
@@ -173,6 +182,7 @@ export class GitIntegration {
     }
 
     console.log(`[GIT] Auto-committing ${status.changes.length} changes...`);
+    */
 
     try {
       // Stage all changes

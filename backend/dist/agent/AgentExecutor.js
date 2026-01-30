@@ -38,7 +38,6 @@ const child_process_1 = require("child_process");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const EventBus_1 = require("../events/EventBus");
-const GitIntegration_1 = require("./GitIntegration");
 const BrowserAutomation_1 = require("./BrowserAutomation");
 // Tool definitions for Claude
 exports.AGENT_TOOLS = [
@@ -588,55 +587,15 @@ class AgentExecutor {
             };
         }
     }
-    // Create git commit
+    // Create git commit - DISABLED to prevent file deletions
     async gitCommit(message, files) {
-        try {
-            // Stage files
-            if (files && files.length > 0) {
-                for (const file of files) {
-                    if (this.isPathSafe(file)) {
-                        (0, child_process_1.execSync)(`git add "${file}"`, {
-                            cwd: this.projectRoot,
-                            encoding: 'utf-8'
-                        });
-                    }
-                }
-            }
-            else {
-                // Stage all changes
-                (0, child_process_1.execSync)('git add -A', {
-                    cwd: this.projectRoot,
-                    encoding: 'utf-8'
-                });
-            }
-            // Create commit
-            const commitOutput = (0, child_process_1.execSync)(`git commit -m "${message.replace(/"/g, '\\"')}"`, {
-                cwd: this.projectRoot,
-                encoding: 'utf-8'
-            });
-            // Get new commit hash
-            const commitHash = (0, child_process_1.execSync)('git rev-parse --short HEAD', {
-                cwd: this.projectRoot,
-                encoding: 'utf-8'
-            }).trim();
-            EventBus_1.eventBus.emit('agent_action', {
-                type: 'git_commit',
-                message,
-                commit: commitHash
-            });
-            return {
-                success: true,
-                output: commitOutput,
-                commit: commitHash
-            };
-        }
-        catch (error) {
-            return {
-                success: false,
-                output: '',
-                error: error.message
-            };
-        }
+        // Git operations are disabled for the agent to prevent accidental file deletions
+        console.log('[EXECUTOR] Git commit DISABLED for agent safety');
+        return {
+            success: false,
+            output: '',
+            error: 'Git operations disabled for agent. Changes are logged but not committed.'
+        };
     }
     // Execute a tool call from Claude
     async executeTool(toolName, args) {
@@ -663,16 +622,15 @@ class AgentExecutor {
                 result = await this.gitStatus();
                 break;
             case 'git_commit':
-                result = await this.gitCommit(args.message, args.files);
-                break;
             case 'git_branch':
-                result = await GitIntegration_1.gitIntegration.createTaskBranch(Date.now().toString(36), args.name);
-                break;
             case 'git_push':
-                result = await GitIntegration_1.gitIntegration.push();
-                break;
             case 'create_pr':
-                result = await GitIntegration_1.gitIntegration.createPullRequest(args.title, args.body);
+                // ALL GIT OPERATIONS DISABLED - they were causing deployment file deletions
+                console.log(`[EXECUTOR] Git operation ${toolName} DISABLED for safety`);
+                result = {
+                    success: false,
+                    error: 'Git operations disabled. Agent work is logged but changes must be committed manually.'
+                };
                 break;
             case 'explain':
                 // Just emit the explanation for streaming
