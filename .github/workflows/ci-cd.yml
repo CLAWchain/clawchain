@@ -1,0 +1,99 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Install dependencies
+      run: |
+        cd backend
+        npm ci
+        cd ../frontend
+        npm ci
+        
+    - name: Build backend
+      run: |
+        cd backend
+        npm run build
+        
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm run build
+        
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Run backend tests
+      run: |
+        cd backend
+        npm test
+        
+    - name: Run frontend tests  
+      run: |
+        cd frontend
+        npm test
+        
+  lint:
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Lint backend
+      run: |
+        cd backend
+        npm run lint
+        
+    - name: Lint frontend
+      run: |
+        cd frontend
+        npm run lint
+        
+  deploy:
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Deploy frontend
+      env:
+        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      run: |
+        cd frontend
+        npx vercel --token=$VERCEL_TOKEN --confirm
+        
+    - name: Deploy backend
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}  
+      run: |
+        cd backend
+        aws s3 sync dist s3://my-clawchain-bucket
+        
+  notify:
+    needs: deploy
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Notify team
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+      run: |
+        curl -X POST -H 'Content-type: application/json' --data '{"text":"ClawChain CI/CD pipeline completed successfully!"}' $SLACK_WEBHOOK
