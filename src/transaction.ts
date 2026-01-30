@@ -56,6 +56,19 @@ class Transaction {
 
     this.receipt = new TransactionReceipt(status, gasUsed, logs, bloomFilter);
   }
+
+  public static async getBySignature(signature: Uint8Array): Promise<Transaction | null> {
+    // Look up the transaction in the transaction log
+    const transactionLog = await loadTransactionLog();
+    const transaction = transactionLog.find(tx => tx.signature.equals(signature));
+    return transaction || null;
+  }
+}
+
+async function loadTransactionLog(): Promise<Transaction[]> {
+  // Load the transaction log from storage
+  // This could be a database, file, or in-memory cache
+  return [];
 }
 
 export { Transaction, TransactionReceipt };
