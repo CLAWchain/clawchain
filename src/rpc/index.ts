@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { Transaction } from '../transaction';
 import { VirtualMachine } from '../vm/virtual_machine';
+import { AccountState } from '../state/account';
 
 export class JsonRpcServer {
   private vm: VirtualMachine;
@@ -39,7 +40,8 @@ export class JsonRpcServer {
         return this.handleSendTransaction;
       case 'eth_call':
         return this.handleCall;
-      // Add more method handlers here
+      case 'getBalance':
+        return this.handleGetBalance;
       default:
         return null;
     }
@@ -66,6 +68,18 @@ export class JsonRpcServer {
     // Implement the logic to handle the 'eth_call' method
     // This should include executing the call and returning the result
     return '0xdeadbeef';
+  }
+
+  private handleGetBalance(params: any) {
+    // Extract the account pubkey from the params
+    const { pubkey } = params;
+
+    // Look up the account balance
+    const accountState = this.vm.getAccountState(pubkey);
+    const balance = accountState ? accountState.balance : 0;
+
+    // Return the balance in lamports
+    return balance;
   }
 
   private sendResponse(res: Response, id: any, result: any) {
