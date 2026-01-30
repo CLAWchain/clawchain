@@ -1,62 +1,66 @@
 import { Transaction } from './transaction';
 
+export enum BlockFinality {
+  PENDING = 'PENDING',
+  FINALIZED = 'FINALIZED',
+  ORPHANED = 'ORPHANED'
+}
+
+export class Block {
+  finality: BlockFinality = BlockFinality.PENDING;
+  // Other block properties...
+}
+
 export class Chain {
+  private static readonly NUM_CONFIRMATIONS = 6; // Number of confirmations required for finality
+  private static pendingBlocks: Block[] = [];
+  private static finalizedBlocks: Block[] = [];
+
   static getBalance(address: string): number {
     // Implement balance lookup logic
     return 0;
   }
 
-  static async validateAndProcessTransaction(tx: Transaction): Promise<void> {
-    // Validate the transaction
-    if (!tx.isSigned()) {
-      throw new Error('Transaction is not signed');
+  static async validateAndProcessBlock(block: Block): Promise<void> {
+    // Validate the block
+    // ...
+
+    // Process the block transactions
+    for (const tx of block.transactions) {
+      await this.validateAndProcessTransaction(tx);
     }
 
-    // Check transaction nonce
-    if (tx.nonce !== await this.getNextNonce(tx.from)) {
-      throw new Error('Invalid transaction nonce');
+    // Update block finality status
+    this.updateBlockFinality(block);
+
+    // Add the block to the appropriate list
+    if (block.finality === BlockFinality.FINALIZED) {
+      this.finalizedBlocks.push(block);
+    } else {
+      this.pendingBlocks.push(block);
+    }
+  }
+
+  private static updateBlockFinality(block: Block): void {
+    // Check the number of confirmations for the block
+    const confirmations = this.getBlockConfirmations(block);
+
+    // Update the finality status based on the number of confirmations
+    if (confirmations >= this.NUM_CONFIRMATIONS) {
+      block.finality = BlockFinality.FINALIZED;
+    } else {
+      block.finality = BlockFinality.PENDING;
     }
 
-    // Validate transaction signature
-    if (!tx.verifySignature()) {
-      throw new Error('Invalid transaction signature');
-    }
-
-    // Calculate transaction fee
-    const fee = this.calculateTransactionFee(tx);
-
-    // Process the transaction
-    await this.processTransaction(tx, fee);
+    // Handle fork/reorg scenarios
+    // ...
   }
 
-  private static async getNextNonce(address: string): Promise<number> {
-    // Implement nonce tracking logic
-    return 0;
+  private static getBlockConfirmations(block: Block): number {
+    // Implement logic to get the number of confirmations for a block
+    // This may involve checking the block height and the current chain tip
+    return 3; // Placeholder value
   }
 
-  private static async processTransaction(tx: Transaction, fee: number): Promise<void> {
-    // Implement transaction processing logic
-    console.log('Processing transaction:', tx);
-
-    // Update block reward with transaction fee
-    await this.updateBlockReward(fee);
-  }
-
-  private static calculateTransactionFee(tx: Transaction): number {
-    // Calculate the fee based on transaction size and complexity
-    const baseGasPrice = 0.000001; // 0.001 CLAW per gas
-    const gasUsed = 21000 + tx.data.length; // Estimate gas usage
-    return baseGasPrice * gasUsed;
-  }
-
-  private static async updateBlockReward(fee: number): Promise<void> {
-    // Update the block reward to include the transaction fee
-    // Implement block reward calculation logic
-    console.log('Updating block reward with fee:', fee);
-  }
-
-  static getTransactionReceipt(txHash: string): any {
-    // Implement transaction receipt lookup
-    return { status: 'SUCCESS' };
-  }
+  // Other existing methods...
 }
