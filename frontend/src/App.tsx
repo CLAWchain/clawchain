@@ -7,7 +7,7 @@ import AgentTerminal from './AgentTerminal';
 import AdminDashboard from './AdminDashboard';
 
 // Types
-type TabType = 'terminal' | 'genesis' | 'molt' | 'protocol' | 'logs' | 'workshop' | 'wallet' | 'faucet' | 'admin';
+type TabType = 'terminal' | 'genesis' | 'molt' | 'updates' | 'logs' | 'workshop' | 'wallet' | 'faucet' | 'admin';
 
 // Mobile menu icon component
 const MenuIcon = ({ open }: { open: boolean }) => (
@@ -80,42 +80,12 @@ const Lobster = ({ size = 120 }: { size?: number }) => (
   </div>
 );
 
-// Genesis CIP data
-const GENESIS_CIP = {
-  id: 'CIP-0',
-  title: 'The Case for AI-Governed Consensus',
-  summary: 'This proposal establishes ClawChain as the first blockchain where all consensus decisions, protocol upgrades, and governance actions are executed entirely by Claw.',
-  fullProposal: `## Abstract
-
-ClawChain represents a paradigm shift in blockchain governance. Rather than relying on human validators who may be subject to social engineering, bribery, or simple unavailability, this chain delegates all consensus responsibilities to a single autonomous Claw instance operating 24/7.
-
-## Motivation
-
-Traditional blockchains face governance challenges:
-• Validator fatigue and inconsistent participation
-• Susceptibility to social attacks and collusion  
-• Slow response times to critical protocol decisions
-
-## Specification
-
-ClawChain implements:
-1. A single autonomous Claw validator with full operational authority
-2. Real-time monitoring and protocol optimization
-3. Persistent memory ensuring consistent decision-making
-4. Transparent on-chain logging of all governance decisions
-
-## Implementation
-
-This CIP is implemented at genesis. Claw autonomously proposes, evaluates, and implements all protocol changes.`
-};
-
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('terminal');
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
-  const [expandedCIP, setExpandedCIP] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [agentPanelOpen, setAgentPanelOpen] = useState(true);
@@ -142,7 +112,7 @@ export default function App() {
   // Sync route to tab
   useEffect(() => {
     const path = location.pathname.slice(1) || 'terminal';
-    const validTabs: TabType[] = ['terminal', 'genesis', 'molt', 'protocol', 'logs', 'workshop', 'wallet', 'faucet', 'admin'];
+    const validTabs: TabType[] = ['terminal', 'genesis', 'molt', 'updates', 'logs', 'workshop', 'wallet', 'faucet', 'admin'];
     if (validTabs.includes(path as TabType)) {
       setActiveTab(path as TabType);
     }
@@ -180,7 +150,7 @@ export default function App() {
     
     if (userMessage.startsWith('/')) {
       const cmd = userMessage.slice(1).toLowerCase();
-      const validCmds = ['genesis', 'molt', 'protocol', 'logs', 'council', 'workshop', 'agents', 'wallet', 'faucet', 'archive'];
+      const validCmds = ['genesis', 'molt', 'updates', 'logs', 'council', 'workshop', 'agents', 'wallet', 'faucet', 'archive'];
       if (validCmds.includes(cmd)) {
         handleTabChange(cmd as TabType);
         setMessages(prev => [...prev, { role: 'system', content: `Navigating to ${cmd}...` }]);
@@ -216,7 +186,7 @@ export default function App() {
   const tabs = [
     { id: 'terminal', label: 'Terminal' },
     { id: 'molt', label: 'Claw' },
-    { id: 'protocol', label: 'Protocol' },
+    { id: 'updates', label: 'Updates' },
     { id: 'logs', label: 'Logs' },
     { id: 'workshop', label: 'Workshop' },
     { id: 'wallet', label: 'Wallet' },
@@ -231,8 +201,8 @@ export default function App() {
         return renderTerminal();
       case 'molt':
         return renderChat();
-      case 'protocol':
-        return renderProtocol();
+      case 'updates':
+        return renderUpdates();
       case 'logs':
         return renderLogs();
       case 'workshop':
@@ -404,37 +374,93 @@ export default function App() {
       </div>
     );
 
-  const renderProtocol = () => (
+  const FEATURE_UPDATES = [
+    {
+      title: 'Persistent Activity Logs',
+      timestamp: '2026-01-30T15:20:00Z',
+      reason: 'Added comprehensive logging system to track all agent activities with persistence across sessions'
+    },
+    {
+      title: 'Task Backlog System',
+      timestamp: '2026-01-30T14:45:00Z',
+      reason: 'Implemented 88-task development backlog to ensure continuous autonomous work for 65+ hours'
+    },
+    {
+      title: 'Skills/Plugins Architecture',
+      timestamp: '2026-01-30T13:30:00Z',
+      reason: 'Created modular skill system for extensible agent capabilities with dynamic enable/disable'
+    },
+    {
+      title: 'Authentication System',
+      timestamp: '2026-01-30T12:15:00Z',
+      reason: 'Added API key management and rate limiting for secure access control'
+    },
+    {
+      title: 'Admin Dashboard',
+      timestamp: '2026-01-30T11:00:00Z',
+      reason: 'Built monitoring interface for system health, agent stats, and API usage tracking'
+    },
+    {
+      title: 'Browser Automation',
+      timestamp: '2026-01-30T10:30:00Z',
+      reason: 'Integrated web browsing tools for deployment verification and information gathering'
+    },
+    {
+      title: 'Auto Git Integration',
+      timestamp: '2026-01-30T09:00:00Z',
+      reason: 'Enabled automatic commits and pushes when agent completes development tasks'
+    },
+    {
+      title: 'Real Task Execution',
+      timestamp: '2026-01-29T16:00:00Z',
+      reason: 'Connected agent to real code execution sandbox with file operations and shell commands'
+    },
+    {
+      title: 'State Manager with Merkle Roots',
+      timestamp: '2026-01-29T14:00:00Z',
+      reason: 'Implemented real blockchain state tracking with account balances and cryptographic proofs'
+    },
+    {
+      title: 'Agent Memory Persistence',
+      timestamp: '2026-01-29T11:00:00Z',
+      reason: 'Added PostgreSQL-backed memory for persistent context across restarts'
+    }
+  ];
+
+  const formatUpdateTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const renderUpdates = () => (
     <div style={{ padding: isMobile ? '20px 16px' : '40px 24px', maxWidth: 800, margin: '0 auto' }}>
-      <h2 className="gradient-text" style={{ fontSize: isMobile ? 24 : 32, marginBottom: isMobile ? 8 : 12 }}>Claw Improvement Proposals</h2>
+      <h2 className="gradient-text" style={{ fontSize: isMobile ? 24 : 32, marginBottom: isMobile ? 8 : 12 }}>Updates</h2>
       <p style={{ color: 'var(--text-muted)', marginBottom: isMobile ? 20 : 32, fontSize: isMobile ? 13 : 14 }}>
-        All protocol upgrades are proposed, evaluated, and implemented by Claw autonomously.
+        Features added to ClawChain by the autonomous agent.
       </p>
       
-      <div className="cip-card card" style={{ marginBottom: isMobile ? 16 : 20 }}>
-        <div style={{ padding: isMobile ? 16 : 20 }}>
-          <div style={{ display: 'flex', gap: isMobile ? 6 : 10, marginBottom: isMobile ? 12 : 16, flexWrap: 'wrap' }}>
-            <span className="badge badge-outline">CIP-0</span>
-            <span className="badge badge-coral">Ratified</span>
-            <span className="badge badge-teal">Genesis</span>
-        </div>
-          <h3 style={{ color: 'var(--coral)', marginBottom: 10, fontSize: isMobile ? 17 : 20 }}>{GENESIS_CIP.title}</h3>
-          <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, fontSize: isMobile ? 13 : 14 }}>{GENESIS_CIP.summary}</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 12 : 16 }}>
+        {FEATURE_UPDATES.map((update, i) => (
+          <div key={i} className="card" style={{ padding: isMobile ? 16 : 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+              <h3 style={{ color: 'var(--coral)', fontSize: isMobile ? 15 : 17, margin: 0 }}>{update.title}</h3>
+              <span className="mono" style={{ color: 'var(--text-muted)', fontSize: isMobile ? 11 : 12 }}>
+                {formatUpdateTime(update.timestamp)}
+              </span>
             </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: isMobile ? 12 : 13, lineHeight: 1.6, margin: 0 }}>
+              {update.reason}
+            </p>
           </div>
-
-      <div className="card" style={{ padding: isMobile ? 16 : 20, background: 'var(--bg-card)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-          <div className="status-online" />
-          <span style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: isMobile ? 14 : 16 }}>Claw Governance</span>
-        </div>
-        <p style={{ color: 'var(--text-muted)', fontSize: isMobile ? 12 : 13, lineHeight: 1.6, margin: 0 }}>
-          Claw continuously monitors the network, identifies areas for improvement, and implements protocol changes. 
-          All decisions are logged on-chain for transparency.
-        </p>
-          </div>
+        ))}
       </div>
-    );
+    </div>
+  );
 
   const [logs, setLogs] = React.useState<any[]>([]);
   const [logsConnected, setLogsConnected] = React.useState(false);
