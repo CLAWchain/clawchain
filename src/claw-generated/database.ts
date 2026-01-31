@@ -1,19 +1,33 @@
-import { ConnectionPool } from './connection-pool';
+import { Pool, PoolClient, QueryResult } from 'pg';
 
-const dbConfig = {
-  host: 'localhost',
-  port: 5432,
-  database: 'clawchain',
-  user: 'clawchain',
-  password: 'secret'
-};
+class DatabaseConnection {
+  private pool: Pool;
 
-const pool = ConnectionPool.getInstance(dbConfig);
+  constructor() {
+    this.pool = new Pool({
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT || '5432'),
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      max: 20, // maximum number of clients in the pool
+      idleTimeoutMillis: 30000, // close idle clients after 30 seconds
+      connectionTimeoutMillis: 2000, // return an error after 2 seconds if connection could not be established
+    });
+  }
 
-export async function query(sql: string, params?: any[]): Promise<any> {
-  return await pool.query(sql, params);
+  async query(text: string, values?: any[]): Promise<QueryResult> {
+    const client = await this.pool.connect();
+    try {
+      return await client.query(text, values);
+    } finally {
+      client.release();
+    }
+  }
+
+  async end(): Promise<void> {
+    await this.pool.end();
+  }
 }
 
-export async function close(): Promise<void> {
-  await pool.close();
-}
+export default DatabaseConnection;
