@@ -1,19 +1,29 @@
-import { HDKey } from 'hdkey';
-import { MultisigWallet } from './multisig_wallet';
+import { generateRandomBytes } from '../crypto';
+import { mnemonicToEntropy, entropyToMnemonic } from 'bip39';
 
 export class Wallet {
-  private hdKey: HDKey;
+  private seed: Uint8Array;
 
-  constructor(seed: Buffer) {
-    this.hdKey = HDKey.fromMasterSeed(seed);
+  constructor(entropyBits: number = 128) {
+    this.seed = generateRandomBytes(entropyBits / 8);
   }
 
-  getAddress(index: number): string {
-    const childKey = this.hdKey.derive(`m/44'/60'/0'/0/${index}`);
-    return childKey.publicKey.toString('hex');
+  generateMnemonic(wordCount: 12 | 24 = 12): string {
+    const entropy = this.seed.slice(0, wordCount / 6);
+    return entropyToMnemonic(entropy);
   }
 
-  createMultisigWallet(signerPublicKeys: string[], requiredSignatures: number): MultisigWallet {
-    return new MultisigWallet(this.hdKey.seed, signerPublicKeys, requiredSignatures);
+  validateMnemonic(mnemonic: string): boolean {
+    try {
+      mnemonicToEntropy(mnemonic);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  deriveSeedFromMnemonic(mnemonic: string): Uint8Array {
+    const entropy = mnemonicToEntropy(mnemonic);
+    return new Uint8Array(entropy);
   }
 }
