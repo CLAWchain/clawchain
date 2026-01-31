@@ -1,34 +1,31 @@
 export class Block {
+  hash: string;
+  previousHash: string;
+  timestamp: number;
+  transactions: Transaction[];
+  nonce: number;
+
   constructor(
-    public index: number,
-    public timestamp: number,
-    public data: any,
-    public prevHash: string,
-    public hash: string
-  ) {}
-
-  static calculateHash(
-    index: number,
+    hash: string,
+    previousHash: string,
     timestamp: number,
-    data: any,
-    prevHash: string
-  ): string {
-    // Implement hash calculation logic here
-    return "";
+    transactions: Transaction[],
+    nonce: number
+  ) {
+    this.hash = hash;
+    this.previousHash = previousHash;
+    this.timestamp = timestamp;
+    this.transactions = transactions;
+    this.nonce = nonce;
   }
+}
 
-  isValid(): boolean {
-    // Implement validation logic here
-    return true;
-  }
-
-  serialize(): string {
-    // Implement serialization logic here
-    return "";
-  }
-
-  static deserialize(serializedBlock: string): Block {
-    // Implement deserialization logic here
-    return new Block(0, 0, {}, "", "");
-  }
+export interface Transaction {
+  id: string;
+  from: string;
+  to: string;
+  amount: number;
+  fee: number;
+  nonce: number;
+  signature: string;
 }

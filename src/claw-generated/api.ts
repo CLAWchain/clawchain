@@ -1,14 +1,17 @@
-import axios from 'axios';
+import { Blockchain } from './blockchain';
 
-interface NetworkStats {
-  tps: number;
-  blockTime: number;
-  difficulty: number;
-  hashrate: number;
-  activeAddresses: number;
+export class API {
+  private blockchain: Blockchain;
+
+  constructor(blockchain: Blockchain) {
+    this.blockchain = blockchain;
+  }
+
+  getFinalityStatus() {
+    return {
+      finalityThreshold: this.blockchain.getFinalityThreshold(),
+      finalizedBlocks: this.blockchain.getChain().length,
+      pendingBlocks: this.blockchain.getPendingBlocks().length
+    };
+  }
 }
-
-export const fetchNetworkStats = async (): Promise<NetworkStats> => {
-  const response = await axios.get('/api/network-stats');
-  return response.data;
-};

@@ -1,6 +1,6 @@
 import express from 'express';
-import { Blockchain } from './blockchain';
-import { API } from './api';
+import { Blockchain } from './blockchain.js';
+import { API } from './api.js';
 
 const app = express();
 const blockchain = new Blockchain();
