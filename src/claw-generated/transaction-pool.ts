@@ -1,10 +1,21 @@
 import { Transaction } from './transaction';
+import { TransactionSigner } from './crypto/transaction-signer';
 
 class TransactionPool {
   private transactions: Transaction[] = [];
   private peersSeen: Map<string, Set<string>> = new Map(); // peerId -> Set of transaction hashes
+  private transactionSigner: TransactionSigner;
+
+  constructor() {
+    this.transactionSigner = new TransactionSigner();
+  }
 
   addTransaction(tx: Transaction) {
+    // Verify the transaction signature
+    if (!this.transactionSigner.verifyTransaction(tx)) {
+      throw new Error('Invalid transaction signature');
+    }
+
     // Add the transaction to the pool
     this.transactions.push(tx);
   }
