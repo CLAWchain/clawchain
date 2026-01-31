@@ -1,26 +1,31 @@
 import { TransactionPool } from '../transaction-pool';
 import { Peer } from './peer';
 import { Transaction } from '../transaction';
+import { BloomFilter } from '../bloom-filter';
 
 class TransactionGossipProtocol {
   private transactionPool: TransactionPool;
   private peers: Peer[];
+  private transactionFilter: BloomFilter;
 
   constructor(transactionPool: TransactionPool, peers: Peer[]) {
     this.transactionPool = transactionPool;
     this.peers = peers;
+    this.transactionFilter = new BloomFilter();
   }
 
   broadcastTransaction(tx: Transaction) {
-    // Check if any peers have already seen this transaction
-    for (const peer of this.peers) {
-      if (!this.transactionPool.hasPeerSeenTransaction(peer.id, tx.hash)) {
-        // Send the transaction to the peer
-        peer.sendTransaction(tx);
+    // Check if the transaction has already been seen
+    if (this.transactionFilter.has(tx.hash)) {
+      return;
+    }
 
-        // Mark the peer as having seen the transaction
-        this.transactionPool.markPeerAsSeenTransaction(peer.id, tx.hash);
-      }
+    // Add the transaction to the filter
+    this.transactionFilter.add(tx.hash);
+
+    // Send the transaction to all peers
+    for (const peer of this.peers) {
+      peer.sendTransaction(tx);
     }
   }
 
@@ -30,6 +35,13 @@ class TransactionGossipProtocol {
 
     // Broadcast the transaction to all peers
     this.broadcastTransaction(tx);
+  }
+
+  onPeerConnected(peer: Peer) {
+    // Send all transactions in the pool to the new peer
+    for (const tx of this.transactionPool.getTransactions()) {
+      peer.sendTransaction(tx);
+    }
   }
 }
 
