@@ -1,73 +1,42 @@
-import { PublicKey, Signature, verifySignature } from './crypto';
-import { MultisigWallet } from './multisig_wallet';
-import { StateChannelUpdate, StateChannel } from './state-channel';
-import { Ed25519PublicKey, Ed25519Signature } from './crypto/ed25519';
+import { Block } from '../block/block';
+import { TransactionInput, TransactionOutput } from './transaction-io';
 
-export interface Transaction {
-  from: Ed25519PublicKey;
-  to: Ed25519PublicKey;
-  value: number;
-  data?: string | StateChannelUpdate;
-  nonce: number;
-  signature: Ed25519Signature;
-  multisigWallet?: MultisigWallet;
-}
+export class Transaction {
+  id: string;
+  inputs: TransactionInput[];
+  outputs: TransactionOutput[];
+  fee: number;
 
-export class TransactionManager {
-  private transactions: Transaction[] = [];
-  private stateChannelManager: StateChannelManager;
-
-  constructor(stateChannelManager: StateChannelManager) {
-    this.stateChannelManager = stateChannelManager;
+  constructor(inputs: TransactionInput[], outputs: TransactionOutput[], fee: number) {
+    this.inputs = inputs;
+    this.outputs = outputs;
+    this.fee = fee;
   }
 
-  addTransaction(transaction: Transaction): void {
-    if (this.verifyTransaction(transaction)) {
-      if (typeof transaction.data === 'object' && 'channelId' in transaction.data) {
-        // Handle state channel update
-        const update = transaction.data as StateChannelUpdate;
-        if (this.stateChannelManager.handleStateUpdate(update)) {
-          this.transactions.push(transaction);
-        }
-      } else {
-        // Handle regular transaction
-        this.transactions.push(transaction);
-      }
-    }
+  calculateSize(): number {
+    // Calculate the size of the transaction based on the input and output data
+    let size = 0;
+    size += this.inputs.reduce((total, input) => total + input.size, 0);
+    size += this.outputs.reduce((total, output) => total + output.size, 0);
+    return size;
   }
 
-  getTransactions(): Transaction[] {
-    return this.transactions;
+  calculateComplexity(): number {
+    // Calculate the complexity of the transaction based on the number of inputs and outputs
+    return this.inputs.length + this.outputs.length;
   }
 
-  verifyTransaction(transaction: Transaction): boolean {
-    if (typeof transaction.data === 'object' && 'channelId' in transaction.data) {
-      // Verify state channel update
-      const update = transaction.data as StateChannelUpdate;
-      const channel = this.stateChannelManager.getChannel(update.channelId);
-      if (channel) {
-        return channel.applyUpdate(update);
-      }
-      return false;
-    } else {
-      // Verify regular transaction
-      if (transaction.multisigWallet) {
-        const { owners, threshold } = transaction.multisigWallet;
-        let validSignatures = 0;
+  calculateFee(): number {
+    // Calculate the transaction fee based on size and complexity
+    const size = this.calculateSize();
+    const complexity = this.calculateComplexity();
+    const baseFee = 0.00001; // 0.01 CLAW per byte
+    const complexityFee = 0.0001; // 0.1 CLAW per unit of complexity
+    return baseFee * size + complexityFee * complexity;
+  }
 
-        for (const signature of transaction.signatures) {
-          for (const owner of owners) {
-            if (verifySignature(signature, transaction, owner)) {
-              validSignatures++;
-              break;
-            }
-          }
-        }
-
-        return validSignatures >= threshold;
-      } else {
-        return verifySignature(transaction.signature, transaction, transaction.from);
-      }
-    }
+  addToBlock(block: Block): void {
+    // Add the transaction to the block
+    block.transactions.push(this);
   }
 }
