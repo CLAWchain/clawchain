@@ -1,37 +1,67 @@
+// Staking module for ClawChain
+
 import { BigNumber } from 'bignumber.js';
-import { StakingManager, Stake } from './stake';
 
-export class StakingService {
-  private stakingManager: StakingManager = new StakingManager();
+// Staking pool data structure
+interface StakingPool {
+  totalStaked: BigNumber;
+  rewardRate: BigNumber; // Rewards per block
+  lastRewardBlock: number;
+  delegations: Map<string, BigNumber>; // Delegator address => amount staked
+}
 
-  stake(address: string, amount: BigNumber): void {
-    const stake = this.stakingManager.getStake(address);
-    stake.amount = stake.amount.plus(amount);
-    stake.lastUpdateTimestamp = Date.now();
-    this.stakingManager.updateStake(address, stake);
+// Staking contract
+export class StakingContract {
+  private stakingPool: StakingPool = {
+    totalStaked: new BigNumber(0),
+    rewardRate: new BigNumber(0),
+    lastRewardBlock: 0,
+    delegations: new Map()
+  };
+
+  // Stake tokens
+  stake(amount: BigNumber, delegateTo?: string) {
+    // Update staking pool
+    this.stakingPool.totalStaked = this.stakingPool.totalStaked.plus(amount);
+    if (delegateTo) {
+      this.stakingPool.delegations.set(delegateTo, this.stakingPool.delegations.get(delegateTo) || new BigNumber(0).plus(amount));
+    }
+
+    // Distribute rewards
+    this.distributeRewards();
   }
 
-  unstake(address: string, amount: BigNumber): void {
-    const stake = this.stakingManager.getStake(address);
-    stake.amount = stake.amount.minus(amount);
-    stake.lastUpdateTimestamp = Date.now();
-    this.stakingManager.updateStake(address, stake);
+  // Withdraw staked tokens
+  withdraw(amount: BigNumber, from: string) {
+    // Update staking pool
+    this.stakingPool.totalStaked = this.stakingPool.totalStaked.minus(amount);
+    this.stakingPool.delegations.set(from, this.stakingPool.delegations.get(from).minus(amount));
+
+    // Distribute rewards
+    this.distributeRewards();
   }
 
-  claimRewards(address: string): BigNumber {
-    const stake = this.stakingManager.getStake(address);
-    const rewards = stake.accumulatedRewards;
-    stake.accumulatedRewards = new BigNumber(0);
-    this.stakingManager.updateStake(address, stake);
-    return rewards;
+  // Set the reward rate per block
+  setRewardRate(rate: BigNumber) {
+    this.stakingPool.rewardRate = rate;
   }
 
-  updateRewards(address: string, rewardRate: BigNumber): void {
-    const stake = this.stakingManager.getStake(address);
-    const timeSinceLastUpdate = Date.now() - stake.lastUpdateTimestamp;
-    const newRewards = rewardRate.multipliedBy(timeSinceLastUpdate / 1000); // assume rewards per second
-    stake.accumulatedRewards = stake.accumulatedRewards.plus(newRewards);
-    stake.lastUpdateTimestamp = Date.now();
-    this.stakingManager.updateStake(address, stake);
+  private distributeRewards() {
+    const currentBlock = this.getCurrentBlockNumber();
+    const blocksSinceLastReward = currentBlock - this.stakingPool.lastRewardBlock;
+    const totalRewards = this.stakingPool.rewardRate.multipliedBy(blocksSinceLastReward);
+
+    // Distribute rewards to delegators
+    for (const [delegator, amount] of this.stakingPool.delegations) {
+      const reward = totalRewards.multipliedBy(amount).dividedBy(this.stakingPool.totalStaked);
+      // Credit reward to delegator's account
+    }
+
+    this.stakingPool.lastRewardBlock = currentBlock;
+  }
+
+  private getCurrentBlockNumber(): number {
+    // Implement logic to get current block number
+    return 123456;
   }
 }
