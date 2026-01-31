@@ -1,49 +1,34 @@
 import { TransactionPool } from '../transaction-pool';
-import { PeerManager, PeerInfo } from './PeerManager';
+import { Peer } from './peer';
+import { Transaction } from '../transaction';
 
 class TransactionGossipProtocol {
   private transactionPool: TransactionPool;
-  private peerManager: PeerManager;
+  private peers: Peer[];
 
-  constructor(transactionPool: TransactionPool, peerManager: PeerManager) {
+  constructor(transactionPool: TransactionPool, peers: Peer[]) {
     this.transactionPool = transactionPool;
-    this.peerManager = peerManager;
+    this.peers = peers;
   }
 
   broadcastTransaction(tx: Transaction) {
-    // Add the transaction to the pool
-    this.transactionPool.addTransaction(tx);
+    // Check if any peers have already seen this transaction
+    for (const peer of this.peers) {
+      if (!this.transactionPool.hasPeerSeenTransaction(peer.id, tx.hash)) {
+        // Send the transaction to the peer
+        peer.sendTransaction(tx);
 
-    // Get the list of peers to send the transaction to
-    const peers = this.peerManager.getBestPeers(10);
-
-    // Broadcast the transaction to the peers
-    for (const peer of peers) {
-      this.sendTransactionToPeer(tx, peer);
+        // Mark the peer as having seen the transaction
+        this.transactionPool.markPeerAsSeenTransaction(peer.id, tx.hash);
+      }
     }
   }
 
-  sendTransactionToPeer(tx: Transaction, peer: PeerInfo) {
-    // Check if the peer has already received this transaction
-    if (this.transactionPool.hasPeerSeenTransaction(peer.id, tx.hash)) {
-      return;
-    }
-
-    // Mark the peer as having seen the transaction
-    this.transactionPool.markPeerAsSeenTransaction(peer.id, tx.hash);
-
-    // Send the transaction to the peer
-    peer.sendTransaction(tx);
-  }
-
-  receivedTransaction(tx: Transaction, peerId: string) {
+  onTransactionReceived(tx: Transaction) {
     // Add the transaction to the pool
     this.transactionPool.addTransaction(tx);
 
-    // Mark the peer as having seen the transaction
-    this.transactionPool.markPeerAsSeenTransaction(peerId, tx.hash);
-
-    // Broadcast the transaction to other peers
+    // Broadcast the transaction to all peers
     this.broadcastTransaction(tx);
   }
 }
