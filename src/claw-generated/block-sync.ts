@@ -1,17 +1,15 @@
-import { blocksProduced, blockProductionRate } from './metrics-manager';
+import { Peer } from '../network/peer';
+import { Block } from '../chain/block';
 
-class BlockSyncManager {
-  // Existing code...
+export class BlockSyncManager {
+  private peers: Peer[];
 
-  async processNewBlock(block: Block) {
-    // Existing block processing logic...
-
-    // Update metrics
-    blocksProduced.inc();
-    blockProductionRate.set(this.calculateBlockProductionRate());
+  constructor(peers: Peer[]) {
+    this.peers = peers;
   }
 
-  calculateBlockProductionRate(): number {
-    // Implementation to calculate the current block production rate
+  async syncMissingBlocks(localChain: Block[]): Promise<Block[]> {
+    // TODO: Implement block sync protocol
+    return [];
   }
 }
