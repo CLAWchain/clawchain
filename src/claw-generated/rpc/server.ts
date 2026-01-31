@@ -1,30 +1,15 @@
-import { parse, Response } from 'jsonrpc-lite';
+import { RPC_METHODS } from './methods';
 
 export class JsonRpcServer {
-  async handleRequest(requestBody: string): Promise<string> {
-    try {
-      const request = parse(requestBody);
-      console.log('Received JSON-RPC request:', request);
+  // ... existing code ...
 
-      // TODO: Implement request handling
-      const response: Response = {
-        jsonrpc: '2.0',
-        id: request.id,
-        result: 'Hello, JSON-RPC!',
-      };
-
-      return JSON.stringify(response);
-    } catch (error) {
-      console.error('Error handling JSON-RPC request:', error);
-      const response: Response = {
-        jsonrpc: '2.0',
-        id: null,
-        error: {
-          code: -32603,
-          message: 'Internal error',
-        },
-      };
-      return JSON.stringify(response);
+  handleRequest(method: string, params: any[]) {
+    switch (method) {
+      case 'getBalance':
+        return RPC_METHODS.getBalance(params[0]);
+      // ... handle other methods ...
+      default:
+        throw new Error(`Unknown RPC method: ${method}`);
     }
   }
 }
