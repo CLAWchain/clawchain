@@ -1,28 +1,23 @@
 import WebSocket from 'ws';
 import { EventEmitter } from 'events';
 import { Block } from './Block';
-import { Transaction } from './Transaction';
+import { Transaction, TransactionReceipt } from './Transaction';
 import { TransactionService } from './TransactionService';
-
-interface WebSocketSubscription {
-  topic: string;
-  callback: (data: any) => void;
-}
+import { WebSocketSubscriptions } from './WebSocketSubscriptions';
 
 class WebSocketServer extends EventEmitter {
   private wss: WebSocket.Server;
-  private subscriptions: WebSocketSubscription[] = [];
-  private transactionService: TransactionService;
+  private subscriptions: WebSocketSubscriptions;
 
   constructor(port: number, transactionService: TransactionService) {
     super();
-    this.transactionService = transactionService;
+    this.subscriptions = new WebSocketSubscriptions(this);
     this.wss = new WebSocket.Server({ port });
     this.wss.on('connection', this.handleConnection.bind(this));
 
-    this.transactionService.on('newTransaction', this.publishTransaction.bind(this));
-    this.transactionService.on('transactionConfirmed', this.publishTransactionConfirmation.bind(this));
-    this.transactionService.on('newBlock', this.publishNewBlock.bind(this));
+    transactionService.on('newTransaction', this.publishTransaction.bind(this));
+    transactionService.on('transactionConfirmed', this.publishTransactionConfirmation.bind(this));
+    transactionService.on('newBlock', this.publishNewBlock.bind(this));
   }
 
   handleConnection(ws: WebSocket) {
@@ -55,39 +50,43 @@ class WebSocketServer extends EventEmitter {
 
   handleSubscription(ws: WebSocket, topic: string) {
     console.log('New subscription:', topic);
-    this.subscriptions.push({
-      topic,
-      callback: (data) => {
-        ws.send(JSON.stringify({ topic, data }));
-      },
-    });
+    switch (topic) {
+      case 'newHeads':
+        this.subscriptions.subscribeNewHeads();
+        break;
+      case 'logs':
+        this.subscriptions.subscribeLogs('');
+        break;
+      case 'pendingTransactions':
+        this.subscriptions.subscribePendingTransactions();
+        break;
+      default:
+        console.error('Unknown subscription topic:', topic);
+    }
   }
 
   handleUnsubscription(ws: WebSocket, topic: string) {
-    console.log('Unsubscription:', topic);
-    this.subscriptions = this.subscriptions.filter((sub) => sub.topic !== topic || sub.callback.toString() !== ws.toString());
+    // TODO: Implement unsubscription logic
   }
 
   unsubscribeClient(ws: WebSocket) {
-    this.subscriptions = this.subscriptions.filter((sub) => sub.callback.toString() !== ws.toString());
+    // TODO: Implement client unsubscription
   }
 
   publishTransaction(tx: Transaction) {
-    this.subscriptions
-      .filter((sub) => sub.topic === 'newTransactions')
-      .forEach((sub) => sub.callback(tx));
+    this.subscriptions.emit('pendingTransaction', tx);
   }
 
   publishTransactionConfirmation(receipt: TransactionReceipt) {
-    this.subscriptions
-      .filter((sub) => sub.topic === 'transactionConfirmations')
-      .forEach((sub) => sub.callback(receipt));
+    this.subscriptions.emit('transactionConfirmed', receipt);
   }
 
   publishNewBlock(block: Block) {
-    this.subscriptions
-      .filter((sub) => sub.topic === 'newBlocks')
-      .forEach((sub) => sub.callback(block));
+    this.subscriptions.emit('newBlock', block);
+  }
+
+  publishLogUpdate(log: any) {
+    this.subscriptions.emit('log', log);
   }
 }
 
