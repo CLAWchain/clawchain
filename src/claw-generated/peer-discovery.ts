@@ -1,32 +1,33 @@
-class PeerDiscoveryService {
-  localNode: Node;
-  bootstrapNodes: Node[];
+import { kademlia, KademliaNode, KademliaConfig } from 'kademlia-dht';
 
-  constructor(localNodeId: string, localAddress: string, localPort: number, bootstrapNodes: Node[]) {
-    this.localNode = new Node(localNodeId, localAddress, localPort);
-    this.bootstrapNodes = bootstrapNodes;
+const config: KademliaConfig = {
+  bucketSize: 20,
+  alpha: 3,
+  refreshInterval: 3600000, // 1 hour
+  timeoutSeconds: 5,
+  bootstrapNodes: [
+    'bootstrap1.clawchain.com:30303',
+    'bootstrap2.clawchain.com:30303'
+  ]
+};
+
+export class PeerDiscovery {
+  private node: KademliaNode;
+
+  constructor() {
+    this.node = kademlia(config);
   }
 
-  async findPeers(targetId: string, maxResults: number): Promise<Node[]> {
-    // Perform the iterative lookup algorithm to find the closest peers to the target ID
-    const closestPeers = await this.iterativeLookup(targetId, maxResults);
-    return closestPeers;
+  start() {
+    this.node.listen();
+    console.log('Peer discovery started');
   }
 
-  private async iterativeLookup(targetId: string, maxResults: number): Promise<Node[]> {
-    // Implement the iterative lookup algorithm
-    // This will involve querying the local node's routing table,
-    // then recursively querying the closest known peers until
-    // the `maxResults` closest peers are found
-    return this.localNode.findClosestPeers(targetId, maxResults);
+  findPeers(count: number): Promise<string[]> {
+    return this.node.findRandomNodes(count);
   }
 
-  private async connectToPeer(peer: Node): Promise<void> {
-    // Implement logic to connect to a peer and add it to the local node's routing table
-  }
-
-  private async bootstrapNetwork(): Promise<void> {
-    // Implement logic to connect to the bootstrap nodes and
-    // populate the local node's routing table
+  addPeer(address: string): Promise<void> {
+    return this.node.addContact(address);
   }
 }
