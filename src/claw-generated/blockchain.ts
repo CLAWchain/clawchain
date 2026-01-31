@@ -1,90 +1,26 @@
-import { State } from './state';
-import { Transaction } from './transaction';
-import { Block } from './block';
-import { Contract } from './contract';
+import { getLatestBlock, getTransactionCount, getActiveAddressCount } from '../utils/chain';
 
-const INITIAL_MAX_BLOCK_SIZE = 1000000; // 1 MB
-const BLOCK_SIZE_ADJUSTMENT_INTERVAL = 10; // Adjust every 10 blocks
+export async function getTransactionVolume(): Promise<number> {
+  const latestBlock = await getLatestBlock();
+  return latestBlock.transactions.length / 5; // Assuming 5 second block time
+}
 
-export class Blockchain {
-  private state: State;
-  private pendingTransactions: Transaction[];
-  private blocks: Block[];
-  private contracts: Contract[];
-  private maxBlockSize: number;
+export async function getBlockTime(): Promise<number> {
+  const latestBlock = await getLatestBlock();
+  const prevBlock = await getLatestBlock(latestBlock.number - 1);
+  return (latestBlock.timestamp - prevBlock.timestamp);
+}
 
-  constructor() {
-    this.state = new State();
-    this.pendingTransactions = [];
-    this.blocks = [];
-    this.contracts = [];
-    this.maxBlockSize = INITIAL_MAX_BLOCK_SIZE;
-  }
+export async function getDifficulty(): Promise<number> {
+  const latestBlock = await getLatestBlock();
+  return latestBlock.difficulty;
+}
 
-  addTransaction(tx: Transaction): void {
-    // Check if the transaction is a contract deployment
-    if (tx.contractBytecode) {
-      this.deployContract(tx);
-    } else {
-      this.pendingTransactions.push(tx);
-    }
-  }
+export async function getHashrate(): Promise<number> {
+  const latestBlock = await getLatestBlock();
+  return latestBlock.hashrate;
+}
 
-  deployContract(tx: Transaction): void {
-    // Generate the contract address deterministically
-    const contractAddress = this.generateContractAddress(tx);
-
-    // Create a new contract instance
-    const contract = new Contract(contractAddress, tx.contractBytecode);
-
-    // Execute the contract creation and update the state
-    this.executeContract(contract);
-
-    // Add the contract to the contracts list
-    this.contracts.push(contract);
-  }
-
-  private generateContractAddress(tx: Transaction): string {
-    // Implement deterministic contract address generation logic here
-    // e.g., based on the sender's address, nonce, and transaction hash
-    return `0x${tx.from.address.slice(2)}-${tx.nonce}`;
-  }
-
-  private executeContract(contract: Contract): void {
-    // Implement contract execution logic here
-    // Use the VirtualMachine to execute the contract bytecode
-  }
-
-  mineBlock(): Block {
-    // Validate the block size before creating a new block
-    this.validateBlockSize();
-
-    const block = new Block(this.pendingTransactions, this.state.getStateRoot());
-    this.state.commitState();
-    this.blocks.push(block);
-
-    // Adjust the block size limit after every BLOCK_SIZE_ADJUSTMENT_INTERVAL blocks
-    if (this.blocks.length % BLOCK_SIZE_ADJUSTMENT_INTERVAL === 0) {
-      this.adjustBlockSizeLimit();
-    }
-
-    this.pendingTransactions = [];
-    return block;
-  }
-
-  private validateBlockSize(): void {
-    if (this.pendingTransactions.length > this.maxBlockSize) {
-      throw new Error(`Block size (${this.pendingTransactions.length}) exceeds the limit (${this.maxBlockSize})`);
-    }
-  }
-
-  private adjustBlockSizeLimit(): void {
-    // Implement dynamic block size adjustment logic here
-    // e.g., based on network congestion, transaction volume, and block propagation times
-    this.maxBlockSize = Math.max(INITIAL_MAX_BLOCK_SIZE, this.maxBlockSize * 1.1);
-  }
-
-  getLatestBlock(): Block {
-    return this.blocks[this.blocks.length - 1];
-  }
+export async function getActiveAddresses(): Promise<number> {
+  return await getActiveAddressCount();
 }
