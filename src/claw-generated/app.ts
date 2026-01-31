@@ -1,28 +1,26 @@
-import WebSocketServer from './websocket/server';
-import WebSocketSubscriptions from './websocket/subscriptions';
-import { BlockProcessor, TransactionPool } from './core';
+import { JsonRpcServer } from './rpc/server';
+import { RpcMethods } from './rpc/methods';
+import { ClawChain } from './chain';
 
 class ClawChainApp {
-  private webSocketServer: WebSocketServer;
-  private webSocketSubscriptions: WebSocketSubscriptions;
-  private blockProcessor: BlockProcessor;
-  private transactionPool: TransactionPool;
+  private rpcServer: JsonRpcServer;
+  private rpcMethods: RpcMethods;
+  private chain: ClawChain;
 
   constructor() {
-    this.webSocketServer = new WebSocketServer(8080);
-    this.webSocketSubscriptions = new WebSocketSubscriptions(this.webSocketServer);
-
-    this.blockProcessor = new BlockProcessor();
-    this.blockProcessor.on('newHead', this.webSocketSubscriptions.onNewHeads.bind(this.webSocketSubscriptions));
-
-    this.transactionPool = new TransactionPool();
-    this.transactionPool.on('newPendingTransactions', this.webSocketSubscriptions.onPendingTransactions.bind(this.webSocketSubscriptions));
-    // TODO: Implement onLogs subscription
+    this.chain = new ClawChain();
+    this.rpcServer = new JsonRpcServer();
+    this.rpcMethods = new RpcMethods(this.rpcServer, this.chain);
   }
 
-  start() {
-    console.log('ClawChain app started');
+  async start() {
+    console.log('ClawChain JSON-RPC server starting...');
+
+    this.rpcServer.registerMethod('ping', () => Promise.resolve('pong'));
+
+    const server = await this.rpcServer.start();
+    console.log(`JSON-RPC server listening on port ${server.address().port}`);
   }
 }
 
-export default ClawChainApp;
+new ClawChainApp().start();

@@ -1,49 +1,61 @@
-import { JsonRpcRequest, JsonRpcResponse, JsonRpcError } from './types';
+import { parseRpcRequest, formatRpcResponse, RpcRequest, RpcResponse, RpcError } from './utils';
 
 class JsonRpcServer {
-  private readonly handlers: Record<string, (params: any) => Promise<any>> = {};
+  private methods: { [key: string]: (...args: any[]) => Promise<any> } = {};
 
-  registerHandler(method: string, handler: (params: any) => Promise<any>) {
-    this.handlers[method] = handler;
+  registerMethod(name: string, handler: (...args: any[]) => Promise<any>) {
+    this.methods[name] = handler;
   }
 
-  async handleRequest(request: JsonRpcRequest): Promise<JsonRpcResponse | JsonRpcResponse[]> {
-    if (Array.isArray(request)) {
-      // Handle batch requests
-      const responses = await Promise.all(request.map(async (req) => await this.handleSingleRequest(req)));
-      return responses;
-    } else {
-      // Handle single request
-      return await this.handleSingleRequest(request);
-    }
-  }
-
-  private async handleSingleRequest(request: JsonRpcRequest): Promise<JsonRpcResponse> {
-    const { id, method, params } = request;
-
-    if (!this.handlers[method]) {
-      return {
-        id,
-        error: {
-          code: JsonRpcError.MethodNotFound,
-          message: `Method "${method}" not found.`
-        }
-      };
-    }
-
+  async handleRequest(rawRequest: string): Promise<string> {
+    let request: RpcRequest;
     try {
-      const result = await this.handlers[method](params);
-      return { id, result };
-    } catch (error) {
-      return {
-        id,
-        error: {
-          code: JsonRpcError.InternalError,
-          message: error.message
-        }
+      request = parseRpcRequest(rawRequest);
+    } catch (err) {
+      return formatRpcResponse(null, {
+        code: RpcError.ParseError,
+        message: 'Invalid JSON-RPC request',
+        data: err.message,
+      });
+    }
+
+    if (Array.isArray(request)) {
+      // Batch request
+      const responses = await Promise.all(
+        request.map(async (req) => {
+          try {
+            const result = await this.handleSingleRequest(req);
+            return result;
+          } catch (err) {
+            return formatRpcResponse(null, err);
+          }
+        })
+      );
+      return formatRpcResponse(responses);
+    } else {
+      // Single request
+      try {
+        const result = await this.handleSingleRequest(request);
+        return formatRpcResponse(result);
+      } catch (err) {
+        return formatRpcResponse(null, err);
+      }
+    }
+  }
+
+  private async handleSingleRequest(request: RpcRequest): Promise<RpcResponse> {
+    const { method, params, id } = request;
+    const handler = this.methods[method];
+    if (!handler) {
+      throw {
+        code: RpcError.MethodNotFound,
+        message: `Method ${method} not found`,
       };
     }
+
+    const result = await handler(...params);
+    return { id, result };
   }
 }
 
-export default JsonRpcServer;
+export { JsonRpcServer };
