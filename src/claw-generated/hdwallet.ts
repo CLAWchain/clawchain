@@ -1,26 +1,21 @@
-import { BIP32Factory, fromSeed } from 'bip32';
-import { fromSeedSync } from 'bip39';
-import { ECPairFactory } from 'ecpair';
-import * as ecc from 'tiny-secp256k1';
+import { BIP32Interface, fromSeed } from 'bip32';
+import { fromMasterSeed } from 'bip39';
+import { ECPair, networks } from 'bitcoinjs-lib';
 
-const bip32 = BIP32Factory(ecc);
-const ecPair = ECPairFactory(ecc);
+export class HDWallet {
+  private masterKey: BIP32Interface;
 
-export function generateMasterKey(seed: Buffer): Buffer {
-  const masterKey = fromSeedSync(seed, bip32.BITCOIN_NETWORK);
-  return masterKey.privateKey!;
-}
+  constructor(seed: Buffer) {
+    this.masterKey = fromSeed(seed, networks.bitcoin);
+  }
 
-export function deriveChildKey(masterKey: Buffer, account: number, change: number, index: number): Buffer {
-  const masterNode = bip32.fromPrivateKey(masterKey);
-  const childNode = masterNode.derive(44, true) // BIP44 purpose
-             .derive(account, true) // account
-             .derive(change, false) // change (0=external, 1=internal)
-             .derive(index);
-  return childNode.privateKey!;
-}
+  derivePath(path: string): BIP32Interface {
+    return this.masterKey.derivePath(path);
+  }
 
-export function generateAddress(childKey: Buffer): string {
-  const keyPair = ecPair.fromPrivateKey(childKey);
-  return keyPair.toPublicKey().toString('hex');
+  getAddress(index: number): string {
+    const childKey = this.derivePath(`m/44'/0'/0'/0/${index}`);
+    const keyPair = ECPair.fromPrivateKey(childKey.privateKey!);
+    return keyPair.toAddress();
+  }
 }
