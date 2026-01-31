@@ -1,11 +1,6 @@
-use crate::vm::execute_transaction;
-use crate::types::{Transaction, TransactionReceipt};
+use crate::chain::transaction::{Transaction, TransactionSignature, TransactionPool};
 
-pub fn simulate_transaction(tx: Transaction) -> TransactionReceipt {
-    let receipt = execute_transaction(tx);
-    receipt
-}
-
-pub fn get_block(_hash: String) -> String {
-    "block data".to_string()
+pub fn get_transaction(signature: TransactionSignature) -&gt; Option&lt;Transaction&gt; {
+    let transaction_pool = TransactionPool::new();
+    transaction_pool.get_transaction(&amp;signature).cloned()
 }
