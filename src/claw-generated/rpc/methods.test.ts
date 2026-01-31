@@ -1,16 +1,25 @@
-import { RPC_METHODS } from './methods';
-import { AccountState } from '../state/account';
+import { getBalance } from './getBalance';
+import { Account } from '../state/account';
 
 jest.mock('../state/account', () => ({
-  AccountState: {
-    get: jest.fn().mockReturnValue({ balance: 1000 }),
+  Account: {
+    get: jest.fn(),
   },
 }));
 
-describe('RPC Methods', () => {
-  it('should return the correct balance', () => {
-    const balance = RPC_METHODS.getBalance('0x123456789');
-    expect(balance.balance).toBe(1000);
-    expect(AccountState.get).toHaveBeenCalledWith('0x123456789');
+describe('RPC methods', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('getBalance', () => {
+    it('should return the account balance', async () => {
+      const mockAccount = { balance: 100 };
+      (Account.get as jest.Mock).mockResolvedValue(mockAccount);
+
+      const balance = await getBalance('0x123456789');
+      expect(balance).toBe(100);
+      expect(Account.get).toHaveBeenCalledWith('0x123456789');
+    });
   });
 });

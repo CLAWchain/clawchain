@@ -1,4 +1,4 @@
-import { Account } from '../types';
+import { Account } from '../state/account';
 
 export async function getBalance(pubkey: string): Promise<number> {
   const account = await Account.get(pubkey);
