@@ -10,16 +10,15 @@ interface Block {
 
 const BlockExplorerPage: React.FC = () => {
   const [blocks, setBlocks] = useState<Block[]>([]);
+  const blockExplorer = new BlockExplorer();
 
   useEffect(() => {
     const fetchBlocks = async () => {
-      const blockExplorer = new BlockExplorer();
-      const blocks = await blockExplorer.getBlocks();
-      setBlocks(blocks);
+      const fetchedBlocks = await blockExplorer.getBlocks();
+      setBlocks(fetchedBlocks);
     };
-
     fetchBlocks();
-  }, []);
+  }, [blockExplorer]);
 
   return (
     <div>
@@ -34,8 +33,8 @@ const BlockExplorerPage: React.FC = () => {
           </tr>
         </thead>
         <tbody>
-          {blocks.map((block) => (
-            <tr key={block.height}>
+          {blocks.map((block, index) => (
+            <tr key={index}>
               <td>{block.height}</td>
               <td>{block.hash}</td>
               <td>{new Date(block.timestamp * 1000).toLocaleString()}</td>
