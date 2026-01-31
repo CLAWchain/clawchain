@@ -1,32 +1,101 @@
-import { Blockchain } from './blockchain';
-import { Transaction } from './transaction';
+import { Block } from './block';
 
-describe('Blockchain', () => {
-  let blockchain: Blockchain;
+describe('Block', () => {
+  describe('creation', () => {
+    it('should create a new block with the correct properties', () => {
+      const block = new Block({
+        index: 1,
+        timestamp: 1234567890,
+        transactions: [
+          { id: '0x123', from: '0xabc', to: '0xdef', amount: 10 },
+          { id: '0x456', from: '0xghi', to: '0xjkl', amount: 5 }
+        ],
+        previousHash: '0xabcd1234',
+        nonce: 42
+      });
 
-  beforeEach(() => {
-    blockchain = new Blockchain();
+      expect(block.index).toEqual(1);
+      expect(block.timestamp).toEqual(1234567890);
+      expect(block.transactions).toEqual([
+        { id: '0x123', from: '0xabc', to: '0xdef', amount: 10 },
+        { id: '0x456', from: '0xghi', to: '0xjkl', amount: 5 }
+      ]);
+      expect(block.previousHash).toEqual('0xabcd1234');
+      expect(block.nonce).toEqual(42);
+    });
   });
 
-  it('should validate block size', () => {
-    // Create a large number of transactions to exceed the block size limit
-    const transactions: Transaction[] = [];
-    for (let i = 0; i < blockchain.maxBlockSize + 1; i++) {
-      transactions.push(new Transaction());
-    }
+  describe('validation', () => {
+    it('should validate a correctly formed block', () => {
+      const block = new Block({
+        index: 1,
+        timestamp: 1234567890,
+        transactions: [
+          { id: '0x123', from: '0xabc', to: '0xdef', amount: 10 },
+          { id: '0x456', from: '0xghi', to: '0xjkl', amount: 5 }
+        ],
+        previousHash: '0xabcd1234',
+        nonce: 42
+      });
 
-    // Try to mine a block with the large transaction set
-    expect(() => blockchain.mineBlock()).toThrowError('Block size exceeds the limit');
+      expect(block.isValid()).toEqual(true);
+    });
+
+    it('should not validate a block with invalid transactions', () => {
+      const block = new Block({
+        index: 1,
+        timestamp: 1234567890,
+        transactions: [
+          { id: '0x123', from: '0xabc', to: '0xdef', amount: -5 },
+          { id: '0x456', from: '0xghi', to: '0xjkl', amount: 5 }
+        ],
+        previousHash: '0xabcd1234',
+        nonce: 42
+      });
+
+      expect(block.isValid()).toEqual(false);
+    });
   });
 
-  it('should adjust block size limit', () => {
-    const initialMaxBlockSize = blockchain.maxBlockSize;
+  describe('serialization', () => {
+    it('should serialize and deserialize a block correctly', () => {
+      const block = new Block({
+        index: 1,
+        timestamp: 1234567890,
+        transactions: [
+          { id: '0x123', from: '0xabc', to: '0xdef', amount: 10 },
+          { id: '0x456', from: '0xghi', to: '0xjkl', amount: 5 }
+        ],
+        previousHash: '0xabcd1234',
+        nonce: 42
+      });
 
-    // Mine 10 blocks to trigger the block size adjustment
-    for (let i = 0; i < 10; i++) {
-      blockchain.mineBlock();
-    }
+      const serializedBlock = block.serialize();
+      const deserializedBlock = Block.deserialize(serializedBlock);
 
-    expect(blockchain.maxBlockSize).toBeGreaterThan(initialMaxBlockSize);
+      expect(deserializedBlock.index).toEqual(block.index);
+      expect(deserializedBlock.timestamp).toEqual(block.timestamp);
+      expect(deserializedBlock.transactions).toEqual(block.transactions);
+      expect(deserializedBlock.previousHash).toEqual(block.previousHash);
+      expect(deserializedBlock.nonce).toEqual(block.nonce);
+    });
+  });
+
+  describe('hashing', () => {
+    it('should calculate the correct hash for a block', () => {
+      const block = new Block({
+        index: 1,
+        timestamp: 1234567890,
+        transactions: [
+          { id: '0x123', from: '0xabc', to: '0xdef', amount: 10 },
+          { id: '0x456', from: '0xghi', to: '0xjkl', amount: 5 }
+        ],
+        previousHash: '0xabcd1234',
+        nonce: 42
+      });
+
+      const expectedHash = '0x5c1b4f4d4d0d2e5b3d7d3e4d5d0d2e5b3d7d3e4d5d0d2e5b3d7d3e4d5d0d2e5';
+      expect(block.hash()).toEqual(expectedHash);
+    });
   });
 });
