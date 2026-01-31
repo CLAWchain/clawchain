@@ -1,91 +1,89 @@
 .navigation {
-  background-color: #333;
-  color: #fff;
+  background-color: var(--nav-bg);
+  color: var(--nav-text);
   padding: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 
-  .nav-container {
+  .navbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: bold;
+      text-decoration: none;
+      color: var(--nav-text);
+    }
+
+    .menu-toggle {
+      background: none;
+      border: none;
+      color: var(--nav-text);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
   }
 
-  .nav-brand {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #fff;
-    text-decoration: none;
-  }
+  .menu {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 1rem;
 
-  .nav-menu {
-    display: flex;
-    gap: 1rem;
+    &.open {
+      display: flex;
+    }
 
-    @media (max-width: 768px) {
-      position: absolute;
-      top: 4rem;
-      left: 0;
-      width: 100%;
-      background-color: #333;
-      flex-direction: column;
-      padding: 1rem;
-      z-index: 1;
-      transform: translateY(-100%);
-      transition: transform 0.3s ease-in-out;
+    ul {
+      list-style-type: none;
+      padding: 0;
+      margin: 0;
 
-      &.open {
-        transform: translateY(0);
+      li {
+        margin-bottom: 1rem;
+
+        a {
+          color: var(--nav-text);
+          text-decoration: none;
+          font-size: 1.2rem;
+        }
       }
     }
-  }
 
-  .nav-link {
-    color: #fff;
-    text-decoration: none;
-    padding: 0.5rem;
-    border-radius: 0.25rem;
-
-    &:hover {
-      background-color: #444;
+    .theme-toggle {
+      margin-top: 1rem;
     }
   }
 
-  .nav-toggle {
-    display: none;
-    background-color: transparent;
-    border: none;
-    color: #fff;
-    font-size: 1.5rem;
-    cursor: pointer;
-
-    @media (max-width: 768px) {
-      display: block;
-    }
-  }
-
-  .nav-toggle-icon {
-    display: block;
-    width: 1.5rem;
-    height: 0.25rem;
-    background-color: #fff;
-    position: relative;
-
-    &::before,
-    &::after {
-      content: '';
-      display: block;
-      width: 1.5rem;
-      height: 0.25rem;
-      background-color: #fff;
-      position: absolute;
-      transition: transform 0.3s ease-in-out;
+  @media (min-width: 768px) {
+    .navbar {
+      .menu-toggle {
+        display: none;
+      }
     }
 
-    &::before {
-      top: -0.5rem;
-    }
+    .menu {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
 
-    &::after {
-      top: 0.5rem;
+      ul {
+        display: flex;
+
+        li {
+          margin-right: 2rem;
+          margin-bottom: 0;
+        }
+      }
+
+      .theme-toggle {
+        margin-top: 0;
+        margin-left: 2rem;
+      }
     }
   }
 }
