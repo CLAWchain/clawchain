@@ -1,57 +1,25 @@
-import { Block, Transaction } from './Block';
-import { Crypto } from './Crypto';
+import { Transaction } from './Transaction';
+import { TransactionService } from './TransactionService';
+import { ParallelTransactionVerifierWorker } from './ParallelTransactionVerifierWorker';
 
 export class ParallelTransactionVerifier {
-  private workerPool: Worker[];
-  private taskQueue: VerificationTask[];
-  private completedTasks: number;
+  private readonly transactionService: TransactionService;
+  private readonly workers: ParallelTransactionVerifierWorker[];
+  private readonly maxWorkers: number;
 
-  constructor(numWorkers: number) {
-    this.workerPool = Array.from({ length: numWorkers }, () => new Worker('./ParallelTransactionVerifierWorker.js'));
-    this.taskQueue = [];
-    this.completedTasks = 0;
+  constructor(transactionService: TransactionService, maxWorkers: number = 4) {
+    this.transactionService = transactionService;
+    this.maxWorkers = maxWorkers;
+    this.workers = Array.from({ length: maxWorkers }, () => new ParallelTransactionVerifierWorker(transactionService));
   }
 
-  async verifyTransactions(block: Block): Promise<boolean> {
-    this.taskQueue = block.transactions.map(tx => ({
-      transaction: tx,
-      valid: false
-    }));
-
-    this.completedTasks = 0;
-
-    for (const worker of this.workerPool) {
-      this.assignTaskToWorker(worker);
-    }
-
-    return new Promise((resolve, reject) => {
-      const interval = setInterval(() => {
-        if (this.completedTasks === this.taskQueue.length) {
-          clearInterval(interval);
-
-          // Check if all transactions are valid
-          const allValid = this.taskQueue.every(task => task.valid);
-          resolve(allValid);
-        }
-      }, 100);
-    });
+  public async verifyTransactions(transactions: Transaction[]): Promise<boolean[]> {
+    const verificationTasks = transactions.map((tx) => this.workers[this.getWorkerIndex()].verifyTransaction(tx));
+    const results = await Promise.all(verificationTasks);
+    return results;
   }
 
-  private assignTaskToWorker(worker: Worker) {
-    if (this.taskQueue.length === 0) return;
-
-    const task = this.taskQueue.shift()!;
-    worker.postMessage(task.transaction);
-
-    worker.onmessage = (event) => {
-      task.valid = event.data;
-      this.completedTasks++;
-      this.assignTaskToWorker(worker);
-    };
+  private getWorkerIndex(): number {
+    return Math.floor(Math.random() * this.maxWorkers);
   }
-}
-
-interface VerificationTask {
-  transaction: Transaction;
-  valid: boolean;
 }
