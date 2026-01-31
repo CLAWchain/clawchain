@@ -1,29 +1,36 @@
-import { hash } from './utils';
-
 export class Block {
-  public number: number;
-  public timestamp: number;
-  public hash: string;
-  public previousHash: string;
-  public transactions: any[];
+  timestamp: number;
+  transactions: Transaction[];
+  previousHash: string;
+  hash: string;
 
   constructor(
-    number: number,
     timestamp: number,
-    hash: string,
-    previousHash: string,
-    transactions: any[]
+    transactions: Transaction[],
+    previousHash: string
   ) {
-    this.number = number;
     this.timestamp = timestamp;
-    this.hash = hash;
-    this.previousHash = previousHash;
     this.transactions = transactions;
+    this.previousHash = previousHash;
+    this.hash = this.calculateHash();
   }
 
-  static createCheckpoint(blockNumber: number, previousHash: string): Block {
-    const timestamp = Date.now();
-    const hash = hash(`${blockNumber}:${timestamp}:${previousHash}`);
-    return new Block(blockNumber, timestamp, hash, previousHash, []);
+  calculateHash(): string {
+    // Implement hash calculation logic
+    return ''; 
+  }
+}
+
+export class Transaction {
+  from: string;
+  to: string;
+  amount: number;
+  nonce: number;
+
+  constructor(from: string, to: string, amount: number, nonce: number) {
+    this.from = from;
+    this.to = to;
+    this.amount = amount;
+    this.nonce = nonce;
   }
 }
