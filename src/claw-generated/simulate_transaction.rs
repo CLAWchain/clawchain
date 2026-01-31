@@ -22,3 +22,19 @@ pub fn simulate_transaction(params: SimulateTransactionParams) -> Result<Simulat
         compute_units,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_simulate_transaction() {
+        let params = SimulateTransactionParams {
+            transaction: "0123456789abcdef".to_string(),
+        };
+
+        let result = simulate_transaction(params).unwrap();
+        assert!(!result.logs.is_empty());
+        assert!(result.compute_units > 0);
+    }
+}
