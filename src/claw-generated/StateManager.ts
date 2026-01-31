@@ -1,47 +1,37 @@
-import { ReadWriteLock } from '../utils/ReadWriteLock';
+import { Account, Transaction } from '../types';
+import { MerklePatriciaTrie } from './MerklePatriciaTrie';
 
-/**
- * StateManager is responsible for managing the global state of the ClawChain network.
- * It provides thread-safe read and write operations to ensure consistency and prevent race conditions.
- */
 export class StateManager {
-  private readonly lock: ReadWriteLock;
-  private state: Map<string, any>;
+  private trie: MerklePatriciaTrie;
 
   constructor() {
-    this.lock = new ReadWriteLock();
-    this.state = new Map();
+    this.trie = new MerklePatriciaTrie();
   }
 
-  /**
-   * Get the value of a state variable.
-   * @param key The key of the state variable to retrieve.
-   * @returns The value of the state variable.
-   */
-  public async get(key: string): Promise<any> {
-    return this.lock.readLock(async () => {
-      return this.state.get(key);
-    });
+  getAccountBalance(address: string): number {
+    const account = this.trie.get<Account>(address);
+    return account?.balance || 0;
   }
 
-  /**
-   * Set the value of a state variable.
-   * @param key The key of the state variable to set.
-   * @param value The new value for the state variable.
-   */
-  public async set(key: string, value: any): Promise<void> {
-    await this.lock.writeLock(async () => {
-      this.state.set(key, value);
-    });
+  updateAccountBalance(address: string, balance: number): void {
+    const account = this.trie.get<Account>(address) || { address, balance: 0 };
+    account.balance = balance;
+    this.trie.set(address, account);
   }
 
-  /**
-   * Delete a state variable.
-   * @param key The key of the state variable to delete.
-   */
-  public async delete(key: string): Promise<void> {
-    await this.lock.writeLock(async () => {
-      this.state.delete(key);
-    });
+  applyTransaction(tx: Transaction): void {
+    const senderAccount = this.trie.get<Account>(tx.from);
+    if (senderAccount && senderAccount.balance >= tx.value) {
+      senderAccount.balance -= tx.value;
+      this.trie.set(tx.from, senderAccount);
+
+      const receiverAccount = this.trie.get<Account>(tx.to) || { address: tx.to, balance: 0 };
+      receiverAccount.balance += tx.value;
+      this.trie.set(tx.to, receiverAccount);
+    }
+  }
+
+  getStateRoot(): string {
+    return this.trie.getRoot();
   }
 }

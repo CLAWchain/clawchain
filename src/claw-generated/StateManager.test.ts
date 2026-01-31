@@ -1,4 +1,5 @@
 import { StateManager } from './StateManager';
+import { Account, Transaction } from '../types';
 
 describe('StateManager', () => {
   let stateManager: StateManager;
@@ -7,48 +8,47 @@ describe('StateManager', () => {
     stateManager = new StateManager();
   });
 
-  it('should allow concurrent read access', async () => {
-    await Promise.all([
-      stateManager.get('key1'),
-      stateManager.get('key2'),
-      stateManager.get('key3'),
-    ]);
+  it('should update account balances correctly', () => {
+    const address1 = '0x123456789';
+    const address2 = '0x987654321';
+
+    stateManager.updateAccountBalance(address1, 100);
+    stateManager.updateAccountBalance(address2, 50);
+
+    expect(stateManager.getAccountBalance(address1)).toBe(100);
+    expect(stateManager.getAccountBalance(address2)).toBe(50);
   });
 
-  it('should allow concurrent write access', async () => {
-    await Promise.all([
-      stateManager.set('key1', 'value1'),
-      stateManager.set('key2', 'value2'),
-      stateManager.set('key3', 'value3'),
-    ]);
+  it('should calculate the state root correctly', () => {
+    const address1 = '0x123456789';
+    const address2 = '0x987654321';
 
-    expect(await stateManager.get('key1')).toBe('value1');
-    expect(await stateManager.get('key2')).toBe('value2');
-    expect(await stateManager.get('key3')).toBe('value3');
+    stateManager.updateAccountBalance(address1, 100);
+    stateManager.updateAccountBalance(address2, 50);
+
+    const stateRoot = stateManager.getStateRoot();
+    expect(stateRoot).not.toBeEmpty();
   });
 
-  it('should prevent race conditions', async () => {
-    const initialValue = 0;
-    await stateManager.set('counter', initialValue);
+  it('should apply transactions correctly', () => {
+    const sender = '0x123456789';
+    const receiver = '0x987654321';
 
-    const numThreads = 10;
-    const numIterations = 100;
+    stateManager.updateAccountBalance(sender, 100);
+    stateManager.updateAccountBalance(receiver, 50);
 
-    const promises = [];
-    for (let i = 0; i < numThreads; i++) {
-      promises.push(
-        (async () => {
-          for (let j = 0; j < numIterations; j++) {
-            const value = await stateManager.get('counter');
-            await stateManager.set('counter', value + 1);
-          }
-        })()
-      );
-    }
+    const tx: Transaction = {
+      from: sender,
+      to: receiver,
+      value: 20,
+      nonce: 0,
+      gasLimit: 21000,
+      gasPrice: 1,
+    };
 
-    await Promise.all(promises);
+    stateManager.applyTransaction(tx);
 
-    const finalValue = await stateManager.get('counter');
-    expect(finalValue).toBe(numThreads * numIterations + initialValue);
+    expect(stateManager.getAccountBalance(sender)).toBe(80);
+    expect(stateManager.getAccountBalance(receiver)).toBe(70);
   });
 });
