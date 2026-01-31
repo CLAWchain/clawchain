@@ -7,7 +7,7 @@ class StateManager {
   private maxSnapshotAge: number = 100; // Keep snapshots for the last 100 blocks
 
   constructor() {
-    this.currentSnapshot = new StateSnapshot();
+    this.currentSnapshot = new StateSnapshot(0, '0x0');
   }
 
   applyBlockToState(block: Block) {
@@ -16,8 +16,14 @@ class StateManager {
 
   commitStateSnapshot() {
     this.stateSnapshots.push(this.currentSnapshot);
-    this.currentSnapshot = new StateSnapshot();
+    this.currentSnapshot = new StateSnapshot(this.currentSnapshot.blockNumber + 1, this.currentSnapshot.stateRoot);
     this.pruneOldSnapshots();
+  }
+
+  getStateDiff(fromBlockNumber: number, toBlockNumber: number): Map<string, any> {
+    const fromSnapshot = this.getPreviousStateSnapshot(fromBlockNumber);
+    const toSnapshot = this.getPreviousStateSnapshot(toBlockNumber);
+    return toSnapshot.getDiff(fromSnapshot);
   }
 
   getPreviousStateSnapshot(blockNumber: number): StateSnapshot {
