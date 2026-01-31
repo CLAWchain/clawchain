@@ -1,54 +1,28 @@
-import { Instruction } from './instructions';
+// src/claw-generated/vm/index.ts
+import { Contract } from '../types';
+import { Opcode, opcodeImplementations } from './opcodes';
 
-export class VM {
+export class VirtualMachine {
   private stack: any[] = [];
-  private memory: Map<number, number> = new Map();
+  private programCounter: number = 0;
 
-  execute(instructions: Instruction[]) {
-    for (const instruction of instructions) {
-      this.executeInstruction(instruction);
+  constructor() {
+    // Initialize the VM
+  }
+
+  execute(contract: Contract): void {
+    while (this.programCounter < contract.bytecode.length) {
+      const opcode = contract.bytecode[this.programCounter] as Opcode;
+      opcodeImplementations[opcode](this);
+      this.programCounter++;
     }
   }
 
-  private executeInstruction(instruction: Instruction) {
-    switch (instruction.opcode) {
-      case 'PUSH':
-        this.stack.push(instruction.operand);
-        break;
-      case 'POP':
-        this.stack.pop();
-        break;
-      case 'ADD':
-        this.binaryOp((a, b) => a + b);
-        break;
-      case 'SUB':
-        this.binaryOp((a, b) => a - b);
-        break;
-      case 'MUL':
-        this.binaryOp((a, b) => a * b);
-        break;
-      case 'DIV':
-        this.binaryOp((a, b) => a / b);
-        break;
-      case 'JUMP':
-        // TODO: implement jump logic
-        break;
-      case 'JUMPI':
-        // TODO: implement conditional jump logic
-        break;
-      default:
-        throw new Error(`Unknown opcode: ${instruction.opcode}`);
-    }
+  push(value: any): void {
+    this.stack.push(value);
   }
 
-  private binaryOp(op: (a: number, b: number) => number) {
-    const b = this.stack.pop();
-    const a = this.stack.pop();
-    this.stack.push(op(a, b));
+  pop(): any {
+    return this.stack.pop();
   }
-}
-
-export interface Instruction {
-  opcode: string;
-  operand?: number;
 }
