@@ -1,16 +1,16 @@
 export class BloomFilter {
-  private bits: Uint8Array;
+  private data: Uint8Array;
 
-  constructor(size: number) {
-    this.bits = new Uint8Array(size);
+  constructor() {
+    this.data = new Uint8Array(256);
   }
 
-  add(value: string): void {
-    // Hash the value and set the corresponding bits in the filter
+  add(item: string): void {
+    // Implement bloom filter logic to add an item
   }
 
-  test(value: string): boolean {
-    // Hash the value and check if the corresponding bits are set
-    return true;
+  test(item: string): boolean {
+    // Implement bloom filter logic to test if an item is present
+    return false;
   }
 }

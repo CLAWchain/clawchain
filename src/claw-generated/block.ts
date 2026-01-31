@@ -1,4 +1,6 @@
 import { TransactionPool } from './transaction-pool';
+import { TransactionReceipt } from './transaction-receipt';
+import { BloomFilter } from './bloom-filter';
 
 export class Block {
   transactions: Transaction[];
@@ -18,7 +20,7 @@ export class Block {
     const status = 'success'; // or 'failure'
     const gasUsed = 100; // actual gas used
     const logs = []; // execution logs
-    const bloomFilter = '0x...'; // bloom filter
+    const bloomFilter = new BloomFilter(); // bloom filter
 
     return new TransactionReceipt({
       status,
@@ -38,23 +40,4 @@ export class Block {
 
 export class Transaction {
   // transaction properties
-}
-
-export class TransactionReceipt {
-  status: 'success' | 'failure';
-  gasUsed: number;
-  logs: any[];
-  bloomFilter: string;
-
-  constructor(data: {
-    status: 'success' | 'failure';
-    gasUsed: number;
-    logs: any[];
-    bloomFilter: string;
-  }) {
-    this.status = data.status;
-    this.gasUsed = data.gasUsed;
-    this.logs = data.logs;
-    this.bloomFilter = data.bloomFilter;
-  }
 }
