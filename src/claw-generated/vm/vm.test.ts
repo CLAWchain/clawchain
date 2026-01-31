@@ -1,20 +1,28 @@
 import { VirtualMachine } from './index';
-import { Instruction } from './types';
 
 describe('VirtualMachine', () => {
-  it('should halt execution when gas limit is exceeded', () => {
-    const instructions: Instruction[] = [
-      { opcode: 'PUSH', operand: 10 },
-      { opcode: 'PUSH', operand: 20 },
-      { opcode: 'ADD' },
-      { opcode: 'PUSH', operand: 30 },
-      { opcode: 'MUL' },
-    ];
-
+  it('should execute bytecode and track gas usage', () => {
     const vm = new VirtualMachine(100);
-    expect(() => vm.execute(instructions)).not.toThrow();
+    const bytecode = new Uint8Array([
+      0x60, 0x05, // PUSH 5
+      0x60, 0x03, // PUSH 3
+      0x01 // ADD
+    ]);
 
-    const vmWithLowGas = new VirtualMachine(15);
-    expect(() => vmWithLowGas.execute(instructions)).toThrow('Out of gas');
+    vm.execute(bytecode);
+    expect(vm.getGasUsed()).toBe(11);
+  });
+
+  it('should halt execution when gas limit is reached', () => {
+    const vm = new VirtualMachine(10);
+    const bytecode = new Uint8Array([
+      0x60, 0x05, // PUSH 5
+      0x60, 0x03, // PUSH 3
+      0x01, // ADD
+      0x01, // ADD
+      0x01 // ADD
+    ]);
+
+    expect(() => vm.execute(bytecode)).toThrowError('Execution halted due to gas limit reached');
   });
 });
