@@ -1,5 +1,7 @@
 import { Blockchain } from '../blockchain';
 import { Block } from '../blockchain/block';
+import { FaucetService } from '../services/faucet';
+import { TokenService } from '../services/token';
 
 export class JsonRpcMethods {
   constructor(
@@ -16,5 +18,22 @@ export class JsonRpcMethods {
     return { finalized: block.finalized };
   }
 
-  // Other RPC methods...
+  async getBlock(params: { slot: number, encoding?: 'json' | 'binary' }): Promise<Block> {
+    const block = this.blockchain.getBlockBySlot(params.slot);
+    if (!block) {
+      throw new Error(`Block at slot ${params.slot} not found`);
+    }
+
+    // Extract relevant block data
+    const { slot, hash, parentHash, timestamp, transactions, finalized } = block;
+
+    // Optionally encode the block data based on the specified encoding
+    if (params.encoding === 'binary') {
+      // Implement binary encoding logic here
+      return { slot, hash, parentHash, timestamp, transactions: [], finalized };
+    } else {
+      // Default to JSON encoding
+      return { slot, hash, parentHash, timestamp, transactions, finalized };
+    }
+  }
 }

@@ -3,15 +3,17 @@ import { validateJsonRpcRequest, JsonRpcResponse } from './utils';
 import { JsonRpcMethods } from './methods';
 import { FaucetService } from '../services/faucet';
 import { TokenService } from '../services/token';
+import { Blockchain } from '../blockchain';
 
 export class JsonRpcServer {
   private rpcMethods: JsonRpcMethods;
 
   constructor(
     private faucetService: FaucetService,
-    private tokenService: TokenService
+    private tokenService: TokenService,
+    private blockchain: Blockchain
   ) {
-    this.rpcMethods = new JsonRpcMethods(faucetService, tokenService);
+    this.rpcMethods = new JsonRpcMethods(faucetService, tokenService, blockchain);
   }
 
   async handleRequest(req: Request, res: Response) {
