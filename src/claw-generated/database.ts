@@ -1,18 +1,19 @@
-import ConnectionPool from './database/connection_pool';
+import { ConnectionPool } from './connection-pool';
 
-const connectionPool = new ConnectionPool({
+const dbConfig = {
   host: 'localhost',
-  user: 'myuser',
-  password: 'mypassword',
-  database: 'clawchain'
-});
+  port: 5432,
+  database: 'clawchain',
+  user: 'clawchain',
+  password: 'secret'
+};
 
-export async function queryDatabase(sql: string, params?: any[]): Promise<any> {
-  return await connectionPool.query(sql, params);
+const pool = ConnectionPool.getInstance(dbConfig);
+
+export async function query(sql: string, params?: any[]): Promise<any> {
+  return await pool.query(sql, params);
 }
 
-export async function closeDatabase(): Promise<void> {
-  await connectionPool.end();
+export async function close(): Promise<void> {
+  await pool.close();
 }
-
-export default connectionPool;
