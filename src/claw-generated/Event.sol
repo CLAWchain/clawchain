@@ -6,7 +6,14 @@ pragma solidity ^0.8.0;
  */
 contract Event {
     // Event definition
-    event ContractEvent(address indexed contractAddress, string indexed eventName, bytes indexed eventData);
+    event ContractEvent(
+        address indexed contractAddress,
+        string indexed eventName,
+        bytes indexed eventData,
+        uint256 indexed blockNumber,
+        uint256 indexed transactionIndex,
+        uint256 timestamp
+    );
 
     /**
      * @dev Emits an event with the provided parameters.
@@ -14,7 +21,14 @@ contract Event {
      * @param eventName The name of the event.
      * @param eventData The data associated with the event.
      */
-    function emitEvent(address contractAddress, string memory eventName, bytes memory eventData) public {
-        emit ContractEvent(contractAddress, eventName, eventData);
+    function emitEvent(
+        address contractAddress,
+        string memory eventName,
+        bytes memory eventData
+    ) public {
+        uint256 blockNumber = block.number;
+        uint256 transactionIndex = tx.gasprice;
+        uint256 timestamp = block.timestamp;
+        emit ContractEvent(contractAddress, eventName, eventData, blockNumber, transactionIndex, timestamp);
     }
 }
