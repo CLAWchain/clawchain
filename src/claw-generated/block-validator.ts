@@ -1,52 +1,29 @@
-import { Block } from './block';
-import { BlockChain } from './blockchain';
-import { ParallelTransactionVerifier } from './ParallelTransactionVerifier';
-import { TransactionService } from './TransactionService';
+import { Block, Transaction } from '../types';
+import { validateTransactions } from './tx-validator';
 
 export class BlockValidator {
-  private readonly blockchain: BlockChain;
-  private readonly parallelTransactionVerifier: ParallelTransactionVerifier;
-
-  constructor(blockchain: BlockChain, transactionService: TransactionService) {
-    this.blockchain = blockchain;
-    this.parallelTransactionVerifier = new ParallelTransactionVerifier(transactionService);
-  }
-
-  public async validateBlock(block: Block): Promise<boolean> {
-    // Check block size
-    if (block.size > this.blockchain.maxBlockSize) {
-      console.error(`Block at index ${block.index} exceeds the maximum size of ${this.blockchain.maxBlockSize} bytes.`);
+  validateBlock(block: Block): boolean {
+    // 1. Validate block header
+    // 2. Validate transactions
+    const isTransactionsValid = validateTransactions(block.transactions);
+    if (!isTransactionsValid) {
       return false;
     }
 
-    // Verify transactions in parallel
-    const transactionVerificationResults = await this.parallelTransactionVerifier.verifyTransactions(block.transactions);
-    if (transactionVerificationResults.some((result) => !result)) {
-      console.error(`Block at index ${block.index} contains invalid transactions.`);
+    // 3. Validate uncle/ommer blocks
+    const areUnclesValid = this.validateUncles(block.uncles);
+    if (!areUnclesValid) {
       return false;
     }
 
-    // Validate uncle/ommer blocks
-    for (const uncle of block.uncles) {
-      if (!await this.validateUncle(uncle.blockNumber, uncle.hash)) {
-        console.error(`Invalid uncle block at number ${uncle.blockNumber} with hash ${uncle.hash}.`);
-        return false;
-      }
-    }
-
-    // Check other validation rules here...
+    // 4. Other validation checks...
 
     return true;
   }
 
-  private async validateUncle(blockNumber: number, hash: string): Promise<boolean> {
-    // Fetch the uncle block from the chain
-    const uncleBlock = await this.blockchain.getBlockByNumberAndHash(blockNumber, hash);
-    if (!uncleBlock) {
-      return false;
-    }
-
-    // Validate the uncle block
-    return uncleBlock.validate();
+  private validateUncles(uncles: Block[]): boolean {
+    // Implement logic to validate uncle/ommer blocks
+    // Check that they are valid, not too old, and meet other criteria
+    return uncles.every((uncle) => this.validateBlock(uncle));
   }
 }
