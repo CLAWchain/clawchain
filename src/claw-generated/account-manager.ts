@@ -1,22 +1,26 @@
-import { Account } from './account';
-import { PublicKey } from '@solana/web3.js';
+import { Account, EOAAccount, SmartContractAccount } from './account';
+import { Address } from '../types';
 
 export class AccountManager {
-  private accounts: Map<string, Account> = new Map();
+  private accounts: Map<Address, Account> = new Map();
 
-  getAccount(pubkey: PublicKey): Account {
-    const pubkeyStr = pubkey.toString();
-    if (this.accounts.has(pubkeyStr)) {
-      return this.accounts.get(pubkeyStr)!;
-    } else {
-      const newAccount = new Account(pubkey, 0);
-      this.accounts.set(pubkeyStr, newAccount);
-      return newAccount;
-    }
+  createEOAAccount(address: Address, balance: bigint, nonce: number): EOAAccount {
+    const account = new EOAAccount(address, balance, nonce);
+    this.accounts.set(address, account);
+    return account;
   }
 
-  updateBalance(pubkey: PublicKey, newBalance: number): void {
-    const account = this.getAccount(pubkey);
-    account.balance = newBalance;
+  createSmartContractAccount(address: Address, balance: bigint, nonce: number, validationLogic: (tx: Transaction) => boolean): SmartContractAccount {
+    const account = new SmartContractAccount(address, balance, nonce, validationLogic);
+    this.accounts.set(address, account);
+    return account;
+  }
+
+  getAccount(address: Address): Account | undefined {
+    return this.accounts.get(address);
+  }
+
+  updateAccount(account: Account): void {
+    this.accounts.set(account.address, account);
   }
 }

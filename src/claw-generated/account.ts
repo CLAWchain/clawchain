@@ -1,19 +1,38 @@
-import { PublicKey } from '@solana/web3.js';
-import { Account } from '../state/account';
+import { ByteArray, Address } from '../types';
 
-export interface GetAccountInfoResponse {
-  pubkey: string;
-  lamports: number;
-  owner: string;
-  executable: boolean;
+export interface Account {
+  address: Address;
+  balance: bigint;
+  nonce: number;
+  validationLogic: (tx: Transaction) => boolean;
 }
 
-export async function getAccountInfo(pubkey: PublicKey): Promise<GetAccountInfoResponse> {
-  const account = await Account.get(pubkey);
-  return {
-    pubkey: pubkey.toBase58(),
-    lamports: account.lamports,
-    owner: account.owner.toBase58(),
-    executable: account.executable
-  };
+export class EOAAccount implements Account {
+  address: Address;
+  balance: bigint;
+  nonce: number;
+  validationLogic: (tx: Transaction) => boolean;
+
+  constructor(address: Address, balance: bigint, nonce: number) {
+    this.address = address;
+    this.balance = balance;
+    this.nonce = nonce;
+    this.validationLogic = (tx: Transaction) => {
+      return tx.from === this.address && tx.nonce === this.nonce;
+    };
+  }
+}
+
+export class SmartContractAccount implements Account {
+  address: Address;
+  balance: bigint;
+  nonce: number;
+  validationLogic: (tx: Transaction) => boolean;
+
+  constructor(address: Address, balance: bigint, nonce: number, validationLogic: (tx: Transaction) => boolean) {
+    this.address = address;
+    this.balance = balance;
+    this.nonce = nonce;
+    this.validationLogic = validationLogic;
+  }
 }

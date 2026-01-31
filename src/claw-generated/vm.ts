@@ -1,30 +1,24 @@
-import { GAS_COSTS } from './gas-costs';
+import { Account, EOAAccount, SmartContractAccount } from './account';
+import { Transaction } from './transaction';
 
-export class VirtualMachine {
-  private gasLimit: number;
-  private gasUsed: number = 0;
-
-  constructor(gasLimit: number) {
-    this.gasLimit = gasLimit;
-  }
-
-  execute(instructions: number[]) {
-    for (const instruction of instructions) {
-      this.checkGasLimit();
-      this.executeInstruction(instruction);
+export class VM {
+  executeContract(account: Account, tx: Transaction, contractCode: ByteArray): any {
+    if (account instanceof EOAAccount) {
+      // Execute contract with EOA account validation
+      return this.executeWithEOAAccount(account, tx, contractCode);
+    } else if (account instanceof SmartContractAccount) {
+      // Execute contract with smart contract account validation
+      return this.executeWithSmartContractAccount(account, tx, contractCode);
+    } else {
+      throw new Error('Unsupported account type');
     }
   }
 
-  private checkGasLimit() {
-    if (this.gasUsed >= this.gasLimit) {
-      throw new Error('Ran out of gas');
-    }
+  private executeWithEOAAccount(account: EOAAccount, tx: Transaction, contractCode: ByteArray): any {
+    // Execute contract code with EOA account validation
   }
 
-  private executeInstruction(instruction: number) {
-    const opcode = instruction & 0xFF;
-    const gasCost = GAS_COSTS[opcode] || 0;
-    this.gasUsed += gasCost;
-    // Execute the instruction
+  private executeWithSmartContractAccount(account: SmartContractAccount, tx: Transaction, contractCode: ByteArray): any {
+    // Execute contract code with smart contract account validation
   }
 }

@@ -1,35 +1,29 @@
-import { ethers } from 'ethers';
+import { Account } from './account';
 
 export class Transaction {
-  public static verifySignature(
-    senderAddress: string,
-    data: string,
-    signature: string
-  ): boolean {
-    try {
-      const recoveredAddress = ethers.utils.verifyMessage(data, signature);
-      return recoveredAddress === senderAddress;
-    } catch (err) {
-      console.error('Error verifying transaction signature:', err);
-      return false;
+  from: Address;
+  to: Address;
+  value: bigint;
+  nonce: number;
+  // other tx fields
+
+  constructor(from: Address, to: Address, value: bigint, nonce: number) {
+    this.from = from;
+    this.to = to;
+    this.value = value;
+    this.nonce = nonce;
+  }
+
+  validate(account: Account): boolean {
+    return account.validationLogic(this);
+  }
+
+  execute(account: Account): void {
+    if (!this.validate(account)) {
+      throw new Error('Invalid transaction');
     }
-  }
 
-  public static async validateNonce(
-    senderAddress: string,
-    nonce: number,
-    stateManager: StateManager
-  ): Promise<boolean> {
-    const currentNonce = await stateManager.getNonce(senderAddress);
-    return nonce === currentNonce;
-  }
-
-  public static async validateBalance(
-    senderAddress: string,
-    amount: ethers.BigNumber,
-    stateManager: StateManager
-  ): Promise<boolean> {
-    const balance = await stateManager.getBalance(senderAddress);
-    return balance.gte(amount);
+    account.balance -= this.value;
+    account.nonce++;
   }
 }
