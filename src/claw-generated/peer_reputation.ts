@@ -1,26 +1,36 @@
-import { PeerInfo } from './peer_info';
+import { PeerInfo } from '../network/peer';
 
 export class PeerReputation {
-  private peerReputations: Map<string, number> = new Map();
-  private reputationThreshold = 0.5;
+  private peerScores: Map<string, number> = new Map();
+  private bannedPeers: Set<string> = new Set();
 
-  addPeer(peer: PeerInfo) {
-    this.peerReputations.set(peer.id, 1.0);
+  addPeerScore(peerId: string, score: number) {
+    if (this.peerScores.has(peerId)) {
+      this.peerScores.set(peerId, this.peerScores.get(peerId)! + score);
+    } else {
+      this.peerScores.set(peerId, score);
+    }
+
+    if (this.peerScores.get(peerId)! < -100) {
+      this.banPeer(peerId);
+    }
   }
 
-  removePeer(peer: PeerInfo) {
-    this.peerReputations.delete(peer.id);
+  banPeer(peerId: string) {
+    this.bannedPeers.add(peerId);
   }
 
-  updateReputation(peer: PeerInfo, score: number) {
-    this.peerReputations.set(peer.id, score);
+  isBanned(peerId: string): boolean {
+    return this.bannedPeers.has(peerId);
   }
 
-  isBanned(peer: PeerInfo): boolean {
-    return this.peerReputations.get(peer.id) < this.reputationThreshold;
+  getPeerScore(peerId: string): number {
+    return this.peerScores.get(peerId) || 0;
   }
 
-  getPeerReputation(peer: PeerInfo): number {
-    return this.peerReputations.get(peer.id) || 1.0;
+  getPeerList(): PeerInfo[] {
+    return Array.from(this.peerScores.entries())
+      .filter(([peerId]) => !this.isBanned(peerId))
+      .map(([peerId, score]) => ({ id: peerId, score }));
   }
 }

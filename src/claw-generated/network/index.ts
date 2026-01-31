@@ -1,3 +1,1 @@
-export class PeerDiscovery {
-  // Kademlia-based DHT implementation
-}
+export * from './peer';
