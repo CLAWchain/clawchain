@@ -1,12 +1,17 @@
 import { PublicKey } from '@solana/web3.js';
+import { BigNumber } from 'ethers';
 
 export class Account {
   pubkey: PublicKey;
   lamports: number;
+  stakedBalance: BigNumber;
+  lastClaimTime: number;
 
-  constructor(pubkey: PublicKey, lamports: number) {
+  constructor(pubkey: PublicKey, lamports: number, stakedBalance: BigNumber, lastClaimTime: number) {
     this.pubkey = pubkey;
     this.lamports = lamports;
+    this.stakedBalance = stakedBalance;
+    this.lastClaimTime = lastClaimTime;
   }
 
   getBalance(): number {
@@ -25,12 +30,14 @@ export class AccountState {
     this.accounts.set(account.pubkey.toBase58(), account);
   }
 
-  updateBalance(pubkey: PublicKey, lamports: number): void {
+  updateBalance(pubkey: PublicKey, lamports: number, stakedBalance: BigNumber, lastClaimTime: number): void {
     const account = this.getAccount(pubkey);
     if (account) {
       account.lamports = lamports;
+      account.stakedBalance = stakedBalance;
+      account.lastClaimTime = lastClaimTime;
     } else {
-      this.addAccount(new Account(pubkey, lamports));
+      this.addAccount(new Account(pubkey, lamports, stakedBalance, lastClaimTime));
     }
   }
 }
