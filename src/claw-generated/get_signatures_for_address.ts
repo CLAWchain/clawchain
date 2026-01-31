@@ -1,15 +1,29 @@
-import { Request, Response } from 'express';
-import { TransactionSignature } from '@solana/web3.js';
-import { getTransactionHistory } from './transaction_history';
+import { GetSignaturesForAddressParams, GetSignaturesForAddressResult } from './rpc_types';
+import { ClawChainState } from '../state';
 
-export async function getSignaturesForAddress(req: Request, res: Response) {
-  const { address, limit = 20, offset = 0 } = req.query;
+export async function getSignaturesForAddress(
+  params: GetSignaturesForAddressParams,
+  state: ClawChainState
+): Promise&lt;GetSignaturesForAddressResult&gt; {
+  const { address, limit = 20, before, until } = params;
+  
+  // Fetch signatures for the given address from the state
+  const signatures = await state.getSignaturesForAddress(address, { limit, before, until });
 
-  if (typeof address !== 'string') {
-    return res.status(400).json({ error: 'Invalid address' });
+  // Prepare the response
+  const result: GetSignaturesForAddressResult = {
+    signatures,
+    before: null,
+    until: null
+  };
+
+  // Set pagination cursors if applicable
+  if (signatures.length === limit) {
+    result.until = signatures[signatures.length - 1];
+  }
+  if (before && signatures.length > 0) {
+    result.before = signatures[0];
   }
 
-  const signatures: TransactionSignature[] = await getTransactionHistory(address, Number(limit), Number(offset));
-
-  res.json({ signatures });
+  return result;
 }
