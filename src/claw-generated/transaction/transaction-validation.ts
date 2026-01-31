@@ -1,5 +1,6 @@
 import { Transaction } from './transaction';
 import { Account } from '../account/account';
+import { TransactionSigner, SignedTransaction } from '../transactions/signing';
 
 export class TransactionValidator {
   static checkIntegerOverflow(transaction: Transaction): boolean {
@@ -12,17 +13,17 @@ export class TransactionValidator {
     return transaction.nonce === account.nextExpectedNonce;
   }
 
-  static checkSignatureMalleability(transaction: Transaction): boolean {
-    // Implement logic to check for signature malleability
-    // This may involve verifying the signature against the expected format and constraints
-    return true;
+  static checkSignature(transaction: Transaction, publicKey: string, signature: SignedTransaction): boolean {
+    const signer = new TransactionSigner('eddsa');
+    return signer.verify(transaction, publicKey, signature);
   }
 
   static validateTransaction(transaction: Transaction, account: Account): boolean {
+    const { from, signature } = transaction;
     return (
       this.checkIntegerOverflow(transaction) &&
       this.checkReplayAttack(transaction, account) &&
-      this.checkSignatureMalleability(transaction)
+      this.checkSignature(transaction, from, signature)
     );
   }
 }
