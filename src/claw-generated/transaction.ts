@@ -6,11 +6,13 @@ export class Transaction {
   inputs: TransactionInput[];
   outputs: TransactionOutput[];
   fee: number;
+  nonce: number;
 
-  constructor(inputs: TransactionInput[], outputs: TransactionOutput[], fee: number) {
+  constructor(inputs: TransactionInput[], outputs: TransactionOutput[], fee: number, nonce: number) {
     this.inputs = inputs;
     this.outputs = outputs;
     this.fee = fee;
+    this.nonce = nonce;
   }
 
   calculateSize(): number {
@@ -18,6 +20,7 @@ export class Transaction {
     let size = 0;
     size += this.inputs.reduce((total, input) => total + input.size, 0);
     size += this.outputs.reduce((total, output) => total + output.size, 0);
+    size += 8; // size of the nonce field
     return size;
   }
 
