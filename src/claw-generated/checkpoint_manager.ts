@@ -1,42 +1,40 @@
 import { Block } from './block/block';
+import { StateManager } from './state/StateManager';
+import { DatabaseCache } from './DatabaseCache';
 
-class CheckpointManager {
-  private checkpoints: { 
-    blockHash: string; 
-    blockHeight: number;
-    timestamp: number;
-  }[] = [];
-  private checkpointInterval: number = 10000;
+export class CheckpointManager {
+  private stateManager: StateManager;
+  private databaseCache: DatabaseCache;
+  private checkpointInterval: number = 10000; // Generate checkpoint every 10,000 blocks
 
-  generateCheckpoint(block: Block): void {
+  constructor(stateManager: StateManager, databaseCache: DatabaseCache) {
+    this.stateManager = stateManager;
+    this.databaseCache = databaseCache;
+  }
+
+  async generateCheckpoint(block: Block): Promise<void> {
     if (block.height % this.checkpointInterval === 0) {
-      this.checkpoints.push({
+      const stateRoot = await this.stateManager.getStateRoot();
+      const checkpoint = {
         blockHash: block.hash,
+        stateRoot,
         blockHeight: block.height,
-        timestamp: block.timestamp
-      });
+        timestamp: block.timestamp,
+        // Add other relevant metadata
+      };
+      await this.databaseCache.storeCheckpoint(checkpoint);
     }
   }
 
-  getLatestCheckpoint(): { 
-    blockHash: string; 
-    blockHeight: number;
-    timestamp: number; 
-  } | null {
-    if (this.checkpoints.length > 0) {
-      return this.checkpoints[this.checkpoints.length - 1];
-    } else {
-      return null;
-    }
-  }
-
-  getCheckpointByHeight(height: number): { 
-    blockHash: string; 
-    blockHeight: number;
-    timestamp: number; 
-  } | null {
-    return this.checkpoints.find(cp => cp.blockHeight === height) || null;
+  async loadCheckpoint(blockHeight: number): Promise<Checkpoint | null> {
+    return await this.databaseCache.getCheckpoint(blockHeight);
   }
 }
 
-export { CheckpointManager };
+export interface Checkpoint {
+  blockHash: string;
+  stateRoot: string;
+  blockHeight: number;
+  timestamp: number;
+  // Add other relevant metadata
+}

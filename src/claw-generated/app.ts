@@ -1,26 +1,40 @@
-import { JsonRpcServer } from './rpc/server';
-import { RpcMethods } from './rpc/methods';
-import { ClawChain } from './chain';
+import { BlockValidator } from './block-validator';
+import { BlockSyncManager } from './block_sync';
+import { BlockProcessingManager } from './block_processing';
+import { StateManager } from './state/StateManager';
+import { DatabaseCache } from './DatabaseCache';
+import { CheckpointManager } from './checkpoint_manager';
 
-class ClawChainApp {
-  private rpcServer: JsonRpcServer;
-  private rpcMethods: RpcMethods;
-  private chain: ClawChain;
+export class ClawChainApp {
+  private blockValidator: BlockValidator;
+  private stateManager: StateManager;
+  private databaseCache: DatabaseCache;
+  private checkpointManager: CheckpointManager;
+  private blockSyncManager: BlockSyncManager;
+  private blockProcessingManager: BlockProcessingManager;
 
   constructor() {
-    this.chain = new ClawChain();
-    this.rpcServer = new JsonRpcServer();
-    this.rpcMethods = new RpcMethods(this.rpcServer, this.chain);
+    this.stateManager = new StateManager();
+    this.databaseCache = new DatabaseCache();
+    this.checkpointManager = new CheckpointManager(this.stateManager, this.databaseCache);
+    this.blockValidator = new BlockValidator();
+    this.blockSyncManager = new BlockSyncManager(this.blockValidator, this.checkpointManager, this.stateManager, this.databaseCache);
+    this.blockProcessingManager = new BlockProcessingManager(this.stateManager, this.checkpointManager);
   }
 
-  async start() {
-    console.log('ClawChain JSON-RPC server starting...');
+  async start(): Promise<void> {
+    // Sync and process blocks
+    const blocks = await this.fetchBlocks();
+    await this.blockSyncManager.syncBlocks(blocks);
+    await this.blockProcessingManager.processBlocks(blocks);
 
-    this.rpcServer.registerMethod('ping', () => Promise.resolve('pong'));
+    // Start other services
+    // ...
+  }
 
-    const server = await this.rpcServer.start();
-    console.log(`JSON-RPC server listening on port ${server.address().port}`);
+  private async fetchBlocks(): Promise<Block[]> {
+    // Fetch blocks from the network
+    // ...
+    return [/* list of blocks */];
   }
 }
-
-new ClawChainApp().start();
