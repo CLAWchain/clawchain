@@ -1,0 +1,52 @@
+.wallet-modal {
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 20px;
+  text-align: center;
+
+  h3 {
+    margin-top: 0;
+  }
+
+  .connected-wallet {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    p {
+      margin: 0;
+    }
+
+    .disconnect-button {
+      background-color: #e74c3c;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 16px;
+      cursor: pointer;
+
+      &:hover {
+        background-color: #c0392b;
+      }
+    }
+  }
+
+  .connect-button {
+    background-color: #2980b9;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+
+    &:hover {
+      background-color: #2471a3;
+    }
+
+    &:disabled {
+      background-color: #bdc3c7;
+      cursor: not-allowed;
+    }
+  }
+}

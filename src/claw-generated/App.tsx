@@ -1,19 +1,26 @@
-import React from 'react';
-import ThemeToggle from './ThemeToggle';
+import React, { useState } from 'react';
+import WalletModal from './WalletModal';
 
-const App = () => {
+const App: React.FC = () => {
+  const [connectedAddress, setConnectedAddress] = useState('');
+
+  const handleConnect = (address: string) => {
+    setConnectedAddress(address);
+    // Integrate wallet address into application state
+  };
+
+  const handleDisconnect = () => {
+    setConnectedAddress('');
+    // Remove wallet address from application state
+  };
+
   return (
     <div className="app">
       <header>
         <h1>ClawChain</h1>
-        <ThemeToggle />
+        <WalletModal onConnect={handleConnect} onDisconnect={handleDisconnect} />
       </header>
-      <main>
-        {/* Your application content goes here */}
-      </main>
-      <footer>
-        <p>&copy; ClawChain 2023</p>
-      </footer>
+      {/* Rest of application content */}
     </div>
   );
 };

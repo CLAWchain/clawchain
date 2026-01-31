@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ethers } from 'ethers';
+import './WalletModal.scss';
 
 interface WalletModalProps {
   onConnect: (address: string) => void;
@@ -8,45 +8,40 @@ interface WalletModalProps {
 
 const WalletModal: React.FC<WalletModalProps> = ({ onConnect, onDisconnect }) => {
   const [isConnecting, setIsConnecting] = useState(false);
-  const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
+  const [connectedAddress, setConnectedAddress] = useState('');
 
-  const connectWallet = async () => {
-    setIsConnecting(true);
+  const connectToMetaMask = async () => {
     try {
-      // Check if Web3 provider (e.g., MetaMask) is available
-      if (typeof window.ethereum !== 'undefined') {
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        await provider.send('eth_requestAccess', []);
-        const signer = provider.getSigner();
-        const address = await signer.getAddress();
-        setConnectedAddress(address);
-        onConnect(address);
-      } else {
-        // No Web3 provider found, prompt user to install one
-        alert('Please install a Web3 wallet like MetaMask to connect.');
-      }
+      setIsConnecting(true);
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const address = accounts[0];
+      setConnectedAddress(address);
+      onConnect(address);
     } catch (error) {
-      console.error('Error connecting wallet:', error);
+      console.error('Error connecting to MetaMask:', error);
     } finally {
       setIsConnecting(false);
     }
   };
 
-  const disconnectWallet = () => {
-    setConnectedAddress(null);
+  const disconnect = () => {
+    setConnectedAddress('');
     onDisconnect();
   };
 
   return (
     <div className="wallet-modal">
+      <h3>Connect Wallet</h3>
       {connectedAddress ? (
-        <div>
-          <p>Connected wallet: {connectedAddress}</p>
-          <button onClick={disconnectWallet}>Disconnect</button>
+        <div className="connected-wallet">
+          <p>Connected to: {connectedAddress}</p>
+          <button className="disconnect-button" onClick={disconnect}>
+            Disconnect
+          </button>
         </div>
       ) : (
-        <button onClick={connectWallet} disabled={isConnecting}>
-          {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+        <button className="connect-button" onClick={connectToMetaMask} disabled={isConnecting}>
+          {isConnecting ? 'Connecting...' : 'Connect to MetaMask'}
         </button>
       )}
     </div>
