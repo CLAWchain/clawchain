@@ -1,19 +1,21 @@
-import { Transaction } from '../transaction';
-import { TransactionPool } from '../transactionPool';
-import { TxSignature } from '../types';
+import { NextFunction, Request, Response } from 'express';
+import { Transaction } from '@solana/web3.js';
 
-export async function sendTransaction(rawTx: string): Promise<{ txId: string }> {
-  // 1. Decode the base64-encoded transaction
-  const tx = Transaction.fromBase64(rawTx);
+export const sendTransactionHandler = async (req: Request, res: Response, next: NextFunction) => {
+  const { signedTransaction } = req.body;
 
-  // 2. Verify the transaction signature
-  if (!tx.verifySignature()) {
-    throw new Error('Invalid transaction signature');
+  try {
+    // 1. Decode the base64-encoded transaction
+    const transaction = Transaction.from(Buffer.from(signedTransaction, 'base64'));
+
+    // 2. Validate the transaction
+    // TODO: Implement transaction validation logic
+
+    // 3. Broadcast the transaction to the network
+    // TODO: Implement transaction broadcasting logic
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    next(error);
   }
-
-  // 3. Add the transaction to the pool
-  await TransactionPool.addTransaction(tx);
-
-  // 4. Return the transaction ID
-  return { txId: tx.hash() };
-}
+};
