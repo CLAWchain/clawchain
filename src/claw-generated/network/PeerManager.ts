@@ -1,4 +1,4 @@
-import { PeerReputation } from './PeerReputation';
+import { PeerReputation, PeerReputationScore } from './PeerReputation';
 
 class PeerManager {
   private peerReputation: PeerReputation;
@@ -12,12 +12,13 @@ class PeerManager {
     this.peerReputation.addPeer(peerInfo);
   }
 
-  updatePeerReputation(peerId: string, delta: number) {
+  updatePeerReputation(peerId: string, responseTime: number, messageIntegrity: number, protocolAdherence: number) {
     // Update the reputation score for a peer
-    this.peerReputation.updateReputation(peerId, delta);
+    this.peerReputation.updateReputation(peerId, responseTime, messageIntegrity, protocolAdherence);
+    this.peerReputation.banPeer(peerId);
   }
 
-  getPeerReputation(peerId: string): number {
+  getPeerReputation(peerId: string): PeerReputationScore {
     // Get the current reputation score for a peer
     return this.peerReputation.getPeerReputation(peerId);
   }
