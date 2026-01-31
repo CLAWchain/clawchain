@@ -1,6 +1,12 @@
-export const Config = {
-  transactionBaseFee: 0.001,
-  transactionSizeMultiplier: 0.001,
-  transactionComplexityMultiplier: 0.1,
-  CHECKPOINT_INTERVAL: 10000,
-};
+import { GenesisConfig } from './genesis';
+
+export interface ChainConfig {
+  genesis: GenesisConfig;
+  // Other chain configuration properties
+}
+
+export function getChainConfig(): ChainConfig {
+  return {
+    genesis: loadGenesisConfig()
+  };
+}
