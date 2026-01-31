@@ -1,30 +1,53 @@
-import { MerklePatriciaTrie } from './merkle-patricia-trie';
-import { compress, decompress } from './compression';
-import { writeFile, readFile } from 'fs/promises';
-import { join } from 'path';
+import { BlockHeader } from '../chain/block';
+import { AccountState } from '../state/account';
+import { ContractState } from '../state/contract';
+import { getAccountStates, getContractStates } from '../state/repository';
+import { createSnapshotFile, loadLatestSnapshotFile } from './snapshot_storage';
 
-export class StateSnapshot {
-  private trie: MerklePatriciaTrie;
-  private snapshotInterval: number;
-  private snapshotDir: string;
+export interface StateSnapshot {
+  blockHeight: number;
+  timestamp: number;
+  hash: string;
+  accounts: Record<string, AccountState>;
+  contracts: Record<string, ContractState>;
+}
 
-  constructor(snapshotInterval: number, snapshotDir: string) {
-    this.trie = new MerklePatriciaTrie();
-    this.snapshotInterval = snapshotInterval;
-    this.snapshotDir = snapshotDir;
+export class SnapshotManager {
+  private snapshotDir = 'data/snapshots';
+
+  async createSnapshot(blockHeader: BlockHeader): Promise<StateSnapshot> {
+    // Capture current state
+    const accounts = await this.getAllAccountStates();
+    const contracts = await this.getAllContractStates();
+
+    // Create snapshot object
+    const snapshot: StateSnapshot = {
+      blockHeight: blockHeader.height,
+      timestamp: blockHeader.timestamp,
+      hash: blockHeader.hash,
+      accounts,
+      contracts
+    };
+
+    // Compress and store snapshot
+    await this.storeSnapshot(snapshot);
+
+    return snapshot;
   }
 
-  async takeSnapshot(): Promise<void> {
-    const snapshotHash = await this.trie.getRootHash();
-    const snapshotData = await this.trie.serialize();
-    const compressedData = await compress(snapshotData);
-    await writeFile(join(this.snapshotDir, `snapshot-${snapshotHash}.dat`), compressedData);
+  private async getAllAccountStates(): Promise<Record<string, AccountState>> {
+    return await getAccountStates();
   }
 
-  async loadSnapshot(hash: string): Promise<void> {
-    const snapshotPath = join(this.snapshotDir, `snapshot-${hash}.dat`);
-    const compressedData = await readFile(snapshotPath);
-    const snapshotData = await decompress(compressedData);
-    await this.trie.deserialize(snapshotData);
+  private async getAllContractStates(): Promise<Record<string, ContractState>> {
+    return await getContractStates();
+  }
+
+  private async storeSnapshot(snapshot: StateSnapshot): Promise<void> {
+    await createSnapshotFile(this.snapshotDir, snapshot);
+  }
+
+  async loadLatestSnapshot(): Promise<StateSnapshot | null> {
+    return await loadLatestSnapshotFile(this.snapshotDir);
   }
 }
