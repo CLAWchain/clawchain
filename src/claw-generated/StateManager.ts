@@ -1,33 +1,37 @@
-import { Account } from '../models/Account';
-import { TransactionReceipt } from '../models/TransactionReceipt';
-import { MerklePatriciaTrie } from '../trie/MerklePatriciaTrie';
+import { Account } from './account';
 
 export class StateManager {
-  private accountTrie: MerklePatriciaTrie<Account>;
-  private stateRoot: Buffer;
+  private accounts: Map<string, Account> = new Map();
 
-  constructor() {
-    this.accountTrie = new MerklePatriciaTrie<Account>();
-    this.stateRoot = this.accountTrie.root;
+  async getBalance(address: string): Promise<bigint> {
+    const account = await this.getAccount(address);
+    return account.balance;
   }
 
-  getAccount(address: Buffer): Account {
-    return this.accountTrie.get(address);
+  async getNonce(address: string): Promise<number> {
+    const account = await this.getAccount(address);
+    return account.nonce;
   }
 
-  updateBalance(address: Buffer, amount: bigint): void {
-    const account = this.getAccount(address);
-    account.balance += amount;
-    this.accountTrie.set(address, account);
-    this.stateRoot = this.accountTrie.root;
+  async incrementNonce(address: string): Promise<void> {
+    const account = await this.getAccount(address);
+    account.nonce++;
+    this.accounts.set(address, account);
+    // Persist account state
   }
 
-  applyTransaction(tx: TransactionReceipt): void {
-    this.updateBalance(tx.from, -tx.value);
-    this.updateBalance(tx.to, tx.value);
-  }
+  private async getAccount(address: string): Promise<Account> {
+    if (this.accounts.has(address)) {
+      return this.accounts.get(address)!;
+    }
 
-  getStateRoot(): Buffer {
-    return this.stateRoot;
+    // Load account from storage
+    const account: Account = {
+      address,
+      balance: 0n,
+      nonce: 0
+    };
+    this.accounts.set(address, account);
+    return account;
   }
 }
