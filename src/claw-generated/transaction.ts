@@ -1,6 +1,7 @@
 import { MultisigWallet } from './multisig_wallet';
 import { Wallet } from './wallet';
 import { TransactionOrdering } from './transaction_ordering';
+import { VerifierContract } from './VerifierContract';
 
 export class Transaction {
   public from: string;
@@ -8,6 +9,10 @@ export class Transaction {
   public value: number;
   public nonce: number;
   public signatures: string[];
+  public zkpProof?: {
+    proof: string;
+    inputs: number[];
+  };
   public multisigData?: {
     signerPublicKeys: string[];
     requiredSignatures: number;
@@ -28,6 +33,16 @@ export class Transaction {
   }
 
   async verifySignatures(): Promise<boolean> {
+    // Verify the signatures
+    const signaturesValid = await this.verifyRegularSignatures();
+
+    // Verify the zk-SNARK proof if present
+    const proofValid = await this.verifyZkpProof();
+
+    return signaturesValid && proofValid;
+  }
+
+  private async verifyRegularSignatures(): Promise<boolean> {
     if (this.multisigData) {
       const { signerPublicKeys, requiredSignatures } = this.multisigData;
       const multisigWallet = new MultisigWallet(Buffer.from(''), signerPublicKeys, requiredSignatures);
@@ -36,6 +51,15 @@ export class Transaction {
       // Verify the single signature using the from address
       return true;
     }
+  }
+
+  private async verifyZkpProof(): Promise<boolean> {
+    if (this.zkpProof) {
+      const { proof, inputs } = this.zkpProof;
+      const verifier = new VerifierContract();
+      return await verifier.verifyProof(proof, inputs);
+    }
+    return true;
   }
 
   async processTransaction(): Promise<void> {
