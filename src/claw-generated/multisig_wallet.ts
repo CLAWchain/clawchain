@@ -1,25 +1,25 @@
-import { Wallet } from './wallet';
+import { PublicKey } from '../crypto';
 
-export class MultisigWallet extends Wallet {
-  private signerPublicKeys: string[];
-  private requiredSignatures: number;
+export interface MultisigWallet {
+  owners: PublicKey[];
+  threshold: number;
+}
 
-  constructor(seed: Buffer, signerPublicKeys: string[], requiredSignatures: number) {
-    super(seed);
-    this.signerPublicKeys = signerPublicKeys;
-    this.requiredSignatures = requiredSignatures;
+export class MultisigWalletManager {
+  private wallets: Map<string, MultisigWallet> = new Map();
+
+  createWallet(owners: PublicKey[], threshold: number): MultisigWallet {
+    const wallet: MultisigWallet = { owners, threshold };
+    const walletId = this.getWalletId(wallet);
+    this.wallets.set(walletId, wallet);
+    return wallet;
   }
 
-  addSignerPublicKey(publicKey: string): void {
-    this.signerPublicKeys.push(publicKey);
+  getWallet(walletId: string): MultisigWallet | undefined {
+    return this.wallets.get(walletId);
   }
 
-  setRequiredSignatures(requiredSignatures: number): void {
-    this.requiredSignatures = requiredSignatures;
-  }
-
-  async verifySignatures(transaction: any, signatures: string[]): Promise<boolean> {
-    // Implement signature verification logic
-    return true;
+  private getWalletId(wallet: MultisigWallet): string {
+    return wallet.owners.map(owner => owner.toString()).sort().join('-');
   }
 }
