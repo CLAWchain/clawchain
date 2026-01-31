@@ -1,67 +1,59 @@
-import { Block, Event, Transaction, TransactionReceipt } from './typeDefs';
-import { getBlock, getTransaction, getEvents } from '../rpc';
+import { Block, Transaction, TransactionReceipt, Event, EventParameter } from './typeDefs';
 
-export const resolvers = {
+const resolvers = {
   Query: {
-    getBlock: async (_: any, { blockNumber }: { blockNumber: number }): Promise<Block> => {
-      const block = await getBlock(blockNumber);
-      return {
-        number: block.number,
-        hash: block.hash,
-        parentHash: block.parentHash,
-        timestamp: block.timestamp,
-        transactions: block.transactions.map((tx) => ({
-          hash: tx.hash,
-          from: tx.from,
-          to: tx.to,
-          value: tx.value.toString(),
-          gas: tx.gas,
-          gasPrice: tx.gasPrice.toString(),
-          nonce: tx.nonce,
-          input: tx.input,
-          receipt: {
-            transactionHash: tx.hash,
-            blockNumber: block.number,
-            blockHash: block.hash,
-            contractAddress: tx.contractAddress,
-            events: [],
-          },
-        })),
-      };
+    getBlock: async (_, { blockNumber }, { dataSources }) => {
+      const block = await dataSources.blockService.getBlock(blockNumber);
+      return block;
     },
-    getTransaction: async (_: any, { transactionHash }: { transactionHash: string }): Promise<Transaction> => {
-      const tx = await getTransaction(transactionHash);
-      return {
-        hash: tx.hash,
-        from: tx.from,
-        to: tx.to,
-        value: tx.value.toString(),
-        gas: tx.gas,
-        gasPrice: tx.gasPrice.toString(),
-        nonce: tx.nonce,
-        input: tx.input,
-        receipt: {
-          transactionHash: tx.hash,
-          blockNumber: tx.blockNumber,
-          blockHash: tx.blockHash,
-          contractAddress: tx.contractAddress,
-          events: [],
-        },
-      };
+    getTransaction: async (_, { transactionHash }, { dataSources }) => {
+      const transaction = await dataSources.transactionService.getTransaction(transactionHash);
+      return transaction;
     },
-    getEvents: async (
-      _: any,
-      { contractAddress, eventName, fromBlock, toBlock }: { contractAddress?: string; eventName?: string; fromBlock?: number; toBlock?: number }
-    ): Promise<Event[]> => {
-      const events = await getEvents(contractAddress, eventName, fromBlock, toBlock);
-      return events.map((event) => ({
-        address: event.address,
-        name: event.name,
-        parameters: event.parameters.map((param) => ({
-          name: param.name,
-          value: param.value,
-        })),
+    getEvents: async (_, { contractAddress, eventName, fromBlock, toBlock }, { dataSources }) => {
+      const events = await dataSources.eventService.getEvents({
+        contractAddress,
+        eventName,
+        fromBlock,
+        toBlock,
+      });
+      return events;
+    },
+  },
+  Block: {
+    transactions: async (block, _, { dataSources }) => {
+      const transactions = await Promise.all(
+        block.transactions.map((txHash) =>
+          dataSources.transactionService.getTransaction(txHash)
+        )
+      );
+      return transactions;
+    },
+  },
+  Transaction: {
+    receipt: async (transaction, _, { dataSources }) => {
+      const receipt = await dataSources.transactionService.getTransactionReceipt(
+        transaction.hash
+      );
+      return receipt;
+    },
+  },
+  TransactionReceipt: {
+    events: async (receipt, _, { dataSources }) => {
+      const events = await dataSources.eventService.getEventsByTransactionHash(
+        receipt.transactionHash
+      );
+      return events;
+    },
+  },
+  Event: {
+    parameters: (event) => {
+      return Object.entries(event.parameters).map(([name, value]) => ({
+        name,
+        value: value.toString(),
       }));
     },
   },
 };
+
+export default resolvers;

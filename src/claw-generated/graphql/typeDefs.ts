@@ -1,10 +1,22 @@
-import { gql } from 'apollo-server';
+import { gql } from 'apollo-server-express';
 
 export const typeDefs = gql`
+  type Query {
+    getBlock(blockNumber: Int!): Block
+    getTransaction(transactionHash: String!): Transaction
+    getEvents(
+      contractAddress: String
+      eventName: String
+      fromBlock: Int
+      toBlock: Int
+    ): [Event]
+  }
+
   type Block {
-    height: Int!
-    timestamp: String!
+    number: Int!
     hash: String!
+    parentHash: String!
+    timestamp: Int!
     transactions: [Transaction!]!
   }
 
@@ -13,14 +25,31 @@ export const typeDefs = gql`
     from: String!
     to: String!
     value: String!
-    timestamp: String!
-    blockHeight: Int!
+    gas: Int!
+    gasPrice: String!
+    nonce: Int!
+    input: String!
+    receipt: TransactionReceipt!
   }
 
-  type Query {
-    block(height: Int!): Block
-    blocks(limit: Int, offset: Int): [Block!]!
-    transaction(hash: String!): Transaction
-    transactions(limit: Int, offset: Int): [Transaction!]!
+  type TransactionReceipt {
+    transactionHash: String!
+    blockNumber: Int!
+    blockHash: String!
+    contractAddress: String
+    events: [Event!]!
+  }
+
+  type Event {
+    address: String!
+    name: String!
+    parameters: [EventParameter!]!
+  }
+
+  type EventParameter {
+    name: String!
+    value: String!
   }
 `;
+
+export default typeDefs;
