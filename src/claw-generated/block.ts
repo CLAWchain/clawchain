@@ -1,18 +1,23 @@
 import { TransactionPool } from './transaction-pool';
 import { TransactionReceipt } from './transaction-receipt';
 import { BloomFilter } from './bloom-filter';
+import { Transaction } from './transaction';
 
 export class Block {
   transactions: Transaction[];
   transactionReceipts: TransactionReceipt[];
   finalized: boolean;
   confirmations: number;
+  totalFees: number;
+  reward: number;
 
   constructor(transactionPool: TransactionPool) {
     this.transactions = transactionPool.getTransactions();
     this.transactionReceipts = this.transactions.map((tx) => this.generateReceipt(tx));
     this.finalized = false;
     this.confirmations = 0;
+    this.totalFees = 0;
+    this.reward = this.calculateReward();
   }
 
   private generateReceipt(tx: Transaction): TransactionReceipt {
@@ -36,8 +41,10 @@ export class Block {
       this.finalized = true;
     }
   }
-}
 
-export class Transaction {
-  // transaction properties
+  private calculateReward(): number {
+    // Calculate the block reward based on the total fees collected
+    const baseReward = 2; // 2 CLAW per block
+    return baseReward + this.totalFees;
+  }
 }

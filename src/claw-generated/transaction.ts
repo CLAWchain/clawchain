@@ -41,5 +41,6 @@ export class Transaction {
   addToBlock(block: Block): void {
     // Add the transaction to the block
     block.transactions.push(this);
+    block.totalFees += this.fee;
   }
 }
