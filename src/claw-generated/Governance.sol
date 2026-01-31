@@ -2,58 +2,82 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./ClawChainToken.sol";
 
 contract Governance {
-    ClawChainToken public token;
-    uint256 public votingPeriod;
-    uint256 public voteThreshold;
-
     struct Proposal {
         uint256 id;
-        address proposer;
+        string title;
         string description;
-        uint256 startTime;
-        uint256 endTime;
-        mapping(address =&gt; uint256) votes;
-        uint256 totalVotes;
+        uint256 startBlock;
+        uint256 endBlock;
+        uint256 quorum;
+        uint256 approvalThreshold;
+        mapping(address =&gt; bool) voters;
+        mapping(address =&gt; uint256) votingPower;
+        uint256 forVotes;
+        uint256 againstVotes;
         bool executed;
     }
 
+    IERC20 public token;
     mapping(uint256 =&gt; Proposal) public proposals;
-    uint256 public nextProposalId = 1;
+    uint256 public proposalCount;
 
-    constructor(ClawChainToken _token, uint256 _votingPeriod, uint256 _voteThreshold) {
-        token = _token;
-        votingPeriod = _votingPeriod;
-        voteThreshold = _voteThreshold;
+    constructor(address _token) {
+        token = IERC20(_token);
     }
 
-    function proposeUpgrade(string memory description) public {
-        uint256 proposalId = nextProposalId++;
+    modifier onlyTokenHolder(uint256 minBalance) {
+        require(token.balanceOf(msg.sender) &gt;= minBalance, "Insufficient token balance");
+        _;
+    }
+
+    function submitProposal(
+        string memory title,
+        string memory description,
+        uint256 startBlock,
+        uint256 endBlock,
+        uint256 quorum,
+        uint256 approvalThreshold
+    ) public onlyTokenHolder(100) {
+        // Implementation...
+    }
+
+    function vote(uint256 proposalId, bool support) public {
         Proposal storage proposal = proposals[proposalId];
-        proposal.id = proposalId;
-        proposal.proposer = msg.sender;
-        proposal.description = description;
-        proposal.startTime = block.timestamp;
-        proposal.endTime = block.timestamp + votingPeriod;
+        require(block.number &gt;= proposal.startBlock && block.number &lt;= proposal.endBlock, "Voting is not open");
+        require(!proposal.voters[msg.sender], "Already voted");
+
+        uint256 voterBalance = token.balanceOf(msg.sender);
+        proposal.votingPower[msg.sender] = voterBalance;
+
+        if (support) {
+            proposal.forVotes += voterBalance;
+        } else {
+            proposal.againstVotes += voterBalance;
+        }
+
+        proposal.voters[msg.sender] = true;
+
+        emit Voted(proposalId, msg.sender, support, voterBalance);
     }
 
-    function vote(uint256 proposalId, uint256 amount) public {
-        Proposal storage proposal = proposals[proposalId];
-        require(block.timestamp &gt;= proposal.startTime &amp;&amp; block.timestamp &lt;= proposal.endTime, "Voting period has ended");
-        uint256 balance = token.balanceOf(msg.sender);
-        require(amount &lt;= balance, "Insufficient token balance");
-        proposal.votes[msg.sender] += amount;
-        proposal.totalVotes += amount;
-    }
+    // Other functions...
 
-    function executeProposal(uint256 proposalId) public {
-        Proposal storage proposal = proposals[proposalId];
-        require(block.timestamp &gt; proposal.endTime, "Voting period has not ended");
-        require(proposal.totalVotes &gt;= voteThreshold, "Proposal did not reach vote threshold");
-        require(!proposal.executed, "Proposal has already been executed");
-        // Execute proposal logic here
-        proposal.executed = true;
-    }
+    event ProposalSubmitted(
+        uint256 indexed proposalId,
+        string title,
+        string description,
+        uint256 startBlock,
+        uint256 endBlock,
+        uint256 quorum,
+        uint256 approvalThreshold
+    );
+
+    event Voted(
+        uint256 indexed proposalId,
+        address indexed voter,
+        bool support,
+        uint256 votingPower
+    );
 }
