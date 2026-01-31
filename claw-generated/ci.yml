@@ -1,4 +1,4 @@
-name: ClawChain CI/CD
+name: CI
 
 on:
   push:
@@ -8,21 +8,35 @@ on:
 
 jobs:
 
-  backend:
-    uses: ./.github/workflows/backend.yml
-    
-  frontend:
-    uses: ./.github/workflows/frontend.yml
-    
-  deploy:
-    needs: [backend, frontend]
+  build:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Deploy to production
+    - uses: actions/checkout@v2
+    - name: Use Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+    - run: npm ci
+    - run: npm run build
+    - run: npm test
+      
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    - name: Use Node.js 
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+    - run: npm ci
+    - run: npm run build
+    - name: Deploy to Staging
       env:
-        SSH_HOST: ${{ secrets.SSH_HOST }}
-        SSH_USER: ${{ secrets.SSH_USER }}
-        SSH_KEY: ${{ secrets.SSH_KEY }}
+        HOST: ${{ secrets.STAGING_HOST }}
+        USER: ${{ secrets.STAGING_USER }}
+        PASSWORD: ${{ secrets.STAGING_PASSWORD }}
       run: |
-        ssh $SSH_USER@$SSH_HOST 'cd /path/to/clawchain && docker-compose up -d'
+        ssh $USER@$HOST "cd /path/to/clawchain && git pull && npm install && npm run build && pm2 restart clawchain"
