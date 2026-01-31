@@ -1,69 +1,79 @@
 import React, { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
-import { CRCTOKEN } from './CRCTOKEN.sol';
+import { getTokens, getTokenHolders, getTokenTransfers } from '../explorer/api';
 
 interface Token {
+  address: string;
   name: string;
   symbol: string;
-  totalSupply: number;
-  holders: number;
-  recentTransfers: {
+  totalSupply: string;
+  holderCount: number;
+  transfers: {
     from: string;
     to: string;
-    value: number;
+    value: string;
     timestamp: number;
   }[];
 }
 
 const TokenTrackerPage: React.FC = () => {
   const [tokens, setTokens] = useState<Token[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchTokens = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Fetch the list of all CRC-20 contract addresses
-        const contractAddresses = await fetchCRC20Contracts();
-
-        // Fetch the token data for each contract
-        const tokenData = await Promise.all(
-          contractAddresses.map(async (address) => {
-            const token = await fetchTokenData(address);
-            return token;
-          })
-        );
-
-        setTokens(tokenData);
-        setLoading(false);
-      } catch (err) {
-        setError((err as Error).message);
-        setLoading(false);
-      }
+    const fetchTokenData = async () => {
+      const tokenList = await getTokens();
+      const tokenData = await Promise.all(
+        tokenList.map(async (token) => {
+          const [holders, transfers] = await Promise.all([
+            getTokenHolders(token.address),
+            getTokenTransfers(token.address),
+          ]);
+          return {
+            ...token,
+            holderCount: holders.length,
+            transfers: transfers.slice(0, 10),
+          };
+        })
+      );
+      setTokens(tokenData);
     };
-
-    fetchTokens();
+    fetchTokenData();
   }, []);
 
   return (
-    // Existing JSX code...
+    <div>
+      <h1>Token Tracker</h1>
+      <table>
+        <thead>
+          <tr>
+            <th>Token</th>
+            <th>Symbol</th>
+            <th>Total Supply</th>
+            <th>Holders</th>
+            <th>Recent Transfers</th>
+          </tr>
+        </thead>
+        <tbody>
+          {tokens.map((token, index) => (
+            <tr key={index}>
+              <td>{token.name}</td>
+              <td>{token.symbol}</td>
+              <td>{token.totalSupply}</td>
+              <td>{token.holderCount}</td>
+              <td>
+                <ul>
+                  {token.transfers.map((transfer, i) => (
+                    <li key={i}>
+                      {transfer.from} → {transfer.to} ({transfer.value})
+                    </li>
+                  ))}
+                </ul>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 };
-
-async function fetchCRC20Contracts(): Promise<string[]> {
-  // Implement logic to fetch the list of all deployed CRC-20 contracts
-  // This could involve querying the chain state or an event log
-  const contracts = [
-    '0x1234567890abcdef',
-    '0x0987654321fedcba',
-    '0xdeadbeefcafebabe',
-  ];
-  return contracts;
-}
-
-// Existing functions...
 
 export default TokenTrackerPage;
