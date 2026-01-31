@@ -1,24 +1,19 @@
-import { Transaction } from './transaction';
+import { generateMnemonic, mnemonicToSeedSync } from 'bip39';
 
 export class Wallet {
-  private publicKeys: string[];
-  private requiredSignatures: number;
+  private mnemonic: string;
+  private seed: Buffer;
 
-  constructor(publicKeys: string[], requiredSignatures: number) {
-    this.publicKeys = publicKeys;
-    this.requiredSignatures = requiredSignatures;
+  constructor(wordCount: 12 | 24 = 12) {
+    this.mnemonic = generateMnemonic(wordCount * 11);
+    this.seed = mnemonicToSeedSync(this.mnemonic);
   }
 
-  createTransaction(inputs: any[], outputs: any[]): Transaction {
-    const tx = new Transaction(inputs, outputs);
-    return tx;
+  getMnemonic(): string {
+    return this.mnemonic;
   }
 
-  signTransaction(transaction: Transaction, privateKey: string): void {
-    transaction.addSignature(privateKey);
-  }
-
-  verifyTransaction(transaction: Transaction): boolean {
-    return transaction.verifySignatures(this.publicKeys, this.requiredSignatures);
+  getSeed(): Buffer {
+    return this.seed;
   }
 }
