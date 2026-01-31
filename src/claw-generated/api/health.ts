@@ -1,47 +1,19 @@
-import { Request, Response } from 'express';
-import { getNodeMetrics } from '../metrics-manager';
+import { Chain } from '../blockchain/Chain';
+import { TransactionPool } from '../blockchain/TransactionPool';
+import { ValidatorManager } from '../validators/ValidatorManager';
 
-export const healthCheck = (req: Request, res: Response) => {
-  // Check overall node health
-  const isHealthy = checkNodeHealth();
+export function initializeHealthChecks(app: any, chain: Chain, txPool: TransactionPool, validatorManager: ValidatorManager) {
+  // Health check endpoint for container orchestration
+  app.get('/health', (req, res) => {
+    // Check if the node is running and able to process transactions
+    const isReady = chain.isInitialized() && txPool.isInitialized() && validatorManager.isInitialized();
+    res.status(isReady ? 200 : 503).json({ status: isReady ? 'ok' : 'error' });
+  });
 
-  if (isHealthy) {
-    res.status(200).json({ status: 'healthy' });
-  } else {
-    res.status(503).json({ status: 'unhealthy' });
-  }
-};
-
-export const readinessCheck = (req: Request, res: Response) => {
-  // Check if the node is ready to process requests
-  const isReady = checkNodeReadiness();
-
-  if (isReady) {
-    res.status(200).json({ status: 'ready' });
-  } else {
-    res.status(503).json({ status: 'not ready' });
-  }
-};
-
-function checkNodeHealth(): boolean {
-  // Check overall node health
-  const metrics = getNodeMetrics();
-  return metrics.cpuUsage < 80 && metrics.memoryUsage < 80 && metrics.diskUsage < 80;
-}
-
-function checkNodeReadiness(): boolean {
-  // Check if the node is ready to process requests
-  return isSyncedWithNetwork() && areAllServicesRunning();
-}
-
-function isSyncedWithNetwork(): boolean {
-  // Check if the node is synced with the network
-  // e.g., check the latest block height, peer count, etc.
-  return true;
-}
-
-function areAllServicesRunning(): boolean {
-  // Check if all necessary services are running
-  // e.g., database connection, event bus, transaction pool, etc.
-  return true;
+  // Readiness check endpoint for container orchestration
+  app.get('/ready', (req, res) => {
+    // Check if the node is fully initialized and ready to handle requests
+    const isReady = chain.isInitialized() && txPool.isInitialized() && validatorManager.isInitialized();
+    res.status(isReady ? 200 : 503).json({ status: isReady ? 'ok' : 'error' });
+  });
 }
