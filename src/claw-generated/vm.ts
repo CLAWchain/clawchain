@@ -1,28 +1,30 @@
-import { Contract } from '../contract';
-import { Transaction } from '../transaction';
+import { GAS_COSTS } from './gas-costs';
 
 export class VirtualMachine {
-  execute(contract: Contract, transaction: Transaction): void {
-    // Implement contract execution logic here
-    for (const opcode of transaction.opcodes) {
-      switch (opcode) {
-        case 'CALL':
-          this.handleCall(contract, transaction);
-          break;
-        default:
-          // Handle other opcodes
-          break;
-      }
+  private gasLimit: number;
+  private gasUsed: number = 0;
+
+  constructor(gasLimit: number) {
+    this.gasLimit = gasLimit;
+  }
+
+  execute(instructions: number[]) {
+    for (const instruction of instructions) {
+      this.checkGasLimit();
+      this.executeInstruction(instruction);
     }
   }
 
-  private handleCall(contract: Contract, transaction: Transaction): void {
-    // Implement CALL opcode logic
-    const targetAddress = transaction.getParameter('target');
-    const inputData = transaction.getParameter('data');
-    const gasLimit = transaction.getParameter('gas');
+  private checkGasLimit() {
+    if (this.gasUsed >= this.gasLimit) {
+      throw new Error('Ran out of gas');
+    }
+  }
 
-    const targetContract = contract.getContractAt(targetAddress);
-    targetContract.call(inputData, gasLimit);
+  private executeInstruction(instruction: number) {
+    const opcode = instruction & 0xFF;
+    const gasCost = GAS_COSTS[opcode] || 0;
+    this.gasUsed += gasCost;
+    // Execute the instruction
   }
 }
