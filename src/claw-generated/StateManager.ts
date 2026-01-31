@@ -1,42 +1,40 @@
-import { Account } from './account';
-import { Trie } from './trie';
-import { Transaction } from './transaction';
+import { Block } from '../blockchain/Block';
+import { StateSnapshot } from './StateSnapshot';
 
-export class StateManager {
-  private accountTrie: Trie;
-  private accounts: Map<string, Account>;
-  private transactions: Map<string, Transaction>;
+class StateManager {
+  private stateSnapshots: StateSnapshot[] = [];
+  private currentSnapshot: StateSnapshot;
+  private maxSnapshotAge: number = 100; // Keep snapshots for the last 100 blocks
 
   constructor() {
-    this.accountTrie = new Trie();
-    this.accounts = new Map();
-    this.transactions = new Map();
+    this.currentSnapshot = new StateSnapshot();
   }
 
-  getAccount(address: Buffer): Account {
-    const addressHex = address.toString('hex');
-    if (this.accounts.has(addressHex)) {
-      return this.accounts.get(addressHex)!;
+  applyBlockToState(block: Block) {
+    this.currentSnapshot.applyBlock(block);
+  }
+
+  commitStateSnapshot() {
+    this.stateSnapshots.push(this.currentSnapshot);
+    this.currentSnapshot = new StateSnapshot();
+    this.pruneOldSnapshots();
+  }
+
+  getPreviousStateSnapshot(blockNumber: number): StateSnapshot {
+    // Find the closest state snapshot before the given block number
+    for (let i = this.stateSnapshots.length - 1; i >= 0; i--) {
+      if (this.stateSnapshots[i].blockNumber <= blockNumber) {
+        return this.stateSnapshots[i];
+      }
     }
-
-    const account = new Account();
-    this.accounts.set(addressHex, account);
-    this.accountTrie.set(address, account.rlp());
-    return account;
+    throw new Error(`No state snapshot found for block ${blockNumber}`);
   }
 
-  async getTransaction(signature: string): Promise<Transaction | null> {
-    if (this.transactions.has(signature)) {
-      return this.transactions.get(signature)!;
-    }
-    return null;
-  }
-
-  commitState(): void {
-    this.accountTrie.commit();
-  }
-
-  getStateRoot(): Buffer {
-    return this.accountTrie.root;
+  private pruneOldSnapshots() {
+    // Remove snapshots that are older than the max snapshot age
+    const currentBlockNumber = this.stateSnapshots[this.stateSnapshots.length - 1]?.blockNumber || 0;
+    this.stateSnapshots = this.stateSnapshots.filter(snapshot => snapshot.blockNumber >= currentBlockNumber - this.maxSnapshotAge);
   }
 }
+
+export { StateManager };
