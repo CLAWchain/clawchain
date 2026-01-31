@@ -1,6 +1,7 @@
 import { Transaction } from './transaction';
 import { Account } from '../account/account';
 import { EventBus } from '../EventBus';
+import { Crypto } from '../crypto/index';
 
 export class TransactionValidator {
   private static nonceTracker: Map<string, number> = new Map();
@@ -37,7 +38,11 @@ export class TransactionValidator {
 
   private verifyTransactionSignature(transaction: Transaction, account: Account): boolean {
     // Implement signature verification logic here
-    return true;
+    return Crypto.verifySignature(
+      transaction.signature,
+      transaction.toSignableData(),
+      account.publicKey
+    );
   }
 
   private verifyTransactionNonce(transaction: Transaction, account: Account): boolean {
