@@ -1,35 +1,17 @@
-import { BloomFilter } from './bloom-filter';
+import { Transaction } from './transaction';
+import { calculateFee } from './transaction_fees';
 
 export class Block {
-  hash: string;
-  number: number;
-  timestamp: number;
-  transactions: Transaction[];
-  bloom: BloomFilter;
+  transactions: Transaction[] = [];
+  totalFees: number = 0;
 
-  constructor(hash: string, number: number, timestamp: number, transactions: Transaction[]) {
-    this.hash = hash;
-    this.number = number;
-    this.timestamp = timestamp;
-    this.transactions = transactions;
-    this.bloom = this.generateBloom();
+  addTransaction(tx: Transaction) {
+    this.transactions.push(tx);
+    this.totalFees += calculateFee(tx);
   }
 
-  private generateBloom(): BloomFilter {
-    const bloom = new BloomFilter(1024, 3);
-    for (const tx of this.transactions) {
-      bloom.add(tx.hash);
-      bloom.add(tx.from);
-      bloom.add(tx.to);
-    }
-    return bloom;
+  getBlockReward(): number {
+    // Calculate block reward based on total fees collected
+    return 10 + this.totalFees;
   }
-}
-
-export class Transaction {
-  hash: string;
-  from: string;
-  to: string;
-  value: number;
-  data: string;
 }
