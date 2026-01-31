@@ -1,61 +1,54 @@
-import { parseRpcRequest, formatRpcResponse, RpcRequest, RpcResponse, RpcError } from './utils';
+import { Request, Response } from 'express';
+import { getBlockHeight } from '../blockchain/chain';
 
 class JsonRpcServer {
-  private methods: { [key: string]: (...args: any[]) => Promise<any> } = {};
+  async handleRequest(req: Request, res: Response) {
+    // Parse the JSON-RPC request
+    const { id, method, params, jsonrpc } = req.body;
 
-  registerMethod(name: string, handler: (...args: any[]) => Promise<any>) {
-    this.methods[name] = handler;
-  }
-
-  async handleRequest(rawRequest: string): Promise<string> {
-    let request: RpcRequest;
-    try {
-      request = parseRpcRequest(rawRequest);
-    } catch (err) {
-      return formatRpcResponse(null, {
-        code: RpcError.ParseError,
-        message: 'Invalid JSON-RPC request',
-        data: err.message,
-      });
+    // Validate the request
+    if (jsonrpc !== '2.0') {
+      return this.sendError(res, -32600, 'Invalid Request');
     }
 
-    if (Array.isArray(request)) {
-      // Batch request
-      const responses = await Promise.all(
-        request.map(async (req) => {
-          try {
-            const result = await this.handleSingleRequest(req);
-            return result;
-          } catch (err) {
-            return formatRpcResponse(null, err);
-          }
-        })
-      );
-      return formatRpcResponse(responses);
-    } else {
-      // Single request
-      try {
-        const result = await this.handleSingleRequest(request);
-        return formatRpcResponse(result);
-      } catch (err) {
-        return formatRpcResponse(null, err);
+    // Process the request
+    const result = await this.processRequest(method, params);
+
+    // Send the response
+    this.sendResponse(res, id, result);
+  }
+
+  private async processRequest(method: string, params: any) {
+    switch (method) {
+      case 'getBlockHeight':
+        return await this.getBlockHeight();
+      default:
+        throw new Error(`Method ${method} not found`);
+    }
+  }
+
+  private async getBlockHeight() {
+    return await getBlockHeight();
+  }
+
+  private sendResponse(res: Response, id: any, result: any) {
+    res.status(200).json({
+      jsonrpc: '2.0',
+      id,
+      result
+    });
+  }
+
+  private sendError(res: Response, code: number, message: string) {
+    res.status(200).json({
+      jsonrpc: '2.0',
+      id: null,
+      error: {
+        code,
+        message
       }
-    }
-  }
-
-  private async handleSingleRequest(request: RpcRequest): Promise<RpcResponse> {
-    const { method, params, id } = request;
-    const handler = this.methods[method];
-    if (!handler) {
-      throw {
-        code: RpcError.MethodNotFound,
-        message: `Method ${method} not found`,
-      };
-    }
-
-    const result = await handler(...params);
-    return { id, result };
+    });
   }
 }
 
-export { JsonRpcServer };
+export default JsonRpcServer;
