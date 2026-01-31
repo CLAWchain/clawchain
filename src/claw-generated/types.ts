@@ -1,14 +1,19 @@
-export interface Account {
-  address: string;
-  balance: string;
+export interface JsonRpcRequest {
+  id?: number | string;
+  jsonrpc: '2.0';
+  method: string;
+  params?: any;
 }
 
-export interface GenesisConfig {
-  chainId: string;
-  initialAccounts: Account[];
-  networkParams: {
-    blockTime: number;
-    maxBlockSize: number;
-    maxTransactionsPerBlock: number;
-  };
+export interface JsonRpcResponse {
+  id?: number | string;
+  jsonrpc: '2.0';
+  result?: any;
+  error?: JsonRpcError;
+}
+
+export interface JsonRpcError {
+  code: number;
+  message: string;
+  data?: any;
 }
