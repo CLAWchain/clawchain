@@ -1,5 +1,6 @@
 import { Account } from '../account/account';
 import { TransactionValidator } from './transaction-validation';
+import * as crypto from 'crypto';
 
 export interface Transaction {
   from: Account;
@@ -21,8 +22,22 @@ export class TransactionManager {
   }
 
   static signTransaction(transaction: Transaction, privateKey: string): Transaction {
-    // TODO: Implement transaction signing logic
-    transaction.signature = 'SIGNED';
+    // Hash the transaction data
+    const transactionData = JSON.stringify({
+      from: transaction.from.address,
+      to: transaction.to.address,
+      amount: transaction.amount,
+      nonce: transaction.nonce
+    });
+    const hash = crypto.createHash('sha256').update(transactionData).digest('hex');
+
+    // Sign the hash with the private key
+    const signature = crypto.createSign('SHA256')
+      .update(hash)
+      .sign(privateKey, 'hex');
+
+    // Update the transaction with the signature
+    transaction.signature = signature;
     return transaction;
   }
 
