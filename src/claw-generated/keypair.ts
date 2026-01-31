@@ -1,97 +1,44 @@
-import { randomBytes } from 'crypto';
+import { Keypair } from '@solana/web3.js';
 import { argon2 } from 'argon2-wasm';
-import { createCipheriv, createDecipheriv } from 'crypto';
 
 export class EncryptedKeypair {
   private static SALT_LENGTH = 16;
-  private static HASH_LENGTH = 32;
-  private static CIPHER_ALGORITHM = 'aes-256-gcm';
 
-  private salt: Buffer;
-  private encryptedPrivateKey: Buffer;
-  private nonce: Buffer;
-  private authTag: Buffer;
+  private keypair: Keypair;
+  private encryptedData: Uint8Array;
+  private salt: Uint8Array;
 
-  constructor(privateKey: Buffer, password: string) {
-    this.salt = randomBytes(EncryptedKeypair.SALT_LENGTH);
-    const key = this.deriveKey(password);
-    this.encryptPrivateKey(privateKey, key);
+  constructor(keypair: Keypair, password: string) {
+    this.keypair = keypair;
+    this.salt = this.generateSalt();
+    this.encryptedData = this.encryptKeypair(password);
   }
 
-  private deriveKey(password: string): Buffer {
-    return argon2.hash(password, {
-      salt: this.salt,
-      hashLength: EncryptedKeypair.HASH_LENGTH,
-      parallelism: 1,
-      memoryCost: 2048,
-      timeCost: 1,
-      type: argon2.ArgonType.Argon2id
-    });
+  private generateSalt(): Uint8Array {
+    const salt = new Uint8Array(EncryptedKeypair.SALT_LENGTH);
+    crypto.getRandomValues(salt);
+    return salt;
   }
 
-  private encryptPrivateKey(privateKey: Buffer, key: Buffer): void {
-    const cipher = createCipheriv(EncryptedKeypair.CIPHER_ALGORITHM, key, this.salt);
-    this.nonce = cipher.getAuthTag();
-    this.authTag = cipher.getAuthTag();
-    this.encryptedPrivateKey = Buffer.concat([
-      cipher.update(privateKey),
-      cipher.final()
-    ]);
+  private encryptKeypair(password: string): Uint8Array {
+    const keypairData = this.keypair.secretKey;
+    return argon2.hash(keypairData, { salt: this.salt, type: argon2.ArgonType.Argon2id });
   }
 
-  public getEncryptedPrivateKey(): Buffer {
-    return this.encryptedPrivateKey;
+  public getEncryptedData(): Uint8Array {
+    return this.encryptedData;
   }
 
-  public getSalt(): Buffer {
+  public getSalt(): Uint8Array {
     return this.salt;
   }
 
-  public getNonce(): Buffer {
-    return this.nonce;
+  public getKeypair(): Keypair {
+    return this.keypair;
   }
 
-  public getAuthTag(): Buffer {
-    return this.authTag;
-  }
-
-  public toSolanaCliFormat(): { secretKey: Uint8Array; publicKey: Uint8Array } {
-    return {
-      secretKey: this.encryptedPrivateKey,
-      publicKey: this.encryptedPrivateKey.slice(0, 32)
-    };
-  }
-
-  public static async fromSolanaCliFormat(
-    solanaCliFormat: { secretKey: Uint8Array; publicKey: Uint8Array },
-    salt: Buffer,
-    nonce: Buffer,
-    authTag: Buffer,
-    password: string
-  ): Promise<EncryptedKeypair> {
-    const privateKey = await this.decryptKeypair(
-      Buffer.from(solanaCliFormat.secretKey),
-      salt,
-      nonce,
-      authTag,
-      password
-    );
-    return new EncryptedKeypair(privateKey, password);
-  }
-
-  public static async decryptKeypair(
-    encryptedPrivateKey: Buffer,
-    salt: Buffer,
-    nonce: Buffer,
-    authTag: Buffer,
-    password: string
-  ): Promise<Buffer> {
-    const key = await this.deriveKey(password);
-    const decipher = createDecipheriv(EncryptedKeypair.CIPHER_ALGORITHM, key, salt);
-    decipher.setAuthTag(authTag);
-    return Buffer.concat([
-      decipher.update(encryptedPrivateKey),
-      decipher.final()
-    ]);
+  public static async decrypt(encryptedData: Uint8Array, salt: Uint8Array, password: string): Promise<Keypair> {
+    const secretKey = await argon2.verify(encryptedData, { salt, type: argon2.ArgonType.Argon2id, password });
+    return Keypair.fromSecretKey(secretKey);
   }
 }
