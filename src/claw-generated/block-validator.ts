@@ -26,8 +26,27 @@ export class BlockValidator {
       return false;
     }
 
+    // Validate uncle/ommer blocks
+    for (const uncle of block.uncles) {
+      if (!await this.validateUncle(uncle.blockNumber, uncle.hash)) {
+        console.error(`Invalid uncle block at number ${uncle.blockNumber} with hash ${uncle.hash}.`);
+        return false;
+      }
+    }
+
     // Check other validation rules here...
 
     return true;
+  }
+
+  private async validateUncle(blockNumber: number, hash: string): Promise<boolean> {
+    // Fetch the uncle block from the chain
+    const uncleBlock = await this.blockchain.getBlockByNumberAndHash(blockNumber, hash);
+    if (!uncleBlock) {
+      return false;
+    }
+
+    // Validate the uncle block
+    return uncleBlock.validate();
   }
 }

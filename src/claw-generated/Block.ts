@@ -10,6 +10,7 @@ export class Block {
   merkleRoot: string;
   nonce: number;
   hash: string;
+  uncles: { blockNumber: number; hash: string; reward: number }[];
 
   constructor(
     version: number,
@@ -24,6 +25,7 @@ export class Block {
     this.merkleRoot = this.calculateMerkleRoot();
     this.nonce = 0;
     this.hash = this.calculateHash();
+    this.uncles = [];
   }
 
   calculateMerkleRoot(): string {
@@ -32,7 +34,7 @@ export class Block {
   }
 
   calculateHash(): string {
-    const data = `${this.version}${this.timestamp}${JSON.stringify(this.transactions)}${this.previousHash}${this.merkleRoot}${this.nonce}`;
+    const data = `${this.version}${this.timestamp}${JSON.stringify(this.transactions)}${this.previousHash}${this.merkleRoot}${this.nonce}${JSON.stringify(this.uncles)}`;
     return crypto.createHash('sha256').update(data).digest('hex');
   }
 
@@ -41,8 +43,13 @@ export class Block {
       return false;
     }
 
-    // Additional validation logic here
+    // Additional validation logic here, including uncle block validation
     return true;
+  }
+
+  addUncle(blockNumber: number, hash: string, reward: number): void {
+    this.uncles.push({ blockNumber, hash, reward });
+    this.hash = this.calculateHash();
   }
 
   serialize(): string {
@@ -53,7 +60,8 @@ export class Block {
       previousHash: this.previousHash,
       merkleRoot: this.merkleRoot,
       nonce: this.nonce,
-      hash: this.hash
+      hash: this.hash,
+      uncles: this.uncles
     });
   }
 }
