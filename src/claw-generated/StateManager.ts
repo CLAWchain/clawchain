@@ -1,70 +1,48 @@
-import { Block } from '../blockchain/Block';
-import { StateSnapshot } from './StateSnapshot';
+import { Block } from './blockchain/Block';
+import { MerklePatriciaTrie } from './MerklePatriciaTrie';
 
 class StateManager {
-  private stateSnapshots: StateSnapshot[] = [];
-  private currentSnapshot: StateSnapshot;
-  private maxSnapshotAge: number = 100; // Keep snapshots for the last 100 blocks
-  private snapshotInterval: number = 100; // Create a new snapshot every 100 blocks
+  private stateTrie: MerklePatriciaTrie;
+  private currentStateRoot: string;
 
   constructor() {
-    this.currentSnapshot = new StateSnapshot(0, '0x0');
+    this.stateTrie = new MerklePatriciaTrie();
+    this.currentStateRoot = '0x0';
   }
 
-  applyBlockToState(block: Block) {
-    this.currentSnapshot.applyBlock(block);
-  }
-
-  commitStateSnapshot() {
-    this.stateSnapshots.push(this.currentSnapshot);
-    this.currentSnapshot = new StateSnapshot(this.currentSnapshot.blockNumber + 1, this.currentSnapshot.stateRoot);
-    this.pruneOldSnapshots();
+  applyBlockToState(block: Block): void {
+    for (const tx of block.transactions) {
+      this.stateTrie.set(tx.from, tx.amount);
+      this.stateTrie.set(tx.to, tx.amount);
+    }
+    this.currentStateRoot = this.stateTrie.generateRoot();
   }
 
   getStateDiff(fromBlockNumber: number, toBlockNumber: number): Map<string, any> {
-    const fromSnapshot = this.getPreviousStateSnapshot(fromBlockNumber);
-    const toSnapshot = this.getPreviousStateSnapshot(toBlockNumber);
-    return toSnapshot.getDiff(fromSnapshot);
-  }
-
-  getPreviousStateSnapshot(blockNumber: number): StateSnapshot {
-    // Find the closest state snapshot before the given block number
-    for (let i = this.stateSnapshots.length - 1; i >= 0; i--) {
-      if (this.stateSnapshots[i].blockNumber <= blockNumber) {
-        return this.stateSnapshots[i];
-      }
-    }
-    throw new Error(`No state snapshot found for block ${blockNumber}`);
+    // Implement state diff calculation using the Merkle Patricia Trie
+    throw new Error('Not implemented');
   }
 
   downloadStateSnapshot(blockNumber: number): Uint8Array {
-    const snapshot = this.getPreviousStateSnapshot(blockNumber);
-    return snapshot.compressedData;
+    // Implement state snapshot download using the Merkle Patricia Trie
+    throw new Error('Not implemented');
   }
 
-  applyStateSnapshot(blockNumber: number, snapshotData: Uint8Array) {
-    const snapshot = new StateSnapshot(blockNumber, '0x0');
-    snapshot.compressedData = snapshotData;
-    this.stateSnapshots.push(snapshot);
-    this.currentSnapshot = snapshot.decompress();
+  applyStateSnapshot(blockNumber: number, snapshotData: Uint8Array): void {
+    // Implement state snapshot application using the Merkle Patricia Trie
+    throw new Error('Not implemented');
   }
 
-  private pruneOldSnapshots() {
-    // Remove snapshots that are older than the max snapshot age
-    const currentBlockNumber = this.stateSnapshots[this.stateSnapshots.length - 1]?.blockNumber || 0;
-    this.stateSnapshots = this.stateSnapshots.filter(snapshot => snapshot.blockNumber >= currentBlockNumber - this.maxSnapshotAge);
+  generateStateProof(key: string): Uint8Array {
+    return this.stateTrie.generateProof(key);
   }
 
-  private shouldCreateSnapshot(): boolean {
-    return this.currentSnapshot.blockNumber % this.snapshotInterval === 0;
+  verifyStateProof(key: string, value: any, proof: Uint8Array): boolean {
+    return this.stateTrie.verifyProof(key, value, proof);
   }
 
-  updateState(block: Block) {
+  updateState(block: Block): void {
     this.applyBlockToState(block);
-
-    if (this.shouldCreateSnapshot()) {
-      this.commitStateSnapshot();
-    }
   }
 }
 
