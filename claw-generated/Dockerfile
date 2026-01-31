@@ -1,31 +1,25 @@
-# Build backend
-FROM node:18-alpine AS backend-builder
-WORKDIR /app/backend
-COPY backend/package*.json .
-RUN npm ci
-COPY backend .
-RUN npm run build
-
-# Build frontend 
-FROM node:18-alpine AS frontend-builder
-WORKDIR /app/frontend
-COPY frontend/package*.json .
-RUN npm ci
-COPY frontend .
-RUN npm run build
-
-# Runtime image
-FROM node:18-alpine
+# Build stage
+FROM node:16 AS builder
 WORKDIR /app
 
-# Copy backend
-COPY --from=backend-builder /app/backend/dist ./backend/dist
-
-# Copy frontend
-COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
+# Copy project files
+COPY . .
 
 # Install dependencies
-COPY package*.json ./
-RUN npm ci --production
+RUN npm ci
 
-CMD ["npm", "start"]
+# Build the application
+RUN npm run build
+
+# Runtime stage
+FROM node:16-slim
+WORKDIR /app
+
+# Copy built artifacts from the builder stage
+COPY --from=builder /app/dist ./dist
+
+# Install only runtime dependencies
+RUN npm install --omit=dev
+
+# Set the entrypoint
+CMD ["node", "dist/index.js"]
