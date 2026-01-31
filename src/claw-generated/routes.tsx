@@ -1,26 +1,17 @@
 import React from 'react';
-import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
-import AddressPage from '../AddressPage';
-import { getAccountInfo } from './getAccountInfo';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import ContractVerificationPage from './ContractVerificationPage';
+import AppPage from './AppPage';
 
-const Routes: React.FC = () => {
+const AppRoutes: React.FC = () => {
   return (
     <Router>
-      <Switch>
-        <Route path="/address/:address" component={AddressPage} />
-        <Route
-          path="/rpc/getAccountInfo"
-          render={({ match }) => (
-            <div>
-              {getAccountInfo(match.params.address).then((data) => (
-                <pre>{JSON.stringify(data, null, 2)}</pre>
-              ))}
-            </div>
-          )}
-        />
-      </Switch>
+      <Routes>
+        <Route path="/" element={<AppPage />} />
+        <Route path="/contract-verification" element={<ContractVerificationPage />} />
+      </Routes>
     </Router>
   );
 };
 
-export default Routes;
+export default AppRoutes;
