@@ -1,24 +1,25 @@
-import { Account, EOAAccount, SmartContractAccount } from './account';
-import { Transaction } from './transaction';
+export class VirtualMachine {
+  private stack: number[] = [];
 
-export class VM {
-  executeContract(account: Account, tx: Transaction, contractCode: ByteArray): any {
-    if (account instanceof EOAAccount) {
-      // Execute contract with EOA account validation
-      return this.executeWithEOAAccount(account, tx, contractCode);
-    } else if (account instanceof SmartContractAccount) {
-      // Execute contract with smart contract account validation
-      return this.executeWithSmartContractAccount(account, tx, contractCode);
-    } else {
-      throw new Error('Unsupported account type');
+  execute(bytecode: Uint8Array) {
+    for (let i = 0; i < bytecode.length; i++) {
+      const opcode = bytecode[i];
+      switch (opcode) {
+        case 0x01: // PUSH
+          this.stack.push(bytecode[++i]);
+          break;
+        case 0x02: // ADD
+          this.stack.push(this.stack.pop() + this.stack.pop());
+          break;
+        case 0x03: // MUL
+          this.stack.push(this.stack.pop() * this.stack.pop());
+          break;
+        case 0x04: // JUMP
+          i = bytecode[++i] - 1;
+          break;
+        default:
+          throw new Error(`Unknown opcode: ${opcode}`);
+      }
     }
-  }
-
-  private executeWithEOAAccount(account: EOAAccount, tx: Transaction, contractCode: ByteArray): any {
-    // Execute contract code with EOA account validation
-  }
-
-  private executeWithSmartContractAccount(account: SmartContractAccount, tx: Transaction, contractCode: ByteArray): any {
-    // Execute contract code with smart contract account validation
   }
 }

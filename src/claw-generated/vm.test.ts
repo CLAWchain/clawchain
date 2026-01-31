@@ -1,27 +1,23 @@
 import { VirtualMachine } from './vm';
-import { Contract } from './contract';
 
 describe('VirtualMachine', () => {
-  let vm: VirtualMachine;
-  let caller: Contract;
-  let callee: Contract;
-
-  beforeEach(() => {
-    vm = new VirtualMachine();
-    caller = new Contract(vm);
-    callee = new Contract(vm);
+  it('should execute PUSH, ADD, and MUL opcodes correctly', () => {
+    const vm = new VirtualMachine();
+    const bytecode = new Uint8Array([0x01, 5, 0x01, 3, 0x02, 0x03]);
+    vm.execute(bytecode);
+    expect(vm.stack).toEqual([8]);
   });
 
-  it('should execute a contract-to-contract call', async () => {
-    // Set up the callee contract to return a known value
-    callee.execute = jest.fn().mockReturnValue(new Uint8Array([0x42]));
+  it('should execute JUMP opcode correctly', () => {
+    const vm = new VirtualMachine();
+    const bytecode = new Uint8Array([0x01, 5, 0x04, 2, 0x01, 10, 0x01, 20]);
+    vm.execute(bytecode);
+    expect(vm.stack).toEqual([10, 20]);
+  });
 
-    // Call the callee contract from the caller contract
-    const result = await caller.call('0x1234', new Uint8Array([0x01, 0x02]), 1000);
-
-    // Verify the call was executed correctly
-    expect(callee.execute).toHaveBeenCalledWith(new Uint8Array([0x01, 0x02]), 1000);
-    expect(result).toEqual(new Uint8Array([0x42]));
-    expect(vm.getGasUsed()).toBeGreaterThan(0);
+  it('should throw an error for unknown opcodes', () => {
+    const vm = new VirtualMachine();
+    const bytecode = new Uint8Array([0x05]);
+    expect(() => vm.execute(bytecode)).toThrowError('Unknown opcode: 5');
   });
 });
