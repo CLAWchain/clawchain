@@ -1,5 +1,6 @@
-import { Block } from './blockchain/Block';
 import { StateManager } from './StateManager';
+import { Account } from '../models/Account';
+import { TransactionReceipt } from '../models/TransactionReceipt';
 
 describe('StateManager', () => {
   let stateManager: StateManager;
@@ -8,31 +9,48 @@ describe('StateManager', () => {
     stateManager = new StateManager();
   });
 
-  test('should track state diffs correctly', () => {
-    const block1 = new Block({
-      number: 1,
-      transactions: [
-        { from: 'account1', to: 'account2', amount: 100 },
-        { from: 'account2', to: 'account3', amount: 50 },
-      ],
-    });
+  it('should update account balances', () => {
+    const address1 = Buffer.from('address1');
+    const address2 = Buffer.from('address2');
 
-    const block2 = new Block({
-      number: 2,
-      transactions: [
-        { from: 'account1', to: 'account3', amount: 75 },
-        { from: 'account3', to: 'account4', amount: 25 },
-      ],
-    });
+    stateManager.updateBalance(address1, 100n);
+    stateManager.updateBalance(address2, 50n);
 
-    stateManager.applyBlockToState(block1);
-    stateManager.applyBlockToState(block2);
+    const account1 = stateManager.getAccount(address1);
+    const account2 = stateManager.getAccount(address2);
 
-    const stateDiff = stateManager.getStateDiff(1, 2);
-    expect(stateDiff.size).toBe(4);
-    expect(stateDiff.get('account1')).toBe(75);
-    expect(stateDiff.get('account2')).toBeNull();
-    expect(stateDiff.get('account3')).toBe(75);
-    expect(stateDiff.get('account4')).toBe(25);
+    expect(account1.balance).toEqual(100n);
+    expect(account2.balance).toEqual(50n);
+  });
+
+  it('should calculate the state root correctly', () => {
+    const address1 = Buffer.from('address1');
+    const address2 = Buffer.from('address2');
+
+    stateManager.updateBalance(address1, 100n);
+    stateManager.updateBalance(address2, 50n);
+
+    const stateRoot = stateManager.getStateRoot();
+    expect(stateRoot).not.toEqual(Buffer.alloc(32));
+  });
+
+  it('should apply transactions correctly', () => {
+    const address1 = Buffer.from('address1');
+    const address2 = Buffer.from('address2');
+
+    const tx1: TransactionReceipt = {
+      from: address1,
+      to: address2,
+      value: 50n,
+    };
+
+    stateManager.updateBalance(address1, 100n);
+    stateManager.applyTransaction(tx1);
+
+    const account1 = stateManager.getAccount(address1);
+    const account2 = stateManager.getAccount(address2);
+
+    expect(account1.balance).toEqual(50n);
+    expect(account2.balance).toEqual(50n);
   });
 });

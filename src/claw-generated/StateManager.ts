@@ -1,59 +1,33 @@
-import { MerklePatriciaTrie } from './MerklePatriciaTrie';
-import { compress, decompress } from 'zlib';
-import { StateSnapshotStorage } from './StateSnapshotStorage';
-import { AccountStorage } from './AccountStorage';
+import { Account } from '../models/Account';
+import { TransactionReceipt } from '../models/TransactionReceipt';
+import { MerklePatriciaTrie } from '../trie/MerklePatriciaTrie';
 
-class StateManager {
-  private trie: MerklePatriciaTrie;
-  private accountStorage: AccountStorage;
-  private snapshotInterval: number = 60 * 60 * 1000; // 1 hour
-  private lastSnapshotTime: number = 0;
-  private snapshotStorage: StateSnapshotStorage;
+export class StateManager {
+  private accountTrie: MerklePatriciaTrie<Account>;
+  private stateRoot: Buffer;
 
   constructor() {
-    this.trie = new MerklePatriciaTrie();
-    this.accountStorage = new AccountStorage();
-    this.snapshotStorage = new StateSnapshotStorage();
+    this.accountTrie = new MerklePatriciaTrie<Account>();
+    this.stateRoot = this.accountTrie.root;
   }
 
-  // Methods for managing state
-  async get(address: string, key: string): Promise<Uint8Array | null> {
-    return this.accountStorage.get(address, key);
+  getAccount(address: Buffer): Account {
+    return this.accountTrie.get(address);
   }
 
-  async set(address: string, key: string, value: Uint8Array): Promise<void> {
-    await this.accountStorage.set(address, key, value);
-    this.maybeSnapshot();
+  updateBalance(address: Buffer, amount: bigint): void {
+    const account = this.getAccount(address);
+    account.balance += amount;
+    this.accountTrie.set(address, account);
+    this.stateRoot = this.accountTrie.root;
   }
 
-  private maybeSnapshot(): void {
-    const now = Date.now();
-    if (now - this.lastSnapshotTime >= this.snapshotInterval) {
-      this.snapshot();
-      this.lastSnapshotTime = now;
-    }
+  applyTransaction(tx: TransactionReceipt): void {
+    this.updateBalance(tx.from, -tx.value);
+    this.updateBalance(tx.to, tx.value);
   }
 
-  private async snapshot(): Promise<void> {
-    console.log('Taking state snapshot...');
-    const snapshotData = this.trie.serialize();
-    const compressedData = await compress(snapshotData);
-    await this.snapshotStorage.storeSnapshot(compressedData);
-  }
-
-  static async restoreFromSnapshot(): Promise<StateManager> {
-    const snapshotStorage = new StateSnapshotStorage();
-    const snapshotData = await snapshotStorage.loadLatestSnapshot();
-    if (!snapshotData) {
-      return new StateManager();
-    }
-
-    const decompressedData = await decompress(snapshotData);
-    const trie = MerklePatriciaTrie.deserialize(decompressedData);
-    const stateManager = new StateManager();
-    stateManager.trie = trie;
-    return stateManager;
+  getStateRoot(): Buffer {
+    return this.stateRoot;
   }
 }
-
-export { StateManager };
