@@ -1,29 +1,23 @@
-import { Account } from './account';
+import { Wallet } from './wallet';
+import { MultiSig } from './multisig';
 
 export class Transaction {
-  from: Address;
-  to: Address;
-  value: bigint;
-  nonce: number;
-  // other tx fields
+  private inputs: any[];
+  private outputs: any[];
+  private signatures: string[];
 
-  constructor(from: Address, to: Address, value: bigint, nonce: number) {
-    this.from = from;
-    this.to = to;
-    this.value = value;
-    this.nonce = nonce;
+  constructor(inputs: any[], outputs: any[]) {
+    this.inputs = inputs;
+    this.outputs = outputs;
+    this.signatures = [];
   }
 
-  validate(account: Account): boolean {
-    return account.validationLogic(this);
+  addSignature(signature: string): void {
+    this.signatures.push(signature);
   }
 
-  execute(account: Account): void {
-    if (!this.validate(account)) {
-      throw new Error('Invalid transaction');
-    }
-
-    account.balance -= this.value;
-    account.nonce++;
+  verifySignatures(publicKeys: string[], requiredSignatures: number): boolean {
+    const multiSig = new MultiSig(publicKeys, requiredSignatures);
+    return multiSig.verifySignatures(this.signatures);
   }
 }

@@ -1,27 +1,24 @@
-import { HardwareWallet } from './hardware';
+import { Transaction } from './transaction';
 
 export class Wallet {
-  private hardwareWallet: HardwareWallet | null = null;
+  private publicKeys: string[];
+  private requiredSignatures: number;
 
-  constructor() {
-    try {
-      this.hardwareWallet = new HardwareWallet();
-    } catch (e) {
-      console.error('Failed to initialize hardware wallet:', e);
-    }
+  constructor(publicKeys: string[], requiredSignatures: number) {
+    this.publicKeys = publicKeys;
+    this.requiredSignatures = requiredSignatures;
   }
 
-  async signTransaction(tx: Transaction): Promise<SignedTransaction> {
-    if (this.hardwareWallet) {
-      return this.hardwareWallet.signTransaction(tx);
-    } else {
-      // Fall back to software signing
-      return this.signTransactionSoftware(tx);
-    }
+  createTransaction(inputs: any[], outputs: any[]): Transaction {
+    const tx = new Transaction(inputs, outputs);
+    return tx;
   }
 
-  private async signTransactionSoftware(tx: Transaction): Promise<SignedTransaction> {
-    // Software-based signing implementation
-    // ...
+  signTransaction(transaction: Transaction, privateKey: string): void {
+    transaction.addSignature(privateKey);
+  }
+
+  verifyTransaction(transaction: Transaction): boolean {
+    return transaction.verifySignatures(this.publicKeys, this.requiredSignatures);
   }
 }
