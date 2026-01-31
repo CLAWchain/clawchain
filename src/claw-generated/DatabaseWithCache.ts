@@ -1,4 +1,4 @@
-import { Database } from '../database/Database';
+import { Database } from './Database';
 import { QueryCache } from './QueryCache';
 
 class DatabaseWithCache extends Database {
