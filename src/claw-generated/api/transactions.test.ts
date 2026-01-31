@@ -1,48 +1,58 @@
-import { validateTransaction } from './transactions';
-import { Request, Response } from 'express';
+import request from 'supertest';
+import app from './server';
 
-describe('validateTransaction', () => {
-  let req: Partial<Request>;
-  let res: Partial<Response>;
+describe('Transactions API', () => {
+  describe('POST /transactions', () => {
+    it('should validate a valid transaction', async () => {
+      const response = await request(app)
+        .post('/transactions')
+        .send({
+          from: '0x1234567890123456789012345678901234567890',
+          to: '0x0987654321098765432109876543210987654321',
+          amount: 100,
+        });
 
-  beforeEach(() => {
-    req = {
-      body: {
-        from: '0x1234567890abcdef1234567890abcdef12345678',
-        to: '0x0987654321fedcba0987654321fedcba09876543',
-        amount: 100
-      }
-    };
-    res = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn()
-    };
-  });
+      expect(response.status).toEqual(200);
+      expect(response.body).toEqual({ message: 'Transaction validated' });
+    });
 
-  it('should validate a valid transaction', () => {
-    validateTransaction(req as Request, res as Response);
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith({ message: 'Transaction validated' });
-  });
+    it('should return an error for an invalid `from` address', async () => {
+      const response = await request(app)
+        .post('/transactions')
+        .send({
+          from: 'invalid-address',
+          to: '0x0987654321098765432109876543210987654321',
+          amount: 100,
+        });
 
-  it('should return an error for an invalid `from` address', () => {
-    req.body.from = 'invalid';
-    validateTransaction(req as Request, res as Response);
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Invalid `from` address' });
-  });
+      expect(response.status).toEqual(400);
+      expect(response.body).toEqual({ error: 'Invalid `from` address' });
+    });
 
-  it('should return an error for an invalid `to` address', () => {
-    req.body.to = 'invalid';
-    validateTransaction(req as Request, res as Response);
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Invalid `to` address' });
-  });
+    it('should return an error for an invalid `to` address', async () => {
+      const response = await request(app)
+        .post('/transactions')
+        .send({
+          from: '0x1234567890123456789012345678901234567890',
+          to: 'invalid-address',
+          amount: 100,
+        });
 
-  it('should return an error for an invalid `amount`', () => {
-    req.body.amount = -10;
-    validateTransaction(req as Request, res as Response);
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Invalid `amount`' });
+      expect(response.status).toEqual(400);
+      expect(response.body).toEqual({ error: 'Invalid `to` address' });
+    });
+
+    it('should return an error for an invalid `amount`', async () => {
+      const response = await request(app)
+        .post('/transactions')
+        .send({
+          from: '0x1234567890123456789012345678901234567890',
+          to: '0x0987654321098765432109876543210987654321',
+          amount: -100,
+        });
+
+      expect(response.status).toEqual(400);
+      expect(response.body).toEqual({ error: 'Invalid `amount`' });
+    });
   });
 });
