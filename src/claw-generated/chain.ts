@@ -1,33 +1,29 @@
-import { Block } from '../models/block';
+import { Block } from './block';
 
-export class Chain {
-  private blocks: Block[] = [];
+export class BlockChain {
+  private chain: Block[] = [];
+  private requiredConfirmations = 3;
 
-  addBlock(block: Block): void {
-    this.blocks.push(block);
+  addBlock(block: Block) {
+    this.chain.push(block);
+    this.checkFinality(block);
   }
 
-  getLatestBlock(): Block {
-    return this.blocks[this.blocks.length - 1];
+  checkFinality(block: Block) {
+    // Count the number of confirmations for the block
+    block.confirmations = this.chain.filter(b => b.hash === block.hash).length;
+
+    // Mark the block as finalized if it has the required confirmations
+    if (block.confirmations >= this.requiredConfirmations) {
+      block.finalized = true;
+    }
   }
 
-  reorganizeChain(newChain: Chain): void {
-    // Find the common ancestor block
-    let commonAncestorIndex = 0;
-    for (let i = 0; i < Math.min(this.blocks.length, newChain.blocks.length); i++) {
-      if (this.blocks[i].hash === newChain.blocks[i].hash) {
-        commonAncestorIndex = i;
-      } else {
-        break;
-      }
+  getBlockStatus(blockHash: string): { finalized: boolean, confirmations: number } {
+    const block = this.chain.find(b => b.hash === blockHash);
+    if (!block) {
+      return { finalized: false, confirmations: 0 };
     }
-
-    // Remove the divergent blocks from the current chain
-    this.blocks.splice(commonAncestorIndex + 1);
-
-    // Add the new blocks from the competing chain
-    for (let i = commonAncestorIndex + 1; i < newChain.blocks.length; i++) {
-      this.blocks.push(newChain.blocks[i]);
-    }
+    return { finalized: block.finalized, confirmations: block.confirmations };
   }
 }

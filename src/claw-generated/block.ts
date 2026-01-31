@@ -1,36 +1,22 @@
 export class Block {
-  timestamp: number;
-  transactions: Transaction[];
-  previousHash: string;
   hash: string;
+  prevHash: string;
+  timestamp: number;
+  transactions: any[];
+  finalized: boolean;
+  confirmations: number;
 
-  constructor(
-    timestamp: number,
-    transactions: Transaction[],
-    previousHash: string
-  ) {
-    this.timestamp = timestamp;
+  constructor(prevHash: string, transactions: any[]) {
+    this.prevHash = prevHash;
     this.transactions = transactions;
-    this.previousHash = previousHash;
+    this.timestamp = Date.now();
     this.hash = this.calculateHash();
+    this.finalized = false;
+    this.confirmations = 0;
   }
 
   calculateHash(): string {
     // Implement hash calculation logic
-    return ''; 
-  }
-}
-
-export class Transaction {
-  from: string;
-  to: string;
-  amount: number;
-  nonce: number;
-
-  constructor(from: string, to: string, amount: number, nonce: number) {
-    this.from = from;
-    this.to = to;
-    this.amount = amount;
-    this.nonce = nonce;
+    return `${this.prevHash}:${this.timestamp}:${JSON.stringify(this.transactions)}`;
   }
 }

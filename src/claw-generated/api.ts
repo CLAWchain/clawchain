@@ -1,13 +1,15 @@
-import { Blockchain } from './blockchain';
+const express = require('express');
+const { BlockChain } = require('./chain');
 
-export class API {
-  private blockchain: Blockchain;
+const app = express();
+const blockchain = new BlockChain();
 
-  constructor(blockchain: Blockchain) {
-    this.blockchain = blockchain;
-  }
+app.get('/block/:hash', (req, res) => {
+  const { hash } = req.params;
+  const { finalized, confirmations } = blockchain.getBlockStatus(hash);
+  res.json({ finalized, confirmations });
+});
 
-  getFinalizationStatus(blockHash: string): 'finalized' | 'pending' {
-    return this.blockchain.getFinalizationStatus(blockHash);
-  }
-}
+app.listen(3000, () => {
+  console.log('API server started on port 3000');
+});
