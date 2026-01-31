@@ -1,15 +1,19 @@
-export class Peer {
-  public id: string;
-  public address: string;
-  public port: number;
+import { PeerInfo } from './types';
 
-  constructor(id: string, address: string, port: number) {
-    this.id = id;
-    this.address = address;
-    this.port = port;
+export class Peer {
+  info: PeerInfo;
+  reputation: number;
+
+  constructor(info: PeerInfo) {
+    this.info = info;
+    this.reputation = 100; // Start with a neutral reputation
   }
 
-  toString() {
-    return `${this.address}:${this.port}`;
+  updateReputation(delta: number) {
+    this.reputation = Math.max(0, this.reputation + delta);
+  }
+
+  isBanned(): boolean {
+    return this.reputation === 0;
   }
 }
