@@ -1,42 +1,34 @@
-import { Block, Transaction } from '../types';
-import { calculateReward } from './rewards';
+import { Block } from './block';
+import { PeerManager } from './peer-manager';
 
-export function processBlock(block: Block): void {
-  // Check if block is an uncle/ommer
-  if (isUncleBlock(block)) {
-    // Calculate partial reward for miner
-    const partialReward = calculateUncleReward(block);
-    // Update block status and propagate through network
-    updateUncleBlockStatus(block, partialReward);
-  } else {
-    // Process block as normal
-    addBlockToChain(block);
-    rewardMiners(block);
+export class BlockProcessing {
+  private peerManager: PeerManager;
+
+  constructor(peerManager: PeerManager) {
+    this.peerManager = peerManager;
   }
-}
 
-function isUncleBlock(block: Block): boolean {
-  // Logic to detect if a block is an uncle/ommer
-  // e.g., check if block height is behind the current chain tip
-  return false;
-}
+  async processBlock(block: Block): Promise<void> {
+    // Validate and add the block to the chain
+    await this.validateAndAddBlock(block);
 
-function calculateUncleReward(block: Block): number {
-  // Logic to calculate a partial reward for the miner of an uncle/ommer block
-  // e.g., based on block age, depth in the chain, etc.
-  return 0.5 * calculateReward(block);
-}
+    // Broadcast the new block to connected peers
+    this.peerManager.broadcastBlock(block);
+  }
 
-function updateUncleBlockStatus(block: Block, reward: number): void {
-  // Logic to update the status of an uncle/ommer block
-  // e.g., mark the block as "uncle", add the partial reward to the miner's balance, etc.
-  // Propagate the update through the network
-}
+  private async validateAndAddBlock(block: Block): Promise<void> {
+    // Validate the block
+    await this.validateBlock(block);
 
-function addBlockToChain(block: Block): void {
-  // Logic to add a new block to the canonical chain
-}
+    // Add the block to the chain
+    await this.addBlockToChain(block);
+  }
 
-function rewardMiners(block: Block): void {
-  // Logic to reward the miners for a new block
+  private async validateBlock(block: Block): Promise<void> {
+    // Implement block validation logic
+  }
+
+  private async addBlockToChain(block: Block): Promise<void> {
+    // Implement block addition to the chain
+  }
 }
