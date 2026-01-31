@@ -1,22 +1,20 @@
-import { EncryptedKeypair } from './keypair';
+import { ECDSASignatureScheme } from './signing';
 
-export class Wallet {
-  private encryptedKeypair: EncryptedKeypair;
+export class WalletService {
+  private signatureScheme: ECDSASignatureScheme;
 
-  constructor(password: string, keypair: Uint8Array) {
-    this.encryptedKeypair = new EncryptedKeypair(password, keypair);
+  constructor() {
+    this.signatureScheme = new ECDSASignatureScheme();
   }
 
-  public async getKeypair(password: string): Promise<Uint8Array> {
-    return await this.encryptedKeypair.decrypt(password);
+  async connectWallet(): Promise<string> {
+    // Connect to user's wallet and return the connected account address
+    const { publicKey } = this.signatureScheme.generateKeyPair();
+    return publicKey.toString('hex');
   }
 
-  public serialize(): string {
-    return this.encryptedKeypair.serialize();
-  }
-
-  public static deserialize(serializedData: string, password: string): Wallet {
-    const encryptedKeypair = EncryptedKeypair.deserialize(serializedData);
-    return new Wallet(password, encryptedKeypair.keypair);
+  async switchAccount(newAccount: string): Promise<void> {
+    // Switch to the new account
+    // (e.g., notify the application of the account change)
   }
 }
