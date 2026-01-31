@@ -14,10 +14,13 @@ export const typeDefs = gql`
     to: String!
     value: String!
     timestamp: String!
+    blockHeight: Int!
   }
 
   type Query {
     block(height: Int!): Block
+    blocks(limit: Int, offset: Int): [Block!]!
     transaction(hash: String!): Transaction
+    transactions(limit: Int, offset: Int): [Transaction!]!
   }
 `;
