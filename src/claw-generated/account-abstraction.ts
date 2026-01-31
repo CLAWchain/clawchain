@@ -1,11 +1,9 @@
-import { AbstractAccount } from './abstract-account';
-import { Transaction } from './transaction';
-import { Address } from './types';
+import { Address, Transaction } from './types';
 
 /**
- * Base class for standard account types on ClawChain.
+ * Base class for custom account types on ClawChain.
  */
-export abstract class StandardAccount extends AbstractAccount {
+export abstract class AbstractAccount {
   public abstract address: Address;
 
   /**
@@ -21,12 +19,28 @@ export abstract class StandardAccount extends AbstractAccount {
    * @returns The updated account state after execution
    */
   public abstract executeTransaction(tx: Transaction): Promise<any>;
+
+  /**
+   * Registers a custom account validation method.
+   * @param validationMethod The validation method to register
+   */
+  public registerValidationMethod(validationMethod: (tx: Transaction) => Promise<boolean>): void {
+    this.validateTransaction = validationMethod;
+  }
+
+  /**
+   * Registers a custom account execution method.
+   * @param executionMethod The execution method to register
+   */
+  public registerExecutionMethod(executionMethod: (tx: Transaction) => Promise<any>): void {
+    this.executeTransaction = executionMethod;
+  }
 }
 
 /**
  * Simple account type with basic validation and execution logic.
  */
-export class SimpleAccount extends StandardAccount {
+export class SimpleAccount extends AbstractAccount {
   public address: Address;
   private balance: number;
 
@@ -49,7 +63,7 @@ export class SimpleAccount extends StandardAccount {
 /**
  * Multisig account type with custom validation and execution logic.
  */
-export class MultisigAccount extends StandardAccount {
+export class MultisigAccount extends AbstractAccount {
   public address: Address;
   private owners: Address[];
   private requiredSignatures: number;
@@ -77,7 +91,7 @@ export class MultisigAccount extends StandardAccount {
 /**
  * Smart contract account type with custom validation and execution logic.
  */
-export class SmartContractAccount extends StandardAccount {
+export class SmartContractAccount extends AbstractAccount {
   public address: Address;
   private code: string;
   private balance: number;
@@ -105,7 +119,7 @@ export class SmartContractAccount extends StandardAccount {
  * Factory for creating custom account types.
  */
 export class AccountFactory {
-  public static createAccount(type: 'simple' | 'multisig' | 'smartContract', ...args: any[]): StandardAccount {
+  public static createAccount(type: 'simple' | 'multisig' | 'smartContract', ...args: any[]): AbstractAccount {
     switch (type) {
       case 'simple':
         return new SimpleAccount(...args);
