@@ -1,22 +1,34 @@
 export class Block {
-  hash: string;
-  prevHash: string;
-  timestamp: number;
-  transactions: any[];
-  finalized: boolean;
-  confirmations: number;
+  constructor(
+    public index: number,
+    public timestamp: number,
+    public data: any,
+    public prevHash: string,
+    public hash: string
+  ) {}
 
-  constructor(prevHash: string, transactions: any[]) {
-    this.prevHash = prevHash;
-    this.transactions = transactions;
-    this.timestamp = Date.now();
-    this.hash = this.calculateHash();
-    this.finalized = false;
-    this.confirmations = 0;
+  static calculateHash(
+    index: number,
+    timestamp: number,
+    data: any,
+    prevHash: string
+  ): string {
+    // Implement hash calculation logic here
+    return "";
   }
 
-  calculateHash(): string {
-    // Implement hash calculation logic
-    return `${this.prevHash}:${this.timestamp}:${JSON.stringify(this.transactions)}`;
+  isValid(): boolean {
+    // Implement validation logic here
+    return true;
+  }
+
+  serialize(): string {
+    // Implement serialization logic here
+    return "";
+  }
+
+  static deserialize(serializedBlock: string): Block {
+    // Implement deserialization logic here
+    return new Block(0, 0, {}, "", "");
   }
 }
