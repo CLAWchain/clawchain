@@ -1,4 +1,5 @@
 import WebSocket from 'ws';
+import { Transaction } from './transaction';
 import { Block } from './block';
 import { LogEntry } from './event';
 
@@ -22,22 +23,26 @@ class WebSocketSubscriptions {
     }
   }
 
+  broadcastPendingTransactions(transactions: Transaction[]) {
+    this.broadcast('pendingTransactions', { result: transactions });
+  }
+
   broadcastNewHeads(blocks: Block[]) {
-    this.broadcast('newHeads', blocks);
+    this.broadcast('newHeads', { result: blocks });
   }
 
-  broadcastLogs(logEntries: LogEntry[]) {
-    this.broadcast('logs', logEntries);
+  broadcastLogs(logs: LogEntry[]) {
+    this.broadcast('logs', { result: logs });
   }
 
-  broadcastPendingTransactions(transactions: any[]) {
-    this.broadcast('pendingTransactions', transactions);
+  broadcastTransactionFeed(transactions: Transaction[]) {
+    this.broadcast('transactionFeed', { result: transactions });
   }
 
   private broadcast(topic: string, data: any) {
     this.subscriptions.forEach((topics, ws) => {
       if (topics.has(topic) && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ jsonrpc: '2.0', method: topic, params: data }));
+        ws.send(JSON.stringify(data));
       }
     });
   }

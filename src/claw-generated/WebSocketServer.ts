@@ -72,6 +72,13 @@ class WebSocketServer extends JsonRpcServer {
       const pendingTransactions = this.transactionPool.getPendingTransactions();
       return { result: pendingTransactions };
     });
+
+    // Add new subscription handler for real-time transaction feed
+    this.registerSubscription('transactionFeed', (params, ws) => {
+      // Broadcast new transactions to the subscriber
+      this.subscriptions.broadcastTransactionFeed(this.getRecentTransactions());
+      return null;
+    });
   }
 
   registerSubscription(name: string, handler: (params: any, ws: WebSocket) => any) {
@@ -93,6 +100,7 @@ class WebSocketServer extends JsonRpcServer {
       // Check for new transactions in the mempool
       const newTransactions = await this.transactionPool.getPendingTransactions();
       this.subscriptions.broadcastPendingTransactions(newTransactions);
+      this.subscriptions.broadcastTransactionFeed(newTransactions);
     }, 1000);
   }
 
@@ -110,6 +118,13 @@ class WebSocketServer extends JsonRpcServer {
       const latestLogEntries = await this.getLatestLogEntries();
       this.subscriptions.broadcastLogs(latestLogEntries);
     }, 5000);
+  }
+
+  private async getRecentTransactions(): Promise<Transaction[]> {
+    // Implement logic to fetch the most recent transactions
+    // and return them as an array of Transaction objects
+    const transactions = await this.transactionPool.getPendingTransactions();
+    return transactions.slice(0, 10);
   }
 
   private async getLatestBlocks(): Promise<Block[]> {
