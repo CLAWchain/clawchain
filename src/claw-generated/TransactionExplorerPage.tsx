@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getTransactions, Transaction } from './TransactionService';
+import { TransactionService, Transaction } from './TransactionService';
 import TransactionDetailsModal from './TransactionDetailsModal';
 
 const TransactionExplorerPage: React.FC = () => {
@@ -10,7 +10,7 @@ const TransactionExplorerPage: React.FC = () => {
   useEffect(() => {
     // Fetch recent transactions
     const fetchTransactions = async () => {
-      const txs = await getTransactions();
+      const txs = await TransactionService.getTransactions();
       setTransactions(txs);
     };
     fetchTransactions();
