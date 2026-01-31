@@ -1,22 +1,18 @@
-import express, { Router } from 'express';
-import { healthCheck, readinessCheck } from './health';
-import { contractVerification } from './contract-verification';
-import { getTransaction } from './transaction';
-import { rateLimiter } from './rate-limiter';
+import express from 'express';
+import rateLimit from 'express-rate-limit';
 
-const router = Router();
+// Create a rate limiter
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again after 15 minutes'
+});
 
-// Health and readiness checks
-router.get('/health', healthCheck);
-router.get('/ready', readinessCheck);
+const router = express.Router();
 
-// Contract verification
-router.post('/contract-verification', contractVerification);
+// Apply the rate limiter to all requests
+router.use(limiter);
 
-// Transaction explorer
-router.get('/transactions/:hash', getTransaction);
-
-// Apply rate limiting middleware
-router.use(rateLimiter);
+// Define public API routes here
 
 export default router;
