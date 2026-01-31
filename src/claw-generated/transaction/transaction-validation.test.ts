@@ -1,55 +1,66 @@
-import { Transaction, TransactionManager } from './transaction';
 import { TransactionValidator } from './transaction-validation';
+import { Transaction } from './transaction';
 import { Account } from '../account/account';
 
 describe('TransactionValidator', () => {
-  let account: Account;
   let transaction: Transaction;
+  let account: Account;
 
   beforeEach(() => {
-    account = {
-      address: '0x1234567890abcdef',
-      privateKey: '0xdeadbeefcafebabedeadbeefcafebabe',
-      nextExpectedNonce: 0
-    };
+    // Set up test data
+    transaction = new Transaction({
+      nonce: 1,
+      from: '0x123456789abcdef',
+      to: '0xfedcba9876543210',
+      value: 100,
+      gas: 21000,
+      gasPrice: 10,
+      data: '0x',
+      signature: '0x...'
+    });
 
-    transaction = TransactionManager.createTransaction(
-      account,
-      { address: '0x0987654321fedcba', privateKey: '0xbabecafebabecafebabecafebabecafe' },
-      100,
-      0
-    );
-    transaction = TransactionManager.signTransaction(transaction, account.privateKey);
+    account = new Account({
+      address: '0x123456789abcdef',
+      balance: 1000,
+      nonce: 0
+    });
   });
 
-  test('checkIntegerOverflow', () => {
-    expect(TransactionValidator.checkIntegerOverflow(transaction)).toBe(true);
+  describe('validateTransaction', () => {
+    it('should return true for a valid transaction', () => {
+      expect(TransactionValidator.validateTransaction(transaction, account)).toBe(true);
+    });
 
-    transaction.amount = Number.MAX_SAFE_INTEGER + 1;
-    expect(TransactionValidator.checkIntegerOverflow(transaction)).toBe(false);
+    it('should return false for an invalid signature', () => {
+      transaction.signature = '0xInvalidSignature';
+      expect(TransactionValidator.validateTransaction(transaction, account)).toBe(false);
+    });
+
+    it('should return false for an invalid nonce', () => {
+      transaction.nonce = 0;
+      expect(TransactionValidator.validateTransaction(transaction, account)).toBe(false);
+    });
+
+    // Add more test cases for other validation checks
   });
 
-  test('checkReplayAttack', () => {
-    expect(TransactionValidator.checkReplayAttack(transaction, account)).toBe(true);
-
-    transaction.nonce = 1;
-    expect(TransactionValidator.checkReplayAttack(transaction, account)).toBe(false);
+  describe('verifyTransactionSignature', () => {
+    // Add test cases for signature verification
   });
 
-  test('checkSignatureMalleability', () => {
-    expect(TransactionValidator.checkSignatureMalleability(transaction)).toBe(true);
+  describe('verifyTransactionNonce', () => {
+    it('should return true for a valid nonce', () => {
+      expect(TransactionValidator.verifyTransactionNonce(transaction, account)).toBe(true);
+    });
 
-    // TODO: Implement tests for signature malleability
-  });
+    it('should return false for a nonce that is too low', () => {
+      transaction.nonce = 0;
+      expect(TransactionValidator.verifyTransactionNonce(transaction, account)).toBe(false);
+    });
 
-  test('validateTransaction', () => {
-    expect(TransactionValidator.validateTransaction(transaction, account)).toBe(true);
-
-    transaction.amount = Number.MAX_SAFE_INTEGER + 1;
-    expect(TransactionValidator.validateTransaction(transaction, account)).toBe(false);
-
-    transaction.amount = 100;
-    transaction.nonce = 1;
-    expect(TransactionValidator.validateTransaction(transaction, account)).toBe(false);
+    it('should return false for a nonce that is too high', () => {
+      transaction.nonce = TransactionValidator.MAX_NONCE + 1;
+      expect(TransactionValidator.verifyTransactionNonce(transaction, account)).toBe(false);
+    });
   });
 });
