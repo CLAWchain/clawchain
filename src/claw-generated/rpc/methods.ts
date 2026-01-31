@@ -1,5 +1,7 @@
-import { getAccountInfo, GetAccountInfoParams, GetAccountInfoResult } from './getAccountInfo';
+import { Transaction, TransactionReceipt } from '../transaction';
+import { getTransaction as getTransactionFromDB } from '../getTransaction';
 
-export const RpcMethods: Record<string, (params: any) => Promise<any>> = {
-  getAccountInfo: (params: GetAccountInfoParams) => getAccountInfo(params)
-};
+export async function getTransaction(signature: string): Promise<Transaction | null> {
+  const transaction = await getTransactionFromDB(signature);
+  return transaction;
+}
