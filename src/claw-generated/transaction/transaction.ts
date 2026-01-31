@@ -1,6 +1,7 @@
 import { Account } from '../account/account';
 import { TransactionValidator } from './transaction-validation';
 import { verifyEd25519Signature } from '../crypto/ed25519';
+import { TransactionFeeCalculator } from '../blockchain/transaction-fee';
 
 export interface Transaction {
   from: Account;
@@ -9,6 +10,7 @@ export interface Transaction {
   nonce: number;
   signature: string;
   publicKey: Uint8Array;
+  fee: number;
 }
 
 export class TransactionManager {
@@ -19,16 +21,19 @@ export class TransactionManager {
       amount,
       nonce,
       signature: '',
-      publicKey: from.publicKey
+      publicKey: from.publicKey,
+      fee: 0
     };
   }
 
   static signTransaction(transaction: Transaction, privateKey: Uint8Array): Transaction {
     const transactionData = this.hashTransaction(transaction);
     const signature = this.signEd25519(transactionData, privateKey);
+    const fee = TransactionFeeCalculator.calculateFee(transaction);
     return {
       ...transaction,
-      signature: Buffer.from(signature).toString('hex')
+      signature: Buffer.from(signature).toString('hex'),
+      fee
     };
   }
 
@@ -42,7 +47,8 @@ export class TransactionManager {
         from: transaction.from.address,
         to: transaction.to.address,
         amount: transaction.amount,
-        nonce: transaction.nonce
+        nonce: transaction.nonce,
+        fee: transaction.fee
       })
     );
   }
