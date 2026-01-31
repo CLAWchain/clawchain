@@ -1,19 +1,33 @@
-import { TransactionSignature } from './types';
+import { Block } from '../models/block';
 
-export class ClawChain {
-  static async getSignaturesForAddress(address: string, { limit = 10, before }: { limit?: number; before?: string }) {
-    // Fetch signatures from the transaction database
-    const signatures = await this.fetchSignaturesForAddress(address, { limit, before });
-    return signatures;
+export class Chain {
+  private blocks: Block[] = [];
+
+  addBlock(block: Block): void {
+    this.blocks.push(block);
   }
 
-  static async fetchSignaturesForAddress(address: string, { limit, before }: { limit?: number; before?: string }) {
-    // Implementation to fetch signatures from the transaction database
-    // and return them in the expected format
-    return [
-      { signature: 'abc123', slot: 12345, blockTime: 1234567890 },
-      { signature: 'def456', slot: 12346, blockTime: 1234567891 },
-      // More signatures...
-    ];
+  getLatestBlock(): Block {
+    return this.blocks[this.blocks.length - 1];
+  }
+
+  reorganizeChain(newChain: Chain): void {
+    // Find the common ancestor block
+    let commonAncestorIndex = 0;
+    for (let i = 0; i < Math.min(this.blocks.length, newChain.blocks.length); i++) {
+      if (this.blocks[i].hash === newChain.blocks[i].hash) {
+        commonAncestorIndex = i;
+      } else {
+        break;
+      }
+    }
+
+    // Remove the divergent blocks from the current chain
+    this.blocks.splice(commonAncestorIndex + 1);
+
+    // Add the new blocks from the competing chain
+    for (let i = commonAncestorIndex + 1; i < newChain.blocks.length; i++) {
+      this.blocks.push(newChain.blocks[i]);
+    }
   }
 }
