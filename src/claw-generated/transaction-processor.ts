@@ -1,57 +1,38 @@
-import { Transaction, ValidationResult } from './transaction';
-import { StateManager } from './StateManager';
+import { Account } from './account';
+import { Transaction } from './transaction';
 
 export class TransactionProcessor {
-  private stateManager: StateManager;
-  private nonces: Map<string, number> = new Map();
+  private accounts: Map<string, Account> = new Map();
 
-  constructor(stateManager: StateManager) {
-    this.stateManager = stateManager;
+  addAccount(account: Account): void {
+    this.accounts.set(account.address, account);
   }
 
-  async validateTransaction(tx: Transaction): Promise<ValidationResult> {
-    // Check nonce
-    const expectedNonce = await this.getNonce(tx.from);
-    if (tx.nonce < expectedNonce) {
-      return { valid: false, error: `Nonce too low: expected ${expectedNonce}, got ${tx.nonce}` };
+  processTransaction(tx: Transaction): boolean {
+    const fromAccount = this.accounts.get(tx.from);
+    if (!fromAccount) {
+      return false;
     }
 
-    // Allow slightly higher nonce for queued transactions
-    if (tx.nonce > expectedNonce + 10) {
-      return { valid: false, error: `Nonce too high: expected ${expectedNonce}, got ${tx.nonce}` };
+    if (!tx.validate(fromAccount)) {
+      return false;
     }
 
-    // Other validation checks...
+    fromAccount.balance -= tx.value;
+    fromAccount.nonce++;
 
-    return { valid: true };
-  }
-
-  async addTransaction(tx: Transaction): Promise<ValidationResult> {
-    const validation = await this.validateTransaction(tx);
-    if (!validation.valid) {
-      return validation;
+    const toAccount = this.accounts.get(tx.to);
+    if (toAccount) {
+      toAccount.balance += tx.value;
+    } else {
+      this.accounts.set(tx.to, {
+        address: tx.to,
+        balance: tx.value,
+        nonce: 0,
+        validateTransaction: () => true
+      });
     }
 
-    // Update nonce
-    await this.incrementNonce(tx.from);
-
-    // Process transaction...
-
-    return { valid: true };
-  }
-
-  private async getNonce(address: string): Promise<number> {
-    if (this.nonces.has(address)) {
-      return this.nonces.get(address)!;
-    }
-
-    const nonce = await this.stateManager.getNonce(address);
-    this.nonces.set(address, nonce);
-    return nonce;
-  }
-
-  private async incrementNonce(address: string): Promise<void> {
-    const currentNonce = await this.getNonce(address);
-    this.nonces.set(address, currentNonce + 1);
+    return true;
   }
 }

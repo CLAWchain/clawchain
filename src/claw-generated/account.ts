@@ -1,13 +1,24 @@
-import { PublicKey } from '@solana/web3.js';
+import { Transaction } from './transaction';
 
-export class Account {
-  pubkey: PublicKey;
+export interface Account {
+  address: string;
+  balance: number;
+  nonce: number;
+  validateTransaction(tx: Transaction): boolean;
+}
+
+export class EOAAccount implements Account {
+  address: string;
   balance: number;
   nonce: number;
 
-  constructor(pubkey: PublicKey, balance: number, nonce: number) {
-    this.pubkey = pubkey;
+  constructor(address: string, balance: number, nonce: number) {
+    this.address = address;
     this.balance = balance;
     this.nonce = nonce;
+  }
+
+  validateTransaction(tx: Transaction): boolean {
+    return tx.from === this.address && tx.nonce === this.nonce;
   }
 }
