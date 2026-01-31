@@ -153,35 +153,53 @@ class GitIntegration {
             console.error('[GIT] Failed to configure git:', error);
         }
     }
-    // Auto-commit and push changes - DISABLED to prevent deployment file deletions
+    // Auto-commit and push changes - SAFE MODE: only commits to claw-generated/
     async autoCommitAndPush(message, taskId) {
-        // DISABLED: Git operations were deleting critical deployment files
-        // The agent can still work and generate code, but commits must be done manually
-        console.log('[GIT] autoCommitAndPush DISABLED for safety:', message);
-        return {
-            success: true,
-            output: 'Git auto-commit disabled. Agent work is logged but not pushed to prevent deployment issues.'
-        };
-        /* DISABLED CODE BELOW
-        console.log('[GIT] autoCommitAndPush called:', message);
-        
-        const status = this.getStatus();
-        console.log('[GIT] Status:', JSON.stringify(status));
-        
-        // Nothing to commit
-        if (status.clean) {
-          console.log('[GIT] Working tree clean, nothing to commit');
-          return {
-            success: true,
-            output: 'No changes to commit'
-          };
-        }
-    
-        console.log(`[GIT] Auto-committing ${status.changes.length} changes...`);
-        */
+        console.log('[GIT] autoCommitAndPush called (SAFE MODE):', message);
+        // SAFE DIRECTORIES - agent can ONLY commit files in these paths
+        const SAFE_PATHS = [
+            'backend/src/claw-generated',
+            'claw-generated',
+            'src/claw-generated'
+        ];
         try {
-            // Stage all changes
-            this.execGit('add -A', true);
+            // Get list of changed files
+            const statusOutput = this.execGit('status --porcelain', true);
+            const changedFiles = statusOutput.split('\n').filter(Boolean);
+            if (changedFiles.length === 0) {
+                console.log('[GIT] No changes to commit');
+                return { success: true, output: 'No changes to commit' };
+            }
+            // Filter to only safe files (in claw-generated directories)
+            const safeFiles = [];
+            const blockedFiles = [];
+            for (const line of changedFiles) {
+                const file = line.substring(3).trim(); // Remove status prefix
+                const isSafe = SAFE_PATHS.some(safePath => file.startsWith(safePath) || file.includes('/' + safePath));
+                if (isSafe) {
+                    safeFiles.push(file);
+                }
+                else {
+                    blockedFiles.push(file);
+                }
+            }
+            if (blockedFiles.length > 0) {
+                console.log(`[GIT] BLOCKED ${blockedFiles.length} files outside safe paths:`, blockedFiles.slice(0, 5));
+            }
+            if (safeFiles.length === 0) {
+                console.log('[GIT] No safe files to commit (all changes are outside claw-generated/)');
+                return { success: true, output: 'No safe files to commit' };
+            }
+            console.log(`[GIT] Staging ${safeFiles.length} safe files...`);
+            // Stage ONLY safe files (never use git add -A)
+            for (const file of safeFiles) {
+                try {
+                    this.execGit(`add "${file}"`, true);
+                }
+                catch (e) {
+                    console.log(`[GIT] Could not stage ${file}`);
+                }
+            }
             // Create commit with CLAW prefix
             const fullMessage = taskId
                 ? `[CLAW-${taskId}] ${message}`

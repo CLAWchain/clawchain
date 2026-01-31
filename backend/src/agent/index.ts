@@ -14,20 +14,6 @@ export { ciMonitor } from './CIMonitor';
 export { browserAutomation, BROWSER_TOOLS } from './BrowserAutomation';
 export { skillManager } from './SkillManager';
 
-// Modular tools
-export { 
-  toolRegistry, 
-  getTool, 
-  executeTool, 
-  getToolDefinitions,
-  fileReadTool,
-  fileWriteTool,
-  commandTool,
-  gitTool,
-  testTool,
-  searchTool
-} from './tools';
-
 // Types
 export type { Memory, WorkingContext, CompletedTaskRecord } from './AgentMemory';
 export type { ChainState, ChainIssue, ChainOpportunity } from './ChainObserver';
@@ -39,4 +25,3 @@ export type { SourceTask, TaskSourceType, TaskPriority } from './TaskSources';
 export type { TestResult, TestFailure, BuildResult, LintResult, LintIssue } from './CIMonitor';
 export type { BrowserResult, PageInfo, ElementInfo } from './BrowserAutomation';
 export type { Skill, SkillTool, SkillScript, SkillTrigger, SkillResult } from './SkillManager';
-export type { ToolResult, AgentTool } from './tools';

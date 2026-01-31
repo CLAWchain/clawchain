@@ -5,17 +5,6 @@ import { eventBus } from '../events/EventBus';
 import { gitIntegration } from './GitIntegration';
 import { browserAutomation, BROWSER_TOOLS } from './BrowserAutomation';
 
-// Import the new modular tools
-import { 
-  fileReadTool, 
-  fileWriteTool, 
-  commandTool, 
-  gitTool, 
-  testTool, 
-  searchTool,
-  getToolDefinitions
-} from './tools';
-
 // Execution result
 export interface ExecutionResult {
   success: boolean;
@@ -249,33 +238,12 @@ const BLOCKED_PATHS = [
   '.git/hooks'
 ];
 
-// Directories allowed for agent writes
-// Expanded to include source directories for real development
+// ONLY these directories are allowed for agent writes
+// This prevents the agent from deleting deployment configs
 const ALLOWED_WRITE_DIRS = [
-  // Generated code directories
   'backend/src/claw-generated',
   'claw-generated',
-  'src/claw-generated',
-  // Source directories for real development
-  'backend/src/agent',
-  'backend/src/blockchain',
-  'backend/src/api',
-  'backend/src/validators',
-  'backend/src/events',
-  'backend/src/config',
-  'backend/src/database',
-  'backend/src/vm',
-  'backend/src/byzantine',
-  'backend/src/integrations',
-  // Frontend source
-  'frontend/src',
-  'frontend/src/components',
-  // Test files
-  'tests',
-  'backend/tests',
-  'frontend/tests',
-  // Documentation
-  'docs'
+  'src/claw-generated'
 ];
 
 export class AgentExecutor {
@@ -682,7 +650,6 @@ export class AgentExecutor {
   }
 
   // Execute a tool call from Claude
-  // Uses new modular tools with improved safety and capabilities
   async executeTool(toolName: string, args: any): Promise<any> {
     console.log(`[EXECUTOR] Running tool: ${toolName}`, args);
     
@@ -691,116 +658,45 @@ export class AgentExecutor {
     let result: any;
 
     switch (toolName) {
-      // File operations - using new modular tools
       case 'read_file':
-        result = await fileReadTool.execute(args);
-        // Convert to legacy format for compatibility
-        result = {
-          success: result.success,
-          path: args.path,
-          content: result.output,
-          error: result.error
-        };
+        result = await this.readFile(args.path);
         break;
       
       case 'write_file':
-        result = await fileWriteTool.execute(args);
-        // Convert to legacy format
-        result = {
-          success: result.success,
-          path: args.path,
-          error: result.error
-        };
+        result = await this.writeFile(args.path, args.content);
         break;
       
       case 'run_command':
-        result = await commandTool.execute(args);
-        // Convert to legacy format
-        result = {
-          success: result.success,
-          output: result.output || '',
-          error: result.error,
-          exitCode: result.data?.exitCode,
-          duration: result.duration
-        };
+        result = await this.runCommand(args.command, args.timeout);
         break;
       
       case 'list_files':
-        const listResult = await fileReadTool.execute({ path: args.path || '.' });
-        if (listResult.data?.type === 'directory') {
-          result = { files: listResult.data.files };
-        } else {
-          result = { files: await this.listFiles(args.path, args.recursive) };
-        }
+        result = { files: await this.listFiles(args.path, args.recursive) };
         break;
       
       case 'search_code':
-        result = await searchTool.execute({
-          pattern: args.pattern,
-          filePattern: args.file_pattern
-        });
-        // Convert to legacy format
-        result = { matches: result.data?.matches || [] };
+        result = { matches: await this.searchCode(args.pattern, args.file_pattern) };
         break;
       
-      // Git operations - RE-ENABLED with new safe GitTool
       case 'git_status':
-        const statusResult = await gitTool.execute({ operation: 'status' });
-        result = {
-          success: statusResult.success,
-          output: statusResult.output,
-          branch: statusResult.data?.branch,
-          commit: statusResult.data?.lastCommit
-        };
+        result = await this.gitStatus();
         break;
       
       case 'git_commit':
-        const commitResult = await gitTool.execute({ 
-          operation: 'commit', 
-          message: args.message,
-          files: args.files
-        });
-        result = {
-          success: commitResult.success,
-          output: commitResult.output,
-          commit: commitResult.data?.commit,
-          error: commitResult.error
-        };
-        break;
-
-      case 'git_branch':
-        const branchResult = await gitTool.execute({ 
-          operation: 'branch', 
-          branch: args.name 
-        });
-        result = {
-          success: branchResult.success,
-          output: branchResult.output,
-          branch: branchResult.data?.branch,
-          error: branchResult.error
-        };
-        break;
-
-      case 'git_push':
-        const pushResult = await gitTool.execute({ operation: 'push' });
-        result = {
-          success: pushResult.success,
-          output: pushResult.output,
-          error: pushResult.error
-        };
-        break;
-
-      case 'create_pr':
-        // PR creation still uses GitIntegration for GitHub API
-        result = await gitIntegration.createPullRequest(args.title, args.body);
+        // Re-enabled with SAFE MODE - only commits to claw-generated/
+        console.log(`[EXECUTOR] Git commit (SAFE MODE) - only claw-generated/ files`);
+        result = await gitIntegration.autoCommitAndPush(args.message, args.taskId);
         break;
       
-      // Run tests
-      case 'run_tests':
-        result = await testTool.execute({
-          type: args.type || 'test',
-          file: args.file
-        });
+      case 'git_branch':
+      case 'git_push':
+      case 'create_pr':
+        // These remain disabled - too risky
+        console.log(`[EXECUTOR] Git operation ${toolName} DISABLED for safety`);
+        result = { 
+          success: false, 
+          error: 'This git operation is disabled. Only git_commit is allowed (to claw-generated/ only).' 
+        };
         break;
       
       case 'explain':
@@ -825,14 +721,6 @@ export class AgentExecutor {
     eventBus.emit('agent_tool_complete', { tool: toolName, result });
     
     return result;
-  }
-  
-  // Get tool definitions for Claude API (from modular tools)
-  getToolDefinitions(): any[] {
-    return [
-      ...getToolDefinitions(),
-      ...BROWSER_TOOLS
-    ];
   }
 }
 

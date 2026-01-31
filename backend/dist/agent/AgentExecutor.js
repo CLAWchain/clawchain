@@ -38,6 +38,7 @@ const child_process_1 = require("child_process");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const EventBus_1 = require("../events/EventBus");
+const GitIntegration_1 = require("./GitIntegration");
 const BrowserAutomation_1 = require("./BrowserAutomation");
 // Tool definitions for Claude
 exports.AGENT_TOOLS = [
@@ -622,14 +623,18 @@ class AgentExecutor {
                 result = await this.gitStatus();
                 break;
             case 'git_commit':
+                // Re-enabled with SAFE MODE - only commits to claw-generated/
+                console.log(`[EXECUTOR] Git commit (SAFE MODE) - only claw-generated/ files`);
+                result = await GitIntegration_1.gitIntegration.autoCommitAndPush(args.message, args.taskId);
+                break;
             case 'git_branch':
             case 'git_push':
             case 'create_pr':
-                // ALL GIT OPERATIONS DISABLED - they were causing deployment file deletions
+                // These remain disabled - too risky
                 console.log(`[EXECUTOR] Git operation ${toolName} DISABLED for safety`);
                 result = {
                     success: false,
-                    error: 'Git operations disabled. Agent work is logged but changes must be committed manually.'
+                    error: 'This git operation is disabled. Only git_commit is allowed (to claw-generated/ only).'
                 };
                 break;
             case 'explain':

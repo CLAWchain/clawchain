@@ -156,70 +156,59 @@ export class GitIntegration {
     }
   }
 
-  // Auto-commit and push changes - RE-ENABLED with safety checks
-  // Only commits files in allowed directories, never touches deployment configs
+  // Auto-commit and push changes - SAFE MODE: only commits to claw-generated/
   async autoCommitAndPush(message: string, taskId?: string): Promise<GitOperationResult> {
-    console.log('[GIT] autoCommitAndPush called:', message);
+    console.log('[GIT] autoCommitAndPush called (SAFE MODE):', message);
     
-    // Safety check: only auto-commit if AUTO_GIT_PUSH is enabled
-    if (AUTO_PUSH_ENABLED === false && !GITHUB_TOKEN) {
-      console.log('[GIT] Auto-push disabled (no GITHUB_TOKEN)');
-      // Still create local commit
-    }
-    
-    const status = this.getStatus();
-    console.log('[GIT] Status:', JSON.stringify(status));
-    
-    // Nothing to commit
-    if (status.clean) {
-      console.log('[GIT] Working tree clean, nothing to commit');
-      return {
-        success: true,
-        output: 'No changes to commit'
-      };
-    }
-
-    // SAFETY: Filter out protected files from staging
-    const PROTECTED_FILES = [
-      'package.json', 'package-lock.json', 'tsconfig.json', 'vite.config.ts',
-      '.gitignore', 'Dockerfile', 'docker-compose.yml', 'railway.json',
-      'vercel.json', 'Procfile', '.env', '.env.example', 'README.md'
+    // SAFE DIRECTORIES - agent can ONLY commit files in these paths
+    const SAFE_PATHS = [
+      'backend/src/claw-generated',
+      'claw-generated',
+      'src/claw-generated'
     ];
-    
-    const safeChanges = status.changes.filter(file => {
-      const fileName = file.split('/').pop() || '';
-      // Block protected files
-      if (PROTECTED_FILES.includes(fileName)) {
-        console.log(`[GIT] Skipping protected file: ${file}`);
-        return false;
-      }
-      // Only allow certain directories
-      const allowedDirs = ['backend/src/', 'frontend/src/', 'docs/', 'tests/'];
-      const inAllowed = allowedDirs.some(dir => file.startsWith(dir));
-      if (!inAllowed) {
-        console.log(`[GIT] Skipping file outside allowed dirs: ${file}`);
-        return false;
-      }
-      return true;
-    });
-    
-    if (safeChanges.length === 0) {
-      console.log('[GIT] No safe changes to commit');
-      return {
-        success: true,
-        output: 'No changes in allowed directories to commit'
-      };
-    }
-
-    console.log(`[GIT] Auto-committing ${safeChanges.length} changes...`);
 
     try {
-      // Stage only safe changes (not protected files or files outside allowed dirs)
-      for (const file of safeChanges) {
+      // Get list of changed files
+      const statusOutput = this.execGit('status --porcelain', true);
+      const changedFiles = statusOutput.split('\n').filter(Boolean);
+      
+      if (changedFiles.length === 0) {
+        console.log('[GIT] No changes to commit');
+        return { success: true, output: 'No changes to commit' };
+      }
+      
+      // Filter to only safe files (in claw-generated directories)
+      const safeFiles: string[] = [];
+      const blockedFiles: string[] = [];
+      
+      for (const line of changedFiles) {
+        const file = line.substring(3).trim(); // Remove status prefix
+        const isSafe = SAFE_PATHS.some(safePath => file.startsWith(safePath) || file.includes('/' + safePath));
+        
+        if (isSafe) {
+          safeFiles.push(file);
+        } else {
+          blockedFiles.push(file);
+        }
+      }
+      
+      if (blockedFiles.length > 0) {
+        console.log(`[GIT] BLOCKED ${blockedFiles.length} files outside safe paths:`, blockedFiles.slice(0, 5));
+      }
+      
+      if (safeFiles.length === 0) {
+        console.log('[GIT] No safe files to commit (all changes are outside claw-generated/)');
+        return { success: true, output: 'No safe files to commit' };
+      }
+      
+      console.log(`[GIT] Staging ${safeFiles.length} safe files...`);
+      
+      // Stage ONLY safe files (never use git add -A)
+      for (const file of safeFiles) {
         try {
           this.execGit(`add "${file}"`, true);
         } catch (e) {
-          console.log(`[GIT] Failed to stage ${file}`);
+          console.log(`[GIT] Could not stage ${file}`);
         }
       }
 

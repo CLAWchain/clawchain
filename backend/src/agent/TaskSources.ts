@@ -59,7 +59,7 @@ export class TaskSources {
     this.setupEventListeners();
   }
 
-  // Listen for chain events and CI events
+  // Listen for chain events
   private setupEventListeners(): void {
     // Listen for consensus failures
     eventBus.on('consensus_failed', (data: any) => {
@@ -92,129 +92,6 @@ export class TaskSources {
         });
       }
     });
-
-    // Listen for CI failures - convert to fix tasks
-    eventBus.on('ci_failure', (data: any) => {
-      this.addCIFailureTask(data);
-    });
-
-    // Listen for chain performance issues
-    eventBus.on('chain_performance_issue', (data: any) => {
-      this.addPerformanceTask(data);
-    });
-
-    // Listen for git commits that might need follow-up
-    eventBus.on('git_commit', (data: any) => {
-      console.log(`[TASKS] Git commit detected: ${data.commit}`);
-      // Could trigger a test task after commits
-    });
-  }
-
-  // Add task from chain performance issue
-  private addPerformanceTask(event: { type: string; [key: string]: any }): void {
-    const id = `perf-${event.type}-${Date.now()}`;
-    
-    if (this.processedIds.has(id)) return;
-
-    let title = '';
-    let description = '';
-    let priority: TaskPriority = 'medium';
-
-    switch (event.type) {
-      case 'slow_blocks':
-        title = 'Investigate slow block production';
-        description = `Block production is slow (${event.blockTime?.toFixed(1)}s, target: 10s).\n\n` +
-          `Average block time: ${event.averageBlockTime?.toFixed(1)}s\n` +
-          `Investigate potential causes:\n` +
-          `- Validator performance\n` +
-          `- Consensus overhead\n` +
-          `- Network latency`;
-        priority = event.severity === 'high' ? 'high' : 'medium';
-        break;
-
-      case 'high_gas':
-        title = 'Optimize gas-heavy operations';
-        description = `Gas utilization is high (${event.utilizationPercent}%).\n\n` +
-          `Gas used: ${event.gasUsed}\n` +
-          `Gas limit: ${event.gasLimit}\n\n` +
-          `Consider optimizing:\n` +
-          `- Transaction batching\n` +
-          `- Storage patterns\n` +
-          `- Computation efficiency`;
-        priority = event.severity === 'high' ? 'high' : 'medium';
-        break;
-
-      default:
-        title = `Fix performance issue: ${event.type}`;
-        description = JSON.stringify(event, null, 2);
-        priority = 'medium';
-    }
-
-    const task: SourceTask = {
-      id,
-      source: 'performance',
-      title,
-      description,
-      priority,
-      context: { performanceEvent: event },
-      createdAt: new Date()
-    };
-
-    this.pendingTasks.set(id, task);
-    console.log(`[TASKS] New performance task: ${task.title} (priority: ${priority})`);
-  }
-
-  // Add task from CI failure
-  private addCIFailureTask(event: { type: string; failures?: any[]; errors?: any[]; issues?: any[] }): void {
-    const id = `ci-${event.type}-${Date.now()}`;
-    
-    if (this.processedIds.has(id)) return;
-
-    let title = '';
-    let description = '';
-    let priority: TaskPriority = 'high';
-
-    switch (event.type) {
-      case 'tests':
-        title = `Fix ${event.failures?.length || 0} failing tests`;
-        description = `Test failures detected:\n\n${event.failures?.map((f: any) => 
-          `- ${f.testName} in ${f.file}: ${f.message}`
-        ).join('\n') || 'Unknown failures'}`;
-        priority = 'critical';
-        break;
-
-      case 'build':
-        title = `Fix ${event.errors?.length || 0} build errors`;
-        description = `Build errors:\n\n${event.errors?.slice(0, 10).join('\n') || 'Build failed'}`;
-        priority = 'critical';
-        break;
-
-      case 'lint':
-        title = `Fix ${event.issues?.length || 0} lint errors`;
-        description = `Lint issues:\n\n${event.issues?.slice(0, 10).map((i: any) => 
-          `- ${i.file}:${i.line} - ${i.message}`
-        ).join('\n') || 'Lint errors found'}`;
-        priority = 'medium';
-        break;
-
-      default:
-        title = `Fix CI failure: ${event.type}`;
-        description = JSON.stringify(event, null, 2);
-        priority = 'high';
-    }
-
-    const task: SourceTask = {
-      id,
-      source: 'code_error',
-      title,
-      description,
-      priority,
-      context: { ciEvent: event },
-      createdAt: new Date()
-    };
-
-    this.pendingTasks.set(id, task);
-    console.log(`[TASKS] New CI failure task: ${task.title} (priority: ${priority})`);
   }
 
   // Add task from chain event
