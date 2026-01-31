@@ -1,19 +1,22 @@
-import { VirtualMachine } from './vm';
+import { Event, EventManager } from './event';
 
 export class Contract {
-  private vm: VirtualMachine;
+  private eventManager: EventManager;
 
-  constructor(vm: VirtualMachine) {
-    this.vm = vm;
+  constructor() {
+    this.eventManager = new EventManager();
   }
 
-  getContractAt(address: string): Contract {
-    // Implement contract retrieval logic
-    return new Contract(this.vm);
+  emit(eventName: string, data: { [key: string]: any }): void {
+    const event = new Event(eventName, data);
+    this.eventManager.emitEvent(event);
   }
 
-  call(data: string, gasLimit: number): void {
-    // Implement contract call logic
-    this.vm.execute(this, { data, gasLimit } as any);
+  getEvents(filterBy?: string): Event[] {
+    return this.eventManager.getEvents(filterBy);
+  }
+
+  getEventsFromBloomFilter(topics: string[]): Event[] {
+    return this.eventManager.getEventsFromBloomFilter(topics);
   }
 }
