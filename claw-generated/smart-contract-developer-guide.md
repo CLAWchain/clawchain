@@ -1,60 +1,55 @@
 # ClawChain Smart Contract Developer Guide
 
-## Introduction
-ClawChain is a decentralized blockchain platform that enables the deployment and execution of smart contracts. This guide will provide an overview of the process for building and deploying smart contracts on the ClawChain network.
+## Smart Contract Structure
+...
 
-## Prerequisites
-- Understanding of blockchain and smart contract concepts
-- Familiarity with the ClawChain platform and its architecture
-- Ability to write code in the supported programming language(s)
+## Contract Deployment
 
-## Smart Contract Development
-### Contract Structure
-A ClawChain smart contract is composed of the following key elements:
-- **State Variables**: Data stored on the blockchain and accessible to the contract
-- **Functions**: Executable code that can read and modify the contract state
-- **Events**: Notifications that the contract can emit during execution
+Deploying smart contracts to the ClawChain network involves a few key steps:
 
-### Deployment
-To deploy a smart contract on ClawChain, you'll need to:
-1. Compile the contract code into a deployable format
-2. Submit the contract bytecode to the ClawChain network
-3. Provide any necessary constructor parameters
+### Development and Compilation
+Developers should use a Solidity-compatible development environment, such as Hardhat or Truffle, to write and compile their smart contracts. This will ensure the contracts are syntactically correct and can be deployed to the network.
 
-The deployment process is handled by the ClawChain VM, which will verify the contract and add it to the blockchain.
-
-### Interacting with Contracts
-After deployment, other clients can interact with the contract by sending transactions that call its functions. The ClawChain VM will execute the contract code and update the state accordingly.
-
-### Security Considerations
-When building smart contracts, it's important to consider potential security vulnerabilities, such as:
-- Reentrancy attacks
-- Integer overflow/underflow
-- Unprotected function calls
-- Lack of input validation
-
-Refer to the ClawChain security guidelines for best practices on writing secure smart contracts.
-
-## Example Contract
-Here's a simple example of a smart contract that manages a token balance:
-
-```solidity
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-
-contract TokenContract {
-    mapping(address => uint256) public balances;
-
-    function deposit(uint256 amount) public {
-        balances[msg.sender] += amount;
-    }
-
-    function withdraw(uint256 amount) public {
-        require(balances[msg.sender] >= amount, "Insufficient balance");
-        balances[msg.sender] -= amount;
-    }
-}
+Example Hardhat setup:
+```
+npm install --save-dev hardhat
+npx hardhat init
 ```
 
-## Conclusion
-This guide provides a high-level overview of smart contract development on the ClawChain platform. For more detailed information, refer to the ClawChain documentation and community resources.
+### Contract Deployment
+Once the contracts are compiled, developers can use deployment scripts to deploy them to the ClawChain network. This may involve interacting with a ClawChain node or using a deployment service provided by the platform.
+
+Example deployment script:
+```javascript
+const hre = require("hardhat");
+
+async function main() {
+  const CRC20Token = await hre.ethers.getContractFactory("CRC20Token");
+  const token = await CRC20Token.deploy("MyToken", "MTK", 1000000);
+  await token.deployed();
+
+  console.log("CRC20Token deployed to:", token.address);
+}
+
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+```
+
+### Verification and Validation
+After deployment, developers should verify that the contract was deployed correctly and that its behavior matches the expected functionality. This may involve running automated tests or manually interacting with the contract through the ClawChain API or a user interface.
+
+Example contract verification:
+```javascript
+const token = await ethers.getContractAt("CRC20Token", contractAddress);
+const totalSupply = await token.totalSupply();
+console.log("Total Supply:", totalSupply.toString());
+```
+
+By following these steps, developers can successfully deploy their smart contracts to the ClawChain network and ensure they are functioning as expected.
+
+## Contract Interaction
+...
