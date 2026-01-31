@@ -1,14 +1,15 @@
 import { PublicKey, Signature, verifySignature } from './crypto';
 import { MultisigWallet } from './multisig_wallet';
 import { StateChannelUpdate, StateChannel } from './state-channel';
+import { Ed25519PublicKey, Ed25519Signature } from './crypto/ed25519';
 
 export interface Transaction {
-  from: PublicKey;
-  to: PublicKey;
+  from: Ed25519PublicKey;
+  to: Ed25519PublicKey;
   value: number;
   data?: string | StateChannelUpdate;
   nonce: number;
-  signatures: Signature[];
+  signature: Ed25519Signature;
   multisigWallet?: MultisigWallet;
 }
 
@@ -21,15 +22,17 @@ export class TransactionManager {
   }
 
   addTransaction(transaction: Transaction): void {
-    if (typeof transaction.data === 'object' && 'channelId' in transaction.data) {
-      // Handle state channel update
-      const update = transaction.data as StateChannelUpdate;
-      if (this.stateChannelManager.handleStateUpdate(update)) {
+    if (this.verifyTransaction(transaction)) {
+      if (typeof transaction.data === 'object' && 'channelId' in transaction.data) {
+        // Handle state channel update
+        const update = transaction.data as StateChannelUpdate;
+        if (this.stateChannelManager.handleStateUpdate(update)) {
+          this.transactions.push(transaction);
+        }
+      } else {
+        // Handle regular transaction
         this.transactions.push(transaction);
       }
-    } else {
-      // Handle regular transaction
-      this.transactions.push(transaction);
     }
   }
 
@@ -63,7 +66,7 @@ export class TransactionManager {
 
         return validSignatures >= threshold;
       } else {
-        return verifySignature(transaction.signatures[0], transaction, transaction.from);
+        return verifySignature(transaction.signature, transaction, transaction.from);
       }
     }
   }
