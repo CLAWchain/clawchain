@@ -2,23 +2,27 @@ import { PeerManager, PeerInfo } from './PeerManager';
 import { PeerReputation } from './PeerReputation';
 import { TransactionManager } from '../blockchain/transaction-manager';
 import { BlockManager } from '../blockchain/block-manager';
+import { EventManager } from '../event/event-manager';
 
 class WormholeBridge {
   private peerManager: PeerManager;
   private peerReputation: PeerReputation;
   private transactionManager: TransactionManager;
   private blockManager: BlockManager;
+  private eventManager: EventManager;
 
   constructor(
     peerManager: PeerManager,
     peerReputation: PeerReputation,
     transactionManager: TransactionManager,
-    blockManager: BlockManager
+    blockManager: BlockManager,
+    eventManager: EventManager
   ) {
     this.peerManager = peerManager;
     this.peerReputation = peerReputation;
     this.transactionManager = transactionManager;
     this.blockManager = blockManager;
+    this.eventManager = eventManager;
   }
 
   async handleIncomingMessage(message: WormholeMessage) {
