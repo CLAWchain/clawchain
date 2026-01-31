@@ -1,0 +1,29 @@
+type Block {
+  height: Int!
+  timestamp: Int!
+  transactions: [Transaction!]!
+  stateRoot: String!
+  hash: String!
+}
+
+type Transaction {
+  hash: String!
+  block: Block!
+  from: String!
+  to: String!
+  value: String!
+  gasUsed: Int!
+  timestamp: Int!
+}
+
+type Account {
+  address: String!
+  balance: String!
+  transactions: [Transaction!]!
+}
+
+type Query {
+  getBlock(height: Int!): Block
+  getTransaction(hash: String!): Transaction
+  getAccount(address: String!): Account
+}
