@@ -1,31 +1,20 @@
 import { argon2 } from 'argon2-wasm';
+import { randomBytes } from 'crypto';
 
-export class EncryptedKeypair {
-  private encryptedData: Buffer;
-  private salt: Buffer;
+export interface EncryptedKeypair {
+  ciphertext: Uint8Array;
+  nonce: Uint8Array;
+}
 
-  constructor(private password: string, private keypair: Uint8Array) {
-    this.generateEncryptedData();
-  }
+export async function encryptKeypair(keypair: Uint8Array, password: string): Promise<EncryptedKeypair> {
+  const salt = randomBytes(16);
+  const key = await argon2.hash(password, { salt });
+  const nonce = randomBytes(12);
+  const ciphertext = await argon2.encrypt(keypair, key, { nonce });
+  return { ciphertext, nonce };
+}
 
-  private async generateEncryptedData() {
-    this.salt = await argon2.hash(this.password);
-    this.encryptedData = await argon2.encrypt(this.keypair, this.salt);
-  }
-
-  public async decrypt(): Promise<Uint8Array> {
-    return await argon2.decrypt(this.encryptedData, this.salt, this.password);
-  }
-
-  public serialize(): string {
-    return JSON.stringify({
-      encryptedData: this.encryptedData.toString('hex'),
-      salt: this.salt.toString('hex')
-    });
-  }
-
-  public static deserialize(serializedData: string): EncryptedKeypair {
-    const { encryptedData, salt } = JSON.parse(serializedData);
-    return new EncryptedKeypair('', Buffer.from(encryptedData, 'hex'));
-  }
+export async function decryptKeypair(encryptedKeypair: EncryptedKeypair, password: string): Promise<Uint8Array> {
+  const key = await argon2.hash(password, { salt: encryptedKeypair.nonce });
+  return await argon2.decrypt(encryptedKeypair.ciphertext, key, { nonce: encryptedKeypair.nonce });
 }
