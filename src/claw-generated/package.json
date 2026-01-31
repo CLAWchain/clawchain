@@ -1,5 +1,0 @@
-{
-  "scripts": {
-    "test:rpc": "jest ../claw-generated/rpc"
-  }
-}
