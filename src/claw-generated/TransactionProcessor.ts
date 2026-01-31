@@ -3,14 +3,22 @@ import { Account } from './account';
 import { StateManager } from './StateManager';
 import { StakingStateManager } from './StakingStateManager';
 import { TransactionReceipt } from './transaction-receipt';
+import { TransactionOrdering } from './transaction_ordering';
+import { Transaction } from './transaction';
 
 class TransactionProcessor {
   private stateManager: StateManager;
   private stakingStateManager: StakingStateManager;
+  private transactionOrdering: TransactionOrdering;
 
   constructor(stateManager: StateManager, stakingStateManager: StakingStateManager) {
     this.stateManager = stateManager;
     this.stakingStateManager = stakingStateManager;
+    this.transactionOrdering = new TransactionOrdering(stateManager);
+  }
+
+  async processTransactions(transactions: Transaction[]): Promise<TransactionReceipt[]> {
+    return this.transactionOrdering.processTransactions(transactions);
   }
 
   async processStakeTransaction(from: Account, amount: BigNumber, delegateTo?: string): Promise<TransactionReceipt> {
