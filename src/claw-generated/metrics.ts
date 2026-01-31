@@ -1,30 +1,62 @@
-import { Counter, Gauge, Registry } from 'prom-client';
+import { NodeStats } from './types';
 
-const registry = new Registry();
+export class MetricsCollector {
+  private nodeStats: NodeStats = {
+    blockHeight: 0,
+    transactionThroughput: 0,
+    transactionLatency: 0,
+    memoryUsage: 0,
+    cpuUtilization: 0,
+    networkBandwidth: 0
+  };
 
-// Blockchain metrics
-export const blockProduced = new Counter({
-  name: 'claw_blocks_produced',
-  help: 'Total number of blocks produced',
-  registers: [registry]
-});
+  constructor() {
+    // Set up metrics collection
+    this.collectNodeStats();
+    setInterval(() => this.collectNodeStats(), 5000);
+  }
 
-export const transactionsProcessed = new Counter({
-  name: 'claw_transactions_processed',
-  help: 'Total number of transactions processed',
-  registers: [registry]
-});
+  private collectNodeStats() {
+    // Implement logic to collect node statistics
+    this.nodeStats.blockHeight = this.getCurrentBlockHeight();
+    this.nodeStats.transactionThroughput = this.getTransactionThroughput();
+    this.nodeStats.transactionLatency = this.getTransactionLatency();
+    this.nodeStats.memoryUsage = this.getMemoryUsage();
+    this.nodeStats.cpuUtilization = this.getCpuUtilization();
+    this.nodeStats.networkBandwidth = this.getNetworkBandwidth();
+  }
 
-export const peersConnected = new Gauge({
-  name: 'claw_peers_connected',
-  help: 'Number of peers currently connected',
-  registers: [registry]
-});
+  public getNodeStats(): NodeStats {
+    return this.nodeStats;
+  }
 
-export const chainHeight = new Gauge({
-  name: 'claw_chain_height',
-  help: 'Current height of the blockchain',
-  registers: [registry]
-});
+  private getCurrentBlockHeight(): number {
+    // Implement logic to get the current block height
+    return 12345;
+  }
 
-export const getMetricsRegistry = () => registry;
+  private getTransactionThroughput(): number {
+    // Implement logic to get the transaction throughput
+    return 100;
+  }
+
+  private getTransactionLatency(): number {
+    // Implement logic to get the transaction latency
+    return 2.5;
+  }
+
+  private getMemoryUsage(): number {
+    // Implement logic to get the memory usage
+    return 75.3;
+  }
+
+  private getCpuUtilization(): number {
+    // Implement logic to get the CPU utilization
+    return 45.2;
+  }
+
+  private getNetworkBandwidth(): number {
+    // Implement logic to get the network bandwidth
+    return 10.5;
+  }
+}
