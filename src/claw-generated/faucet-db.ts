@@ -1,11 +1,31 @@
-// Faucet database integration
-import { getDispensedAddresses, storeDispensedAddress } from './faucet-db';
+import { PrismaClient } from '@prisma/client';
 
-export async function getDispensedAddresses(): Promise<string[]> {
-  // TODO: Implement database integration to retrieve dispensed addresses
-  return [];
+const prisma = new PrismaClient();
+
+export async function recordFaucetRequest(address: string): Promise<void> {
+  await prisma.faucetRequest.create({
+    data: {
+      address,
+      requestedAt: new Date(),
+    },
+  });
 }
 
-export async function storeDispensedAddress(address: string): Promise<void> {
-  // TODO: Implement database integration to store dispensed address
+export async function hasRecentFaucetPayout(address: string): Promise<boolean> {
+  const lastRequest = await prisma.faucetRequest.findFirst({
+    where: {
+      address,
+    },
+    orderBy: {
+      requestedAt: 'desc',
+    },
+  });
+
+  if (!lastRequest) {
+    return false;
+  }
+
+  const oneDay = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+  const timeSinceLastRequest = new Date().getTime() - lastRequest.requestedAt.getTime();
+  return timeSinceLastRequest < oneDay;
 }

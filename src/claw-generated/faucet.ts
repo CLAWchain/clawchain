@@ -1,17 +1,26 @@
-// Faucet API endpoint
-import express from 'express';
-import { dispenseTokens } from './faucet-logic';
+import { Request, Response } from 'express';
+import { mintTokens } from '../token-service';
+import { recordFaucetRequest } from '../faucet-db';
 
-const faucetRouter = express.Router();
+export const faucetRoute = async (req: Request, res: Response) => {
+  const { address } = req.body;
 
-faucetRouter.post('/claim', async (req, res) => {
-  try {
-    const address = req.body.address;
-    const tokens = await dispenseTokens(address);
-    res.json({ tokens });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+  // Check if address has received a faucet payout in the last 24 hours
+  const hasRecentPayout = await hasRecentFaucetPayout(address);
+  if (hasRecentPayout) {
+    return res.status(429).json({ error: 'You can only request faucet once per day' });
   }
-});
 
-export default faucetRouter;
+  // Mint 10 CLAW tokens and send to the address
+  await mintTokens(address, 10);
+
+  // Record the faucet request in the database
+  await recordFaucetRequest(address);
+
+  return res.json({ message: 'Faucet payout successful' });
+};
+
+async function hasRecentFaucetPayout(address: string): Promise<boolean> {
+  // TODO: Implement database lookup to check for recent faucet payouts
+  return false;
+}
