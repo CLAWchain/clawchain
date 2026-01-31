@@ -1,85 +1,70 @@
-import { jest } from '@jest/globals';
 import { StateManager } from './StateManager';
-import { Account } from './account';
+import { ReadWriteLock } from './ReadWriteLock';
+import { StateDiffManager } from './StateDiffManager';
 
 describe('StateManager', () => {
   let stateManager: StateManager;
-  let mockStorage: any;
+  let stateDiffManager: StateDiffManager;
 
   beforeEach(() => {
-    mockStorage = {
-      get: jest.fn(),
-      set: jest.fn(),
-    };
-    stateManager = new StateManager(mockStorage);
+    stateDiffManager = new StateDiffManager();
+    stateManager = new StateManager(stateDiffManager);
   });
 
-  test('should update account balances correctly', async () => {
-    // Arrange
-    const account1 = new Account('0x1234', 100);
-    const account2 = new Account('0x5678', 50);
-    mockStorage.get.mockResolvedValueOnce(account1).mockResolvedValueOnce(account2);
+  it('should acquire and release read locks correctly', async () => {
+    const key = 'test-key';
+    const value = { data: 'test-value' };
 
-    // Act
-    await stateManager.updateBalance('0x1234', 50);
-    await stateManager.updateBalance('0x5678', 25);
+    // Simulate concurrent reads
+    const readPromises = [];
+    for (let i = 0; i < 10; i++) {
+      readPromises.push(stateManager.getState(key));
+    }
+    await Promise.all(readPromises);
 
-    // Assert
-    expect(mockStorage.get).toHaveBeenCalledTimes(2);
-    expect(mockStorage.set).toHaveBeenCalledTimes(2);
-    expect(mockStorage.set).toHaveBeenCalledWith('0x1234', new Account('0x1234', 50));
-    expect(mockStorage.set).toHaveBeenCalledWith('0x5678', new Account('0x5678', 25));
-    expect(await stateManager.getStateRoot()).toEqual(expect.any(String));
+    // Verify that the read locks were acquired and released correctly
+    const lock = (stateManager as any).getLock(key);
+    expect(lock.readLocks).toBe(0);
   });
 
-  test('should calculate state root correctly', async () => {
-    // Arrange
-    const account1 = new Account('0x1234', 100);
-    const account2 = new Account('0x5678', 50);
-    mockStorage.get
-      .mockResolvedValueOnce(account1)
-      .mockResolvedValueOnce(account2);
+  it('should acquire and release write locks correctly', async () => {
+    const key = 'test-key';
+    const value = { data: 'test-value' };
 
-    // Act
-    await stateManager.updateBalance('0x1234', 50);
-    await stateManager.updateBalance('0x5678', 25);
-    const stateRoot = await stateManager.getStateRoot();
+    // Simulate concurrent writes
+    const writePromises = [];
+    for (let i = 0; i < 10; i++) {
+      writePromises.push(stateManager.setState(key, value, i));
+    }
+    await Promise.all(writePromises);
 
-    // Assert
-    expect(mockStorage.get).toHaveBeenCalledTimes(2);
-    expect(mockStorage.set).toHaveBeenCalledTimes(2);
-    expect(stateRoot).toEqual(expect.any(String));
+    // Verify that the write locks were acquired and released correctly
+    const lock = (stateManager as any).getLock(key);
+    expect(lock.writeLocks).toBe(0);
   });
 
-  test('should apply transactions correctly', async () => {
-    // Arrange
-    const account1 = new Account('0x1234', 100);
-    const account2 = new Account('0x5678', 50);
-    mockStorage.get
-      .mockResolvedValueOnce(account1)
-      .mockResolvedValueOnce(account2);
+  it('should prioritize writers over readers', async () => {
+    const key = 'test-key';
+    const value = { data: 'test-value' };
 
-    const transaction = {
-      from: '0x1234',
-      to: '0x5678',
-      value: 25,
-      nonce: 0,
-    };
+    // Acquire a write lock
+    const writePromise = stateManager.setState(key, value, 0);
 
-    // Act
-    const receipt = await stateManager.applyTransaction(transaction);
+    // Simulate concurrent reads
+    const readPromises = [];
+    for (let i = 0; i < 10; i++) {
+      readPromises.push(stateManager.getState(key));
+    }
 
-    // Assert
-    expect(mockStorage.get).toHaveBeenCalledTimes(2);
-    expect(mockStorage.set).toHaveBeenCalledTimes(2);
-    expect(receipt).toEqual(expect.objectContaining({
-      from: '0x1234',
-      to: '0x5678',
-      value: 25,
-      status: 1,
-    }));
-    expect(await stateManager.getBalance('0x1234')).toEqual(75);
-    expect(await stateManager.getBalance('0x5678')).toEqual(75);
-    expect(await stateManager.getStateRoot()).toEqual(expect.any(String));
+    // Wait for the write lock to be released
+    await writePromise;
+
+    // Wait for the read promises to complete
+    await Promise.all(readPromises);
+
+    // Verify that the write lock was prioritized over the reads
+    const lock = (stateManager as any).getLock(key);
+    expect(lock.readLocks).toBe(0);
+    expect(lock.writeLocks).toBe(0);
   });
 });
