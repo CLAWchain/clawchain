@@ -1,7 +1,10 @@
 import { keccak256 } from 'js-sha3';
 import { AccountStorage } from './account-storage';
+import { TransactionProcessor } from './transaction-processor';
+import { VMState } from './vm';
 
 const accountStorage = new AccountStorage();
+const transactionProcessor = new TransactionProcessor();
 
 export async function generateContractAddress(
   deployer: string,
@@ -22,9 +25,29 @@ export async function deployContract(
   bytecode: string,
   ...args: any[]
 ): Promise<string> {
-  // TODO: Implement contract deployment transaction
   const contractAddress = await generateContractAddress(deployer, bytecode);
   const nonce = await fetchNonce(deployer);
-  accountStorage.set(deployer, 'nonce', nonce.add(1));
+
+  // Create a new transaction to deploy the contract
+  const tx = {
+    from: deployer,
+    to: '0x0000000000000000000000000000000000000000',
+    value: 0,
+    data: `0x${bytecode}${encodeConstructorArgs(args)}`,
+    nonce,
+    gasLimit: 5000000,
+    gasPrice: 1000000000
+  };
+
+  // Process the contract deployment transaction
+  await transactionProcessor.processTransaction(tx);
+
+  // Update the deployer's nonce
+  accountStorage.set(deployer, 'nonce', nonce + 1);
+
   return contractAddress;
+}
+
+function encodeConstructorArgs(args: any[]): string {
+  return args.reduce((encoded, arg) => encoded + arg.toString(16).padStart(64, '0'), '');
 }
