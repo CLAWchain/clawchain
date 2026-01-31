@@ -49,6 +49,45 @@ class BlockStressTests {
 
     console.log('Block production stress test completed successfully!');
   }
+
+  static async runMultipleBlockProductionStressTests(
+    numTests: number,
+    numTransactions: number,
+    transactionsPerSecond: number
+  ): Promise<void> {
+    for (let i = 0; i < numTests; i++) {
+      console.log(`Running block production stress test ${i + 1} of ${numTests}`);
+      await this.runBlockProductionStressTest(numTransactions, transactionsPerSecond);
+    }
+  }
+
+  static async runBlockPropagationStressTest(
+    numBlocks: number,
+    blockInterval: number
+  ): Promise<void> {
+    console.log(`Running block propagation stress test with ${numBlocks} blocks at ${blockInterval} second intervals...`);
+
+    // Create a chain of blocks
+    const blocks: Block[] = [];
+    for (let i = 0; i < numBlocks; i++) {
+      const block = await Block.create(i, [], Date.now() + i * blockInterval * 1000);
+      blocks.push(block);
+    }
+
+    // Propagate the blocks through the network
+    const startTime = Date.now();
+    for (const block of blocks) {
+      await Chain.instance.processBlock(block);
+      await new Promise((resolve) => setTimeout(resolve, blockInterval * 1000));
+    }
+
+    // Measure block propagation time
+    const elapsedSeconds = (Date.now() - startTime) / 1000;
+    const actualBlocksPerSecond = numBlocks / elapsedSeconds;
+    console.log(`Actual blocks per second: ${actualBlocksPerSecond.toFixed(2)}`);
+
+    console.log('Block propagation stress test completed successfully!');
+  }
 }
 
 export { BlockStressTests };
