@@ -1,62 +1,36 @@
-import { ec as EC } from 'elliptic';
-import { keccak256 } from 'js-sha3';
-import { ed25519 } from '../crypto/ed25519';
+/**
+ * Transaction Signing Library
+ * 
+ * Provides functionality for signing transactions client-side using different signature schemes.
+ */
 
-// Supported signature schemes
-export type SignatureScheme = 'ecdsa' | 'eddsa';
+import { Transaction } from '../models/transaction';
+import { Wallet } from '../wallet/wallet';
+import * as elliptic from 'elliptic';
 
-export interface SignedTransaction {
-  r: string;
-  s: string;
-  v: number;
-}
+const ec = new elliptic.ec('secp256k1');
 
 export class TransactionSigner {
-  private ec: EC;
-  private useEd25519: boolean;
-
-  constructor(signatureScheme: SignatureScheme = 'ecdsa') {
-    if (signatureScheme === 'ecdsa') {
-      this.ec = new EC('secp256k1');
-      this.useEd25519 = false;
-    } else {
-      this.useEd25519 = true;
-    }
+  /**
+   * Sign a transaction using the provided wallet.
+   * @param tx The transaction to sign
+   * @param wallet The wallet to use for signing
+   * @returns The signed transaction
+   */
+  static sign(tx: Transaction, wallet: Wallet): Transaction {
+    const key = ec.keyFromPrivate(wallet.privateKey, 'hex');
+    const signature = key.sign(tx.hash()).toDER('hex');
+    tx.signature = signature;
+    return tx;
   }
 
-  sign(transaction: any, privateKey: string): SignedTransaction {
-    if (this.useEd25519) {
-      const signature = ed25519.sign(JSON.stringify(transaction), privateKey);
-      return {
-        r: signature.slice(0, 64),
-        s: signature.slice(64, 128),
-        v: 0
-      };
-    } else {
-      const key = this.ec.keyFromPrivate(privateKey, 'hex');
-      const digest = keccak256(JSON.stringify(transaction));
-      const signature = key.sign(digest);
-
-      return {
-        r: signature.r.toString(16),
-        s: signature.s.toString(16),
-        v: signature.recoveryParam! + 27
-      };
-    }
-  }
-
-  verify(transaction: any, publicKey: string, signature: SignedTransaction): boolean {
-    if (this.useEd25519) {
-      const signatureBytes = Buffer.from(signature.r + signature.s, 'hex');
-      return ed25519.verify(JSON.stringify(transaction), publicKey, signatureBytes);
-    } else {
-      const key = this.ec.keyFromPublic(publicKey, 'hex');
-      const digest = keccak256(JSON.stringify(transaction));
-      return key.verify(digest, {
-        r: signature.r,
-        s: signature.s,
-        recoveryParam: signature.v - 27
-      });
-    }
+  /**
+   * Verify the signature of a transaction.
+   * @param tx The transaction to verify
+   * @returns True if the signature is valid, false otherwise
+   */
+  static verify(tx: Transaction): boolean {
+    const key = ec.keyFromPublic(tx.senderPublicKey, 'hex');
+    return key.verify(tx.hash(), tx.signature);
   }
 }

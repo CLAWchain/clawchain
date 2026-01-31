@@ -1,25 +1,21 @@
+import { Transaction } from '../models/transaction';
+import { Wallet } from '../wallet/wallet';
 import { TransactionSigner } from './signing';
 
 describe('TransactionSigner', () => {
-  const signer = new TransactionSigner();
-  const privateKey = '0x...'; // Replace with a valid private key
-  const transaction = {
-    to: '0x...', 
-    value: 1000,
-    nonce: 1
-  };
+  it('should sign and verify a transaction', () => {
+    const wallet = new Wallet();
+    const tx = new Transaction({
+      from: wallet.address,
+      to: '0x1234567890abcdef',
+      value: 100,
+      nonce: 0
+    });
 
-  it('should sign a transaction', () => {
-    const signedTx = signer.sign(transaction, privateKey);
-    expect(signedTx.r).toBeDefined();
-    expect(signedTx.s).toBeDefined();
-    expect(signedTx.v).toBeDefined();
-  });
+    const signedTx = TransactionSigner.sign(tx, wallet);
+    expect(signedTx.signature).not.toBeUndefined();
 
-  it('should verify a signed transaction', () => {
-    const signedTx = signer.sign(transaction, privateKey);
-    const publicKey = signer.ec.keyFromPrivate(privateKey, 'hex').getPublic('hex');
-    const isValid = signer.verify(transaction, publicKey, signedTx);
+    const isValid = TransactionSigner.verify(signedTx);
     expect(isValid).toBe(true);
   });
 });
