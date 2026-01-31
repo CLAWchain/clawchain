@@ -1,15 +1,18 @@
-import * as bip39 from 'bip39';
+import { entropyToMnemonic, mnemonicToEntropy } from 'bip39';
+import { randomBytes } from 'crypto';
 
 export class Mnemonic {
-  static generatePhrase(wordCount: 12 | 24): string {
-    return bip39.generateMnemonic(wordCount * 11);
+  static generateMnemonic(wordCount: 12 | 24): string {
+    const entropy = randomBytes(wordCount === 12 ? 16 : 32);
+    return entropyToMnemonic(entropy);
   }
 
-  static validatePhrase(phrase: string): boolean {
-    return bip39.validateMnemonic(phrase);
-  }
-
-  static seedFromPhrase(phrase: string): Buffer {
-    return bip39.mnemonicToSeedSync(phrase);
+  static validateMnemonic(mnemonic: string): boolean {
+    try {
+      mnemonicToEntropy(mnemonic);
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 }
