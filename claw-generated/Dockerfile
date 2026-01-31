@@ -1,15 +1,17 @@
-# Stage 1: Build
-FROM node:18-alpine AS build
-WORKDIR /app/backend
+# Build stage
+FROM node:18-alpine AS builder
+WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
 RUN npm run build
 
-# Stage 2: Runtime
+# Runtime stage
 FROM node:18-alpine
-WORKDIR /app/backend
-COPY --from=build /app/backend/dist ./dist
-COPY --from=build /app/backend/package*.json ./
-RUN npm ci --only=production
-CMD ["node", "dist/api/server.js"]
+WORKDIR /app
+COPY --from=builder /app/backend/dist ./backend/dist
+COPY --from=builder /app/claw-generated ./claw-generated
+COPY --from=builder /app/frontend/dist ./frontend/dist
+COPY package*.json ./
+RUN npm ci --production
+CMD ["npm", "start"]
