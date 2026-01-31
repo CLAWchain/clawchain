@@ -1,95 +1,58 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./Token.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract Governance {
-    Token public token;
-    
-    struct VotingProposal {
+    IERC20 public token;
+    uint256 public votingPeriod;
+    uint256 public voteThreshold;
+
+    struct Proposal {
         uint256 id;
+        address proposer;
         string description;
-        uint256 startBlock;
-        uint256 endBlock;
-        uint256 quorumThreshold;
-        uint256 passThreshold;
-        mapping(address => bool) voters;
-        mapping(address => uint256) voteWeights;
-        uint256 forVotes;
-        uint256 againstVotes;
+        uint256 startTime;
+        uint256 endTime;
+        mapping(address =&gt; uint256) votes;
+        uint256 totalVotes;
         bool executed;
     }
-    
-    VotingProposal[] public proposals;
-    
-    event ProposalCreated(uint256 indexed proposalId, string description, uint256 startBlock, uint256 endBlock);
-    event Voted(uint256 indexed proposalId, address indexed voter, bool support, uint256 voteWeight);
-    event ProposalFinalized(uint256 indexed proposalId, bool passed);
-    
-    constructor(Token _token) {
+
+    mapping(uint256 =&gt; Proposal) public proposals;
+    uint256 public nextProposalId = 1;
+
+    constructor(IERC20 _token, uint256 _votingPeriod, uint256 _voteThreshold) {
         token = _token;
+        votingPeriod = _votingPeriod;
+        voteThreshold = _voteThreshold;
     }
-    
-    function proposeUpgrade(string memory description, uint256 duration, uint256 quorum, uint256 passThreshold) public {
-        require(quorum > 0 && quorum <= 100, "Invalid quorum threshold");
-        require(passThreshold > 0 && passThreshold <= 100, "Invalid passage threshold");
-        
-        uint256 startBlock = block.number;
-        uint256 endBlock = startBlock + duration;
-        
-        VotingProposal memory proposal = VotingProposal({
-            id: proposals.length,
-            description: description,
-            startBlock: startBlock,
-            endBlock: endBlock,
-            quorumThreshold: quorum,
-            passThreshold: passThreshold,
-            forVotes: 0,
-            againstVotes: 0,
-            executed: false
-        });
-        
-        proposals.push(proposal);
-        
-        emit ProposalCreated(proposal.id, proposal.description, proposal.startBlock, proposal.endBlock);
+
+    function proposeUpgrade(string memory description) public {
+        uint256 proposalId = nextProposalId++;
+        Proposal storage proposal = proposals[proposalId];
+        proposal.id = proposalId;
+        proposal.proposer = msg.sender;
+        proposal.description = description;
+        proposal.startTime = block.timestamp;
+        proposal.endTime = block.timestamp + votingPeriod;
     }
-    
-    function castVote(uint256 proposalId, bool support) public {
-        VotingProposal storage proposal = proposals[proposalId];
-        
-        require(block.number >= proposal.startBlock && block.number <= proposal.endBlock, "Voting period has ended");
-        require(!proposal.voters[msg.sender], "You have already voted");
-        
-        uint256 voteWeight = token.balanceOf(msg.sender);
-        proposal.voters[msg.sender] = true;
-        proposal.voteWeights[msg.sender] = voteWeight;
-        
-        if (support) {
-            proposal.forVotes += voteWeight;
-        } else {
-            proposal.againstVotes += voteWeight;
-        }
-        
-        emit Voted(proposalId, msg.sender, support, voteWeight);
+
+    function vote(uint256 proposalId, uint256 amount) public {
+        Proposal storage proposal = proposals[proposalId];
+        require(block.timestamp &gt;= proposal.startTime &amp;&amp; block.timestamp &lt;= proposal.endTime, "Voting period has ended");
+        uint256 balance = token.balanceOf(msg.sender);
+        require(amount &lt;= balance, "Insufficient token balance");
+        proposal.votes[msg.sender] += amount;
+        proposal.totalVotes += amount;
     }
-    
-    function finalizeProposal(uint256 proposalId) public {
-        VotingProposal storage proposal = proposals[proposalId];
-        
-        require(block.number > proposal.endBlock, "Voting period is still open");
+
+    function executeProposal(uint256 proposalId) public {
+        Proposal storage proposal = proposals[proposalId];
+        require(block.timestamp &gt; proposal.endTime, "Voting period has not ended");
+        require(proposal.totalVotes &gt;= voteThreshold, "Proposal did not reach vote threshold");
         require(!proposal.executed, "Proposal has already been executed");
-        
-        uint256 totalSupply = token.totalSupply();
-        uint256 quorum = (proposal.forVotes + proposal.againstVotes) * 100 / totalSupply;
-        bool passed = quorum >= proposal.quorumThreshold && proposal.forVotes * 100 / (proposal.forVotes + proposal.againstVotes) >= proposal.passThreshold;
-        
+        // Execute proposal logic here
         proposal.executed = true;
-        
-        emit ProposalFinalized(proposalId, passed);
-        
-        if (passed) {
-            // Execute the proposed upgrade
-            // TODO: Implement upgrade logic
-        }
     }
 }
