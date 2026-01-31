@@ -5,29 +5,39 @@ import { db, cache } from './db';
 class DatabaseConnectionPool {
   private pool: Pool;
   private redis: Redis;
+  private maxPoolSize: number = 20;
+  private connectionTimeoutMs: number = 2000;
+  private idleTimeoutMs: number = 30000;
+  private maxRetries: number = 3;
+  private retryDelayMs: number = 100;
 
   constructor() {
     this.pool = new Pool({
       connectionString: process.env.DATABASE_URL,
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
+      max: this.maxPoolSize,
+      idleTimeoutMillis: this.idleTimeoutMs,
+      connectionTimeoutMillis: this.connectionTimeoutMs,
     });
 
     this.redis = new Redis(process.env.REDIS_URL, {
-      maxRetriesPerRequest: 3,
-      retryStrategy: (times) => Math.min(times * 100, 3000),
+      maxRetriesPerRequest: this.maxRetries,
+      retryStrategy: (times) => Math.min(times * this.retryDelayMs, 3000),
     });
   }
 
   async getClient(): Promise<PoolClient> {
-    try {
-      return await this.pool.connect();
-    } catch (error) {
-      console.error('Error getting database client:', error);
-      throw error;
+    let retries = 0;
+    while (retries < this.maxRetries) {
+      try {
+        return await this.pool.connect();
+      } catch (error) {
+        console.error('Error getting database client:', error);
+        retries++;
+        await new Promise((resolve) => setTimeout(resolve, this.retryDelayMs * retries));
+      }
     }
+    throw new Error('Failed to get database client after multiple retries');
   }
 
   async query(text: string, params: any[] = []): Promise<{ rows: any[]; rowCount?: number }> {
