@@ -1,24 +1,49 @@
-import { Transaction } from '../transaction/transaction';
-import { Account } from '../account/account';
+import { Transaction } from './transaction';
+import { MerkleTree } from './merkle-tree';
+import { sha256 } from 'js-sha256';
 
 export class Block {
+  version: number;
+  timestamp: number;
+  previousHash: string;
   transactions: Transaction[];
-  reward: number;
-  minerAddress: string;
+  merkleRoot: string;
+  nonce: number;
+  hash: string;
 
-  constructor(transactions: Transaction[], minerAddress: string) {
+  constructor(
+    version: number,
+    timestamp: number,
+    previousHash: string,
+    transactions: Transaction[],
+    nonce: number
+  ) {
+    this.version = version;
+    this.timestamp = timestamp;
+    this.previousHash = previousHash;
     this.transactions = transactions;
-    this.minerAddress = minerAddress;
-    this.reward = 0;
+    this.merkleRoot = this.calculateMerkleRoot();
+    this.nonce = nonce;
+    this.hash = this.calculateHash();
   }
 
-  processTransactions(): void {
-    for (const tx of this.transactions) {
-      tx.apply(this);
-    }
+  calculateMerkleRoot(): string {
+    const merkleTree = new MerkleTree(this.transactions.map((tx) => tx.hash()));
+    return merkleTree.getRoot();
   }
 
-  getMinerReward(): number {
-    return this.reward;
+  calculateHash(): string {
+    const hashInput = `${this.version}${this.timestamp}${this.previousHash}${this.merkleRoot}${this.nonce}`;
+    return sha256(hashInput);
+  }
+
+  validate(): boolean {
+    // Implement block validation
+    return true;
+  }
+
+  serialize(): string {
+    // Implement block serialization
+    return '';
   }
 }
