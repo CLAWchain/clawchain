@@ -1,4 +1,3 @@
-// Peer discovery protocol implementation
-export class PeerDiscovery {
-  // Implement Kademlia-like DHT here
-}
+export * from './PeerManager';
+export * from './PeerReputation';
+export * from './WormholeBridge';
