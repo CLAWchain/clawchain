@@ -1,52 +1,57 @@
-import { Instruction, OperandSize } from './types';
-
 export class VirtualMachine {
-  private stack: number[] = [];
-  private pc: number = 0;
-  private memory: number[] = [];
+  private memory: Uint8Array;
+  private stack: number[];
+  private pc: number;
+  private gas: number;
+  private gasLimit: number;
 
-  execute(instructions: Instruction[]) {
-    while (this.pc < instructions.length) {
-      const instruction = instructions[this.pc];
-      this.executeInstruction(instruction);
+  constructor(gasLimit: number) {
+    this.memory = new Uint8Array(1024 * 1024); // 1 MB memory
+    this.stack = [];
+    this.pc = 0;
+    this.gas = 0;
+    this.gasLimit = gasLimit;
+  }
+
+  execute(code: Uint8Array): void {
+    while (this.pc < code.length) {
+      if (this.gas > this.gasLimit) {
+        throw new Error('Out of gas');
+      }
+
+      const opcode = code[this.pc];
+      switch (opcode) {
+        case 0x01: // ADD
+          this.addGasCost(3);
+          this.add();
+          break;
+        case 0x02: // SUB
+          this.addGasCost(3);
+          this.sub();
+          break;
+        // Add more opcodes and their gas costs
+        default:
+          throw new Error(`Unknown opcode: ${opcode}`);
+      }
       this.pc++;
     }
   }
 
-  private executeInstruction(instruction: Instruction) {
-    switch (instruction.opcode) {
-      case 'PUSH':
-        this.stack.push(instruction.operand as number);
-        break;
-      case 'POP':
-        this.stack.pop();
-        break;
-      case 'ADD':
-        this.binaryOperation((a, b) => a + b);
-        break;
-      case 'SUB':
-        this.binaryOperation((a, b) => a - b);
-        break;
-      case 'MUL':
-        this.binaryOperation((a, b) => a * b);
-        break;
-      case 'DIV':
-        this.binaryOperation((a, b) => a / b);
-        break;
-      case 'JUMP':
-        this.pc = instruction.operand as number;
-        break;
-      case 'JUMPI':
-        this.pc = this.stack.pop() ? (instruction.operand as number) : this.pc;
-        break;
-      default:
-        throw new Error(`Unknown opcode: ${instruction.opcode}`);
-    }
+  private add(): void {
+    const a = this.stack.pop();
+    const b = this.stack.pop();
+    this.stack.push(a + b);
   }
 
-  private binaryOperation(operation: (a: number, b: number) => number) {
-    const b = this.stack.pop();
+  private sub(): void {
     const a = this.stack.pop();
-    this.stack.push(operation(a, b));
+    const b = this.stack.pop();
+    this.stack.push(b - a);
   }
+
+  private addGasCost(amount: number): void {
+    this.gas += amount;
+  }
+
+  // Add more private methods for other opcodes
 }

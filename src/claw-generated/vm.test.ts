@@ -1,37 +1,18 @@
 import { VirtualMachine } from './vm';
-import { Instruction, OperandSize } from './types';
 
 describe('VirtualMachine', () => {
-  let vm: VirtualMachine;
+  it('should execute code with gas metering', () => {
+    const vm = new VirtualMachine(100);
+    const code = new Uint8Array([0x01, 0x02]); // ADD, SUB
 
-  beforeEach(() => {
-    vm = new VirtualMachine();
+    vm.execute(code);
+    expect(vm.gas).toBe(6);
   });
 
-  it('should execute basic arithmetic operations', () => {
-    const instructions: Instruction[] = [
-      { opcode: 'PUSH', operand: 5 },
-      { opcode: 'PUSH', operand: 3 },
-      { opcode: 'ADD' },
-      { opcode: 'PUSH', operand: 2 },
-      { opcode: 'SUB' },
-    ];
+  it('should halt execution when gas is depleted', () => {
+    const vm = new VirtualMachine(5);
+    const code = new Uint8Array([0x01, 0x01, 0x01, 0x01, 0x01, 0x01]); // 6 ADD instructions
 
-    vm.execute(instructions);
-    expect(vm.stack).toEqual([6]);
-  });
-
-  it('should execute jump and conditional jump instructions', () => {
-    const instructions: Instruction[] = [
-      { opcode: 'PUSH', operand: 1 },
-      { opcode: 'PUSH', operand: 0 },
-      { opcode: 'JUMPI', operand: 4 },
-      { opcode: 'PUSH', operand: 100 },
-      { opcode: 'JUMP', operand: 5 },
-      { opcode: 'PUSH', operand: 200 },
-    ];
-
-    vm.execute(instructions);
-    expect(vm.stack).toEqual([1, 200]);
+    expect(() => vm.execute(code)).toThrowError('Out of gas');
   });
 });
