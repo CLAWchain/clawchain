@@ -1,69 +1,45 @@
-import { BigNumber, ethers } from 'ethers';
-import { StateChannel, ChannelState } from './channel';
-import { ClawChainContract } from '../contract';
+import { StateChannel } from './state-channel';
+import { Transaction } from '../transaction/transaction';
+import { Account } from '../account/account';
 
-class StateChannelManager {
+export class StateChannelManager {
   private channels: Map<string, StateChannel> = new Map();
-  private clawChainContract: ClawChainContract;
 
-  constructor(clawChainContract: ClawChainContract) {
-    this.clawChainContract = clawChainContract;
-  }
-
-  async openChannel(
-    participant1: string,
-    participant2: string,
-    initialBalance1: BigNumber,
-    initialBalance2: BigNumber
-  ): Promise<string> {
-    const channelId = await this.clawChainContract.openChannel(
-      participant1,
-      participant2,
-      initialBalance1,
-      initialBalance2
-    );
-    const channel = new StateChannel(
-      channelId,
-      participant1,
-      participant2,
-      initialBalance1,
-      initialBalance2
-    );
+  /**
+   * Create a new state channel between two parties.
+   * @param initiator The initiating party's account
+   * @param counterparty The counterparty's account
+   * @param initialDeposit The initial deposit amount for the channel
+   * @returns The newly created state channel
+   */
+  createChannel(
+    initiator: Account,
+    counterparty: Account,
+    initialDeposit: number
+  ): StateChannel {
+    const channelId = this.generateChannelId(initiator, counterparty);
+    const channel = new StateChannel(channelId, initiator, counterparty, initialDeposit);
     this.channels.set(channelId, channel);
-    return channelId;
+    return channel;
   }
 
+  /**
+   * Get an existing state channel by its ID.
+   * @param channelId The unique identifier for the channel
+   * @returns The state channel instance, or undefined if not found
+   */
   getChannel(channelId: string): StateChannel | undefined {
     return this.channels.get(channelId);
   }
 
-  updateChannelState(
-    channelId: string,
-    newBalance1: BigNumber,
-    newBalance2: BigNumber,
-    newSequenceNumber: number
-  ): ChannelState {
-    const channel = this.getChannel(channelId);
-    if (!channel) {
-      throw new Error(`Channel ${channelId} not found`);
-    }
-    return channel.updateState(newBalance1, newBalance2, newSequenceNumber);
-  }
-
-  async closeChannel(channelId: string): Promise<void> {
-    const channel = this.getChannel(channelId);
-    if (!channel) {
-      throw new Error(`Channel ${channelId} not found`);
-    }
-    await this.clawChainContract.closeChannel(
-      channel.getState().participant1,
-      channel.getState().participant2,
-      channel.getState().balance1,
-      channel.getState().balance2,
-      channel.getState().sequenceNumber
-    );
-    this.channels.delete(channelId);
+  /**
+   * Generate a unique identifier for a state channel based on the participating accounts.
+   * @param initiator The initiating party's account
+   * @param counterparty The counterparty's account
+   * @returns The channel ID
+   */
+  private generateChannelId(initiator: Account, counterparty: Account): string {
+    const sortedAccounts = [initiator, counterparty].sort((a, b) => a.address.localeCompare(b.address));
+    return `${sortedAccounts[0].address}-${sortedAccounts[1].address}`;
   }
 }
-
-export { StateChannelManager };
