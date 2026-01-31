@@ -1,11 +1,29 @@
-import express from 'express';
-import { getSignaturesForAddress } from './methods';
+import { Account, AccountInfo } from '../state/account';
+import { TxnProcessor } from '../tx/processor';
 
-const app = express();
-app.use(express.json());
+export class RPCServer {
+  private accounts: Account[];
+  private txnProcessor: TxnProcessor;
 
-app.get('/signatures', getSignaturesForAddress);
+  constructor(accounts: Account[], txnProcessor: TxnProcessor) {
+    this.accounts = accounts;
+    this.txnProcessor = txnProcessor;
+  }
 
-app.listen(8080, () => {
-  console.log('RPC server started on port 8080');
-});
+  async getAccountInfo(pubkey: string): Promise<AccountInfo> {
+    const account = this.accounts.find(a => a.publicKey === pubkey);
+    if (!account) {
+      throw new Error(`Account not found: ${pubkey}`);
+    }
+
+    return {
+      lamports: account.lamports,
+      owner: account.owner.toString(),
+      executable: account.executable
+    };
+  }
+
+  async processTransaction(tx: any): Promise<void> {
+    this.txnProcessor.processTransaction(tx);
+  }
+}
