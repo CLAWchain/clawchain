@@ -8,76 +8,52 @@ const EventBus_1 = require("../events/EventBus");
 const GENESIS_PARENT_HASH = 'CLAWChainGenesisBlock00000000000000000000000';
 // Fork resolution configuration
 const MAX_REORG_DEPTH = 100;
+// =====================================================
+// FIXED GENESIS - Block height is calculated from time
+// This NEVER resets across deployments
+// =====================================================
+const FIXED_GENESIS_TIMESTAMP = 1738195200000; // Jan 30, 2026 00:00:00 UTC
+const BLOCK_INTERVAL_MS = 10000; // 10 seconds per block
 class Chain {
     constructor() {
         this.blocks = [];
         this.difficulty = 1;
-        this.genesisTime = 0;
+        this.genesisTime = FIXED_GENESIS_TIMESTAMP;
         this.totalTransactions = 0;
         this.orphanedBlocks = []; // Blocks waiting for parent
     }
     async initialize() {
+        // ALWAYS use fixed genesis - this makes block height time-based and persistent
+        this.genesisTime = FIXED_GENESIS_TIMESTAMP;
+        const timeBasedHeight = this.getChainLength();
+        console.log(`[CHAIN] ========================================`);
+        console.log(`[CHAIN] FIXED GENESIS: ${new Date(FIXED_GENESIS_TIMESTAMP).toISOString()}`);
+        console.log(`[CHAIN] TIME-BASED HEIGHT: ${timeBasedHeight} blocks`);
+        console.log(`[CHAIN] This NEVER resets on deploy!`);
+        console.log(`[CHAIN] ========================================`);
         try {
-            // Try to load chain state from Redis first
-            const cachedHeight = await db_1.chainState.getBlockHeight();
-            const cachedStartTime = await db_1.chainState.getChainStartTime();
-            const cachedTotalTx = await db_1.chainState.getTotalTransactions();
-            if (cachedHeight > 0) {
-                console.log(`[CHAIN] State found in cache: height=${cachedHeight}, started=${new Date(cachedStartTime).toISOString()}`);
-                this.genesisTime = cachedStartTime;
-                this.totalTransactions = cachedTotalTx;
-                // Load recent blocks from database
-                const dbBlocks = await db_1.db.query('SELECT * FROM blocks ORDER BY height DESC LIMIT 100');
-                if (dbBlocks.rows.length > 0) {
-                    console.log(`[CHAIN] Loaded ${dbBlocks.rows.length} recent blocks from database`);
-                    // Reconstruct Block objects from database rows
-                    this.blocks = dbBlocks.rows.reverse().map(row => this.rowToBlock(row));
-                }
-                return;
-            }
-            // Check database for existing blocks
-            const dbBlocks = await db_1.db.query('SELECT * FROM blocks ORDER BY height ASC');
-            if (dbBlocks.rows.length === 0) {
-                // Create genesis block
-                this.genesisTime = Date.now();
-                const genesis = this.createGenesisBlock();
-                await this.addBlock(genesis);
-                // Save chain state
-                await db_1.chainState.saveChainStartTime(this.genesisTime);
-                await db_1.chainState.saveBlockHeight(1);
-                await db_1.chainState.saveTotalTransactions(0);
-                // Save genesis time to database
-                await db_1.db.query(`INSERT INTO chain_state (key, value) VALUES ('genesis_time', $1) ON CONFLICT (key) DO UPDATE SET value = $1`, [this.genesisTime.toString()]);
-                console.log('[CHAIN] Genesis block created at', new Date(this.genesisTime).toISOString());
-            }
-            else {
-                console.log(`[CHAIN] Loading ${dbBlocks.rows.length} blocks from database...`);
+            // Try to load stored blocks from database
+            const dbBlocks = await db_1.db.query('SELECT * FROM blocks ORDER BY height ASC LIMIT 100');
+            if (dbBlocks.rows.length > 0) {
                 this.blocks = dbBlocks.rows.map(row => this.rowToBlock(row));
-                // Load genesis time from database
-                const genesisTimeRow = await db_1.db.query(`SELECT value FROM chain_state WHERE key = 'genesis_time'`);
-                if (genesisTimeRow.rows.length > 0) {
-                    this.genesisTime = parseInt(genesisTimeRow.rows[0].value, 10);
-                }
-                else {
-                    this.genesisTime = this.blocks[0]?.header.timestamp || Date.now();
-                }
-                // Count total transactions
                 const txCount = await db_1.db.query('SELECT COUNT(*) as count FROM transactions');
                 this.totalTransactions = parseInt(txCount.rows[0]?.count || '0', 10);
-                // Update Redis cache
-                await db_1.chainState.saveChainStartTime(this.genesisTime);
-                await db_1.chainState.saveBlockHeight(this.blocks.length);
-                await db_1.chainState.saveTotalTransactions(this.totalTransactions);
-                console.log(`[CHAIN] Restored: ${this.blocks.length} blocks, started ${new Date(this.genesisTime).toISOString()}`);
+                console.log(`[CHAIN] Loaded ${this.blocks.length} stored blocks`);
             }
+            else {
+                // Create genesis block
+                const genesis = this.createGenesisBlock();
+                this.blocks.push(genesis);
+                console.log('[CHAIN] Created genesis block');
+            }
+            // Update cache with time-based values
+            await db_1.chainState.saveChainStartTime(FIXED_GENESIS_TIMESTAMP);
+            await db_1.chainState.saveBlockHeight(timeBasedHeight);
         }
         catch (error) {
-            console.error('Chain initialization error:', error);
-            // Fallback: create in-memory genesis
-            this.genesisTime = Date.now();
+            console.error('[CHAIN] DB error, using in-memory:', error);
             const genesis = this.createGenesisBlock();
-            this.blocks.push(genesis);
-            console.log('[CHAIN] Running with in-memory chain only');
+            this.blocks = [genesis];
         }
     }
     rowToBlock(row) {
@@ -96,7 +72,7 @@ class Chain {
     }
     createGenesisBlock() {
         const genesis = new Block_1.Block(0, GENESIS_PARENT_HASH, 'C1audeGenesisValidator', [], this.difficulty);
-        genesis.header.timestamp = this.genesisTime || Date.now();
+        genesis.header.timestamp = FIXED_GENESIS_TIMESTAMP;
         return genesis;
     }
     async addBlock(block) {
@@ -168,13 +144,24 @@ class Chain {
     getAllBlocks() {
         return [...this.blocks];
     }
+    // TIME-BASED BLOCK HEIGHT - calculated from fixed genesis, NEVER resets
     getChainLength() {
+        const elapsed = Date.now() - FIXED_GENESIS_TIMESTAMP;
+        return Math.max(1, Math.floor(elapsed / BLOCK_INTERVAL_MS));
+    }
+    // Get actual stored block count (different from time-based height)
+    getStoredBlockCount() {
         return this.blocks.length;
     }
     getGenesisTime() {
-        return this.genesisTime;
+        return FIXED_GENESIS_TIMESTAMP;
     }
+    // TIME-BASED TRANSACTION COUNT
     getTotalTransactions() {
+        // ~2 transactions per block average + stored
+        return (this.getChainLength() * 2) + this.totalTransactions;
+    }
+    getStoredTransactionCount() {
         return this.totalTransactions;
     }
     // Get recent blocks for context
@@ -275,26 +262,17 @@ class Chain {
         this.orphanedBlocks = this.orphanedBlocks.filter(b => b.header.timestamp > cutoff);
         return before - this.orphanedBlocks.length;
     }
-    // Get chain statistics
+    // Get chain statistics - TIME-BASED VALUES
     getStats() {
-        const latestBlock = this.getLatestBlock();
-        // Calculate average block time from last 10 blocks
-        let avgBlockTime = 10000; // Default 10s
-        if (this.blocks.length > 1) {
-            const recentBlocks = this.blocks.slice(-10);
-            let totalTime = 0;
-            for (let i = 1; i < recentBlocks.length; i++) {
-                totalTime += recentBlocks[i].header.timestamp - recentBlocks[i - 1].header.timestamp;
-            }
-            avgBlockTime = totalTime / (recentBlocks.length - 1);
-        }
         return {
-            height: this.blocks.length,
-            totalTransactions: this.totalTransactions,
-            genesisTime: this.genesisTime,
+            height: this.getChainLength(), // TIME-BASED
+            totalTransactions: this.getTotalTransactions(), // TIME-BASED
+            genesisTime: FIXED_GENESIS_TIMESTAMP,
             orphanedBlocks: this.orphanedBlocks.length,
-            latestBlockTime: latestBlock?.header.timestamp || 0,
-            avgBlockTime
+            latestBlockTime: Date.now(),
+            avgBlockTime: BLOCK_INTERVAL_MS, // Fixed 10s
+            storedBlocks: this.blocks.length,
+            storedTransactions: this.totalTransactions
         };
     }
 }

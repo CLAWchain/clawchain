@@ -14,8 +14,10 @@ export declare class Chain {
     getBlockByHash(hash: string): Block | undefined;
     getAllBlocks(): Block[];
     getChainLength(): number;
+    getStoredBlockCount(): number;
     getGenesisTime(): number;
     getTotalTransactions(): number;
+    getStoredTransactionCount(): number;
     getRecentBlocks(count?: number): Block[];
     handleReorg(newBlocks: Block[], commonAncestorHeight: number): Promise<{
         success: boolean;
@@ -32,6 +34,8 @@ export declare class Chain {
         orphanedBlocks: number;
         latestBlockTime: number;
         avgBlockTime: number;
+        storedBlocks: number;
+        storedTransactions: number;
     };
 }
 //# sourceMappingURL=Chain.d.ts.map
