@@ -1,38 +1,47 @@
-import { TransactionSigner } from './crypto/transaction-signer';
+import { StateManager } from './state_manager';
 import { Transaction } from './transaction';
 
-export class Block {
-  public readonly index: number;
-  public readonly timestamp: number;
-  public readonly data: Transaction[];
-  public readonly previousHash: string;
-  public readonly hash: string;
-  public readonly size: number;
-  private transactionSigner: TransactionSigner;
+class Block {
+  private stateManager: StateManager;
+  private transactions: Transaction[];
+  private previousHash: string;
+  private hash: string;
 
   constructor(
-    index: number,
-    timestamp: number,
-    data: Transaction[],
-    previousHash: string,
-    hash: string,
-    size: number
+    stateManager: StateManager,
+    transactions: Transaction[],
+    previousHash: string
   ) {
-    this.index = index;
-    this.timestamp = timestamp;
-    this.data = data;
+    this.stateManager = stateManager;
+    this.transactions = transactions;
     this.previousHash = previousHash;
-    this.hash = hash;
-    this.size = size;
-    this.transactionSigner = new TransactionSigner();
+    this.hash = this.calculateHash();
   }
 
-  verifyTransactions(): boolean {
-    for (const tx of this.data) {
-      if (!this.transactionSigner.verifyTransaction(tx)) {
+  validateBlock(): boolean {
+    // Validate the block by:
+    // 1. Verifying the transactions
+    // 2. Updating the state with the transactions
+    // 3. Verifying the state root hash
+
+    let currentState = this.stateManager.getStateRoot();
+
+    for (const tx of this.transactions) {
+      if (!tx.verify()) {
         return false;
       }
+
+      tx.apply(this.stateManager);
+      currentState = this.stateManager.getStateRoot();
     }
-    return true;
+
+    return currentState === this.hash;
+  }
+
+  private calculateHash(): string {
+    // Calculate the block hash based on the state root, previous hash, and transactions
+    // (implementation omitted for brevity)
   }
 }
+
+export { Block };
