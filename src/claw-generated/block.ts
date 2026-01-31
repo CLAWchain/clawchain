@@ -3,10 +3,14 @@ import { TransactionPool } from './transaction-pool';
 export class Block {
   transactions: Transaction[];
   transactionReceipts: TransactionReceipt[];
+  finalized: boolean;
+  confirmations: number;
 
   constructor(transactionPool: TransactionPool) {
     this.transactions = transactionPool.getTransactions();
     this.transactionReceipts = this.transactions.map((tx) => this.generateReceipt(tx));
+    this.finalized = false;
+    this.confirmations = 0;
   }
 
   private generateReceipt(tx: Transaction): TransactionReceipt {
@@ -22,6 +26,13 @@ export class Block {
       logs,
       bloomFilter
     });
+  }
+
+  incrementConfirmations() {
+    this.confirmations++;
+    if (this.confirmations >= 6) {
+      this.finalized = true;
+    }
   }
 }
 
