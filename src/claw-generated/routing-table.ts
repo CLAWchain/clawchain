@@ -1,23 +1,26 @@
+// Kademlia routing table implementation
 import { Node } from './node';
 
 export class RoutingTable {
-  nodes: Node[] = [];
+  private buckets: Map<number, Node[]>;
 
-  addNode(node: Node) {
-    this.nodes.push(node);
+  constructor() {
+    this.buckets = new Map();
   }
 
-  removeNode(node: Node) {
-    this.nodes = this.nodes.filter(n => n.id !== node.id);
+  addNode(node: Node): void {
+    // Determine the appropriate bucket for the node based on its ID
+    // Add the node to the bucket, maintaining the bucket size limit
+    // ...
   }
 
-  findClosestNodes(targetId: string, limit: number): Node[] {
-    // Implement Kademlia distance-based sorting and limiting
-    return this.nodes.sort((a, b) => this.distance(a.id, targetId) - this.distance(b.id, targetId)).slice(0, limit);
+  removeNode(node: Node): void {
+    // Find the bucket containing the node and remove it
+    // ...
   }
 
-  private distance(id1: string, id2: string): number {
-    // Implement Kademlia XOR distance metric
-    return 0;
+  getClosestNodes(key: string, count: number): Node[] {
+    // Find the k closest nodes to the given key
+    // ...
   }
 }
