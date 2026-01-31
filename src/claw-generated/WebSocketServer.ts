@@ -5,17 +5,21 @@ import { Transaction } from './transaction';
 import { BlockExplorer } from './BlockExplorer';
 import WebSocketSubscriptions from './WebSocketSubscriptions';
 import { TransactionPool } from './transaction-pool';
+import { Block } from './block';
+import { LogEntry } from './event';
 
 class WebSocketServer extends JsonRpcServer {
   private wss: WebSocketServer;
   private transactionPool: TransactionPool;
   private subscriptions: WebSocketSubscriptions;
+  private blockExplorer: BlockExplorer;
 
   constructor() {
     super();
     this.wss = new WebSocketServer({ port: 8080 });
     this.transactionPool = new TransactionPool();
     this.subscriptions = new WebSocketSubscriptions();
+    this.blockExplorer = new BlockExplorer();
 
     this.wss.on('connection', (ws, req) => {
       console.log('WebSocket connection established');
@@ -26,6 +30,8 @@ class WebSocketServer extends JsonRpcServer {
 
     this.registerSubscriptionHandlers();
     this.startTransactionFeed();
+    this.startBlockFeed();
+    this.startLogFeed();
   }
 
   handleWebSocketMessage(ws: WebSocket, message: string) {
@@ -48,6 +54,18 @@ class WebSocketServer extends JsonRpcServer {
     this.registerSubscription('unsubscribe', (params, ws) => {
       this.subscriptions.unsubscribe(ws, params.topic);
       return { result: 'Unsubscribed' };
+    });
+
+    this.registerSubscription('newHeads', (params, ws) => {
+      // Broadcast new block headers to all connected clients
+      this.subscriptions.broadcastNewHeads(this.getLatestBlocks());
+      return null;
+    });
+
+    this.registerSubscription('logs', (params, ws) => {
+      // Broadcast new log entries to all connected clients
+      this.subscriptions.broadcastLogs(this.getLatestLogEntries());
+      return null;
     });
 
     this.registerSubscription('pendingTransactions', (params, ws) => {
@@ -76,6 +94,47 @@ class WebSocketServer extends JsonRpcServer {
       const newTransactions = await this.transactionPool.getPendingTransactions();
       this.subscriptions.broadcastPendingTransactions(newTransactions);
     }, 1000);
+  }
+
+  private startBlockFeed() {
+    setInterval(async () => {
+      // Broadcast new block headers
+      const latestBlocks = await this.getLatestBlocks();
+      this.subscriptions.broadcastNewHeads(latestBlocks);
+    }, 5000);
+  }
+
+  private startLogFeed() {
+    setInterval(async () => {
+      // Broadcast new log entries
+      const latestLogEntries = await this.getLatestLogEntries();
+      this.subscriptions.broadcastLogs(latestLogEntries);
+    }, 5000);
+  }
+
+  private async getLatestBlocks(): Promise<Block[]> {
+    // Implement logic to fetch the latest block headers
+    // and return them as an array of Block objects
+    const blocks = await this.blockExplorer.getLatestBlocks(10);
+    return blocks.map((block) => ({
+      number: block.number,
+      hash: block.hash,
+      parentHash: block.parentHash,
+      timestamp: block.timestamp,
+    }));
+  }
+
+  private async getLatestLogEntries(): Promise<LogEntry[]> {
+    // Implement logic to fetch the latest log entries
+    // and return them as an array of LogEntry objects
+    const logEntries = await this.blockExplorer.getLatestLogEntries(10);
+    return logEntries.map((entry) => ({
+      blockNumber: entry.blockNumber,
+      logIndex: entry.logIndex,
+      address: entry.address,
+      topics: entry.topics,
+      data: entry.data,
+    }));
   }
 }
 
