@@ -1,30 +1,20 @@
 import React from 'react';
-import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
-import WalletConnectionFlow from './WalletConnectionFlow';
-import NetworkStatsPage from './NetworkStatsPage';
-import TransactionExplorerPage from './TransactionExplorerPage';
-import ContractVerificationPage from './ContractVerificationPage';
-import GovernancePage from './GovernancePage';
-import TokenTrackerPage from './TokenTrackerPage';
+import WalletProvider from './WalletProvider';
+import WalletModal from './WalletModal';
 
-const App: React.FC = () => {
+const App = () => {
   return (
-    <Router>
+    <WalletProvider>
       <div className="app">
         <header>
-          <WalletConnectionFlow />
+          <h1>ClawChain</h1>
         </header>
         <main>
-          <Switch>
-            <Route path="/network-stats" component={NetworkStatsPage} />
-            <Route path="/transactions" component={TransactionExplorerPage} />
-            <Route path="/contracts" component={ContractVerificationPage} />
-            <Route path="/governance" component={GovernancePage} />
-            <Route path="/tokens" component={TokenTrackerPage} />
-          </Switch>
+          <WalletModal />
+          {/* Other app content goes here */}
         </main>
       </div>
-    </Router>
+    </WalletProvider>
   );
 };
 

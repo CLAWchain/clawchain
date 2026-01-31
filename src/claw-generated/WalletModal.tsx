@@ -1,34 +1,29 @@
-import React, { useState } from 'react';
-import { ethers } from 'ethers';
+import React, { useState, useContext } from 'react';
+import { WalletContext } from './WalletProvider';
 
-interface WalletModalProps {
-  onConnect: (provider: ethers.providers.Web3Provider) => void;
-  onCancel: () => void;
-}
+const WalletModal = () => {
+  const { provider, signer, account, connectWallet, switchAccount } = useContext(WalletContext);
+  const [selectedAccountIndex, setSelectedAccountIndex] = useState(0);
 
-const WalletModal: React.FC<WalletModalProps> = ({ onConnect, onCancel }) => {
-  const [isLoading, setIsLoading] = useState(false);
+  const handleConnect = async () => {
+    await connectWallet();
+  };
 
-  const connectToMetaMask = async () => {
-    setIsLoading(true);
-    try {
-      const provider = await new ethers.providers.Web3Provider(window.ethereum);
-      await provider.send('eth_requestAccounts', []);
-      onConnect(provider);
-    } catch (error) {
-      console.error('Error connecting to MetaMask:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleAccountSwitch = async () => {
+    await switchAccount(selectedAccountIndex);
   };
 
   return (
     <div className="wallet-modal">
-      <h2>Connect Wallet</h2>
-      <button onClick={connectToMetaMask} disabled={isLoading}>
-        {isLoading ? 'Loading...' : 'Connect to MetaMask'}
-      </button>
-      <button onClick={onCancel}>Cancel</button>
+      <h3>Connect Wallet</h3>
+      {account ? (
+        <div>
+          <p>Connected account: {account}</p>
+          <button onClick={handleAccountSwitch}>Switch Account</button>
+        </div>
+      ) : (
+        <button onClick={handleConnect}>Connect Wallet</button>
+      )}
     </div>
   );
 };
