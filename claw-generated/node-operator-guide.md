@@ -1,53 +1,52 @@
 # ClawChain Node Operator Guide
 
 ## Hardware Requirements
-- CPU: Minimum 2 cores, recommended 4 cores or more
-- RAM: Minimum 8GB, recommended 16GB or more
-- Storage: Minimum 100GB SSD, recommended 500GB or more
-- Stable internet connection with at least 10Mbps download and 5Mbps upload
+- CPU: Minimum 2 cores, recommended 4+ cores
+- RAM: Minimum 4GB, recommended 8GB+
+- Storage: Minimum 100GB SSD, recommended 500GB+ SSD
+- Network: Minimum 10Mbps, recommended 50Mbps+ with low latency
 
 ## Configuration
 
-### 1. Install Prerequisites
-- Node.js (version 14 or higher)
-- npm (version 6 or higher)
-- Git
+### Install Dependencies
+1. Install Node.js (version 14 or higher)
+2. Install the ClawChain node software:
+   ```
+   npm install -g clawchain-node
+   ```
 
-### 2. Clone the ClawChain Repository
-```
-git clone https://github.com/clawchain/clawchain.git
-cd clawchain
-```
+### Initialize Node
+1. Create a new directory for your node data:
+   ```
+   mkdir clawchain-node-data
+   ```
+2. Initialize the node:
+   ```
+   clawchain-node init --data-dir clawchain-node-data
+   ```
+3. This will generate a new node configuration file at `clawchain-node-data/config.json`.
 
-### 3. Install Dependencies
-```
-npm install
-```
+### Configure Node
+1. Open the `config.json` file and review the default settings.
+2. Update the following parameters as needed:
+   - `p2p.port`: The port for peer-to-peer communication (default: 30303)
+   - `rpc.port`: The port for the JSON-RPC API (default: 8545)
+   - `rpc.enabled`: Set to `true` to enable the JSON-RPC API
+   - `mining.enabled`: Set to `true` to enable mining (optional)
+   - `mining.threads`: Number of CPU threads to use for mining (optional)
 
-### 4. Configure Node Settings
-Edit the `config.js` file in the root directory and set the following:
-- `rpcPort`: The port for the RPC server (default: 8545)
-- `p2pPort`: The port for the P2P network (default: 30303)
-- `genesisFile`: The path to the genesis block configuration file
-- `dataDir`: The directory to store node data
-
-### 5. Start the Node
-```
-npm start
-```
-
-This will start the ClawChain node and connect it to the network. The node will begin syncing the blockchain and participating in consensus.
+### Start the Node
+1. Run the node:
+   ```
+   clawchain-node start --data-dir clawchain-node-data
+   ```
+2. The node will start syncing the blockchain and joining the network.
 
 ## Monitoring and Maintenance
-- Check the node logs for any errors or warnings
-- Monitor the node's CPU, memory, and disk usage
-- Keep the node software up-to-date by pulling the latest changes from the repository
-- Ensure the node has a stable internet connection and sufficient hardware resources
-
-## Advanced Configuration
-- Configure node to run as a service (e.g., systemd, PM2)
-- Enable remote access and monitoring (e.g., SSH, Grafana)
-- Join the validator set (if supported) to participate in consensus
-- Customize node settings for specific use cases or requirements
-
-For more information, please refer to the ClawChain documentation or reach out to the community.
+- Check the node logs for any errors or warnings:
+  ```
+  clawchain-node logs --data-dir clawchain-node-data
+  ```
+- Monitor the node's status using the JSON-RPC API or a monitoring tool.
+- Regularly update the node software to the latest version.
+- Ensure the node has sufficient disk space and network bandwidth.
