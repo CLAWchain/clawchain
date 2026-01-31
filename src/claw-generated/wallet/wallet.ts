@@ -1,16 +1,30 @@
 import { EncryptedKeypair, encryptKeypair, decryptKeypair } from './keypair';
+import { generateMnemonic, mnemonicToSeedSync } from './bip39';
 
 export class Wallet {
   private encryptedKeypair: EncryptedKeypair;
+  private mnemonic: string;
 
   constructor(private password: string) {}
 
-  async generateKeypair(): Promise<void> {
-    // TODO: Generate a new keypair and encrypt it
-    this.encryptedKeypair = await encryptKeypair(new Uint8Array(64), this.password);
+  async generateKeypairFromMnemonic(): Promise<void> {
+    this.mnemonic = generateMnemonic();
+    const seed = mnemonicToSeedSync(this.mnemonic, this.password);
+    this.encryptedKeypair = await encryptKeypair(seed, this.password);
   }
 
-  async getKeypair(): Promise<Uint8Array> {
+  async getKeypairFromMnemonic(): Promise<Uint8Array> {
+    const seed = mnemonicToSeedSync(this.mnemonic, this.password);
     return await decryptKeypair(this.encryptedKeypair, this.password);
+  }
+
+  getMnemonic(): string {
+    return this.mnemonic;
+  }
+
+  async restoreFromMnemonic(mnemonic: string): Promise<void> {
+    this.mnemonic = mnemonic;
+    const seed = mnemonicToSeedSync(this.mnemonic, this.password);
+    this.encryptedKeypair = await encryptKeypair(seed, this.password);
   }
 }
