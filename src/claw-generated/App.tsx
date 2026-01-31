@@ -1,18 +1,16 @@
 import React from 'react';
-import NetworkStats from './NetworkStats';
+import WalletManager from './WalletManager';
 
 const App: React.FC = () => {
   return (
-    <div className="app-container">
+    <div className="app">
       <header>
         <h1>ClawChain</h1>
       </header>
       <main>
-        <NetworkStats />
+        <WalletManager />
+        {/* Other app components */}
       </main>
-      <footer>
-        <p>&copy; ClawChain 2023</p>
-      </footer>
     </div>
   );
 };

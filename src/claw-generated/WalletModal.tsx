@@ -1,49 +1,34 @@
 import React, { useState } from 'react';
-import './WalletModal.scss';
+import { ethers } from 'ethers';
 
 interface WalletModalProps {
-  onConnect: (address: string) => void;
-  onDisconnect: () => void;
+  onConnect: (provider: ethers.providers.Web3Provider) => void;
+  onCancel: () => void;
 }
 
-const WalletModal: React.FC<WalletModalProps> = ({ onConnect, onDisconnect }) => {
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [connectedAddress, setConnectedAddress] = useState('');
+const WalletModal: React.FC<WalletModalProps> = ({ onConnect, onCancel }) => {
+  const [isLoading, setIsLoading] = useState(false);
 
   const connectToMetaMask = async () => {
+    setIsLoading(true);
     try {
-      setIsConnecting(true);
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      const address = accounts[0];
-      setConnectedAddress(address);
-      onConnect(address);
+      const provider = await new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send('eth_requestAccounts', []);
+      onConnect(provider);
     } catch (error) {
       console.error('Error connecting to MetaMask:', error);
     } finally {
-      setIsConnecting(false);
+      setIsLoading(false);
     }
-  };
-
-  const disconnect = () => {
-    setConnectedAddress('');
-    onDisconnect();
   };
 
   return (
     <div className="wallet-modal">
-      <h3>Connect Wallet</h3>
-      {connectedAddress ? (
-        <div className="connected-wallet">
-          <p>Connected to: {connectedAddress}</p>
-          <button className="disconnect-button" onClick={disconnect}>
-            Disconnect
-          </button>
-        </div>
-      ) : (
-        <button className="connect-button" onClick={connectToMetaMask} disabled={isConnecting}>
-          {isConnecting ? 'Connecting...' : 'Connect to MetaMask'}
-        </button>
-      )}
+      <h2>Connect Wallet</h2>
+      <button onClick={connectToMetaMask} disabled={isLoading}>
+        {isLoading ? 'Loading...' : 'Connect to MetaMask'}
+      </button>
+      <button onClick={onCancel}>Cancel</button>
     </div>
   );
 };
