@@ -1,66 +1,30 @@
-import { Block } from '../blockchain/block';
-import { Peer } from './peer';
-import { Transaction } from '../blockchain/transaction';
+import { Block, Transaction } from '../blockchain';
+import { Peer } from '../networking/peer_manager';
 
-class BlockPropagationManager {
+export class BlockPropagator {
   private peers: Peer[];
 
-  constructor() {
-    this.peers = [];
+  constructor(peers: Peer[]) {
+    this.peers = peers;
   }
 
-  addPeer(peer: Peer) {
-    this.peers.push(peer);
-  }
-
-  removePeer(peer: Peer) {
-    this.peers = this.peers.filter(p => p !== peer);
-  }
-
-  onNewBlock(block: Block) {
-    this.broadcastCompactBlock(block);
-  }
-
-  private broadcastCompactBlock(block: Block) {
-    const compactBlock = this.createCompactBlock(block);
-    const serializedCompactBlock = this.serializeCompactBlock(compactBlock);
+  broadcastBlock(block: Block) {
+    const compactBlock = {
+      header: block.header,
+      txIds: block.transactions.map(tx => tx.id)
+    };
 
     for (const peer of this.peers) {
-      peer.sendCompactBlock(serializedCompactBlock);
-      const missingTransactions = compactBlock.missingTransactions;
-      if (missingTransactions.length > 0) {
-        peer.sendMissingTransactions(missingTransactions);
-      }
+      peer.sendCompactBlock(compactBlock);
     }
   }
 
-  private createCompactBlock(block: Block): CompactBlock {
-    const transactions = block.transactions;
-    const transactionIds = transactions.map(tx => tx.id);
-    const missingTransactions = this.findMissingTransactions(transactions);
-
-    return {
-      blockHeader: block.header,
-      transactionIds,
-      missingTransactions
-    };
-  }
-
-  private findMissingTransactions(transactions: Transaction[]): Transaction[] {
-    // Implement logic to find transactions that are missing from the recipient's mempool
-    return [];
-  }
-
-  private serializeCompactBlock(compactBlock: CompactBlock): string {
-    // Implement serialization logic here
-    return '';
+  handleCompactBlock(peer: Peer, compactBlock: {
+    header: any,
+    txIds: string[]
+  }) {
+    // Validate compact block header
+    // Request missing transactions from peer
+    // Assemble full block and add to chain
   }
 }
-
-interface CompactBlock {
-  blockHeader: BlockHeader;
-  transactionIds: string[];
-  missingTransactions: Transaction[];
-}
-
-export { BlockPropagationManager, CompactBlock };
