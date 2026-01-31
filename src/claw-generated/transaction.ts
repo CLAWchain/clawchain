@@ -1,34 +1,28 @@
-import { Signer } from '../crypto/signer';
-import { Wallet } from './wallet';
+import { FeeCalculator } from './fee-calculator';
 
-class Transaction {
-  private inputs: { wallet: Wallet, signers: Signer[] }[];
-  private outputs: { wallet: Wallet, amount: number }[];
+export class Transaction {
+  public id: string;
+  public from: string;
+  public to: string;
+  public amount: number;
+  public fee: number;
+  public timestamp: number;
+  public signature: string;
 
-  constructor(inputs: { wallet: Wallet, signers: Signer[] }[], outputs: { wallet: Wallet, amount: number }[]) {
-    this.inputs = inputs;
-    this.outputs = outputs;
-  }
-
-  verify(): boolean {
-    // Verify that each input wallet can approve the transaction
-    for (const input of this.inputs) {
-      if (!input.wallet.verifyTransaction(this)) {
-        return false;
-      }
-    }
-
-    // Verify that the total output amount does not exceed the total input amount
-    let totalInput = 0;
-    let totalOutput = 0;
-    for (const input of this.inputs) {
-      totalInput += input.wallet.getBalance();
-    }
-    for (const output of this.outputs) {
-      totalOutput += output.amount;
-    }
-    return totalInput >= totalOutput;
+  constructor(
+    id: string,
+    from: string,
+    to: string,
+    amount: number,
+    timestamp: number,
+    signature: string
+  ) {
+    this.id = id;
+    this.from = from;
+    this.to = to;
+    this.amount = amount;
+    this.fee = FeeCalculator.calculateFee(this);
+    this.timestamp = timestamp;
+    this.signature = signature;
   }
 }
-
-export { Transaction };
