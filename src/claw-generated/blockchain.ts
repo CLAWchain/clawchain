@@ -1,43 +1,17 @@
-import { Block } from './block';
-import { Transaction } from './transaction';
-import { TransactionPool } from './transaction-pool';
-import { BlockFinality } from './block-finality';
+import { getLatestBlock, getTransactionsByAddress, getTokenBalancesByAddress } from './blockchainService';
 
-export class Blockchain {
-  private blocks: Block[] = [];
-  private transactionPool: TransactionPool = new TransactionPool();
-  private blockFinality: BlockFinality = new BlockFinality();
+export const getAddressBalance = async (address: string) => {
+  const latestBlock = await getLatestBlock();
+  const balance = latestBlock.accounts[address]?.balance || '0';
+  return { balance };
+};
 
-  addBlock(block: Block) {
-    // Validate block
-    // Add block to chain
-    this.blocks.push(block);
-    this.blockFinality.addBlock(block);
-  }
+export const getAddressTransactions = async (address: string) => {
+  const transactions = await getTransactionsByAddress(address);
+  return { transactions };
+};
 
-  addTransaction(transaction: Transaction) {
-    // Validate transaction
-    // Add to transaction pool
-    this.transactionPool.addTransaction(transaction);
-  }
-
-  getBlocks(): Block[] {
-    return this.blocks;
-  }
-
-  getTransactionPool(): Transaction[] {
-    return this.transactionPool.getTransactions();
-  }
-
-  getFinalizedBlocks(): Block[] {
-    return this.blockFinality.getFinalizedBlocks();
-  }
-
-  getPendingBlocks(): Block[] {
-    return this.blockFinality.getPendingBlocks();
-  }
-
-  getFinalizationStatus(blockHash: string): 'finalized' | 'pending' {
-    return this.blockFinality.getFinalizationStatus(blockHash);
-  }
-}
+export const getAddressTokenBalances = async (address: string) => {
+  const tokenBalances = await getTokenBalancesByAddress(address);
+  return { balances: tokenBalances };
+};
