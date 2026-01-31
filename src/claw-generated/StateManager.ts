@@ -1,25 +1,28 @@
-import { MerklePatriciaTrie } from '../state/MerklePatriciaTrie';
+import { MerklePatriciaTrie } from './MerklePatriciaTrie';
 import { compress, decompress } from 'zlib';
 import { StateSnapshotStorage } from './StateSnapshotStorage';
+import { AccountStorage } from './AccountStorage';
 
 class StateManager {
   private trie: MerklePatriciaTrie;
+  private accountStorage: AccountStorage;
   private snapshotInterval: number = 60 * 60 * 1000; // 1 hour
   private lastSnapshotTime: number = 0;
   private snapshotStorage: StateSnapshotStorage;
 
   constructor() {
     this.trie = new MerklePatriciaTrie();
+    this.accountStorage = new AccountStorage();
     this.snapshotStorage = new StateSnapshotStorage();
   }
 
   // Methods for managing state
-  get(key: Uint8Array): Uint8Array | undefined {
-    return this.trie.get(key);
+  async get(address: string, key: string): Promise<Uint8Array | null> {
+    return this.accountStorage.get(address, key);
   }
 
-  set(key: Uint8Array, value: Uint8Array): void {
-    this.trie.set(key, value);
+  async set(address: string, key: string, value: Uint8Array): Promise<void> {
+    await this.accountStorage.set(address, key, value);
     this.maybeSnapshot();
   }
 

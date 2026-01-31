@@ -1,29 +1,39 @@
-import { H256 } from '../types';
+import { MerklePatriciaTrie } from './MerklePatriciaTrie';
 
-export class AccountStorage {
-  private storage: Map<H256, Map<H256, Uint8Array>> = new Map();
+class AccountStorage {
+  private trie: MerklePatriciaTrie;
 
-  getStorageSlot(address: H256, slot: H256): Uint8Array | undefined {
-    const accountStorage = this.storage.get(address);
-    if (accountStorage) {
-      return accountStorage.get(slot);
-    }
-    return undefined;
+  constructor() {
+    this.trie = new MerklePatriciaTrie();
   }
 
-  setStorageSlot(address: H256, slot: H256, value: Uint8Array): void {
-    let accountStorage = this.storage.get(address);
-    if (!accountStorage) {
-      accountStorage = new Map();
-      this.storage.set(address, accountStorage);
+  async get(address: string, key: string): Promise<Uint8Array | null> {
+    const accountKey = this.getAccountKey(address);
+    const value = this.trie.get(accountKey);
+    if (!value) {
+      return null;
     }
-    accountStorage.set(slot, value);
+
+    const accountStorage = JSON.parse(Buffer.from(value).toString());
+    return accountStorage[key] ? new Uint8Array(accountStorage[key]) : null;
   }
 
-  clearStorageSlot(address: H256, slot: H256): void {
-    const accountStorage = this.storage.get(address);
-    if (accountStorage) {
-      accountStorage.delete(slot);
-    }
+  async set(address: string, key: string, value: Uint8Array): Promise<void> {
+    const accountKey = this.getAccountKey(address);
+    const accountStorage = await this.getAccountStorage(address);
+    accountStorage[key] = Array.from(value);
+    this.trie.set(accountKey, new Uint8Array(Buffer.from(JSON.stringify(accountStorage))));
+  }
+
+  private getAccountKey(address: string): Uint8Array {
+    return new Uint8Array(Buffer.from(address, 'hex'));
+  }
+
+  private async getAccountStorage(address: string): Promise<Record<string, any>> {
+    const accountKey = this.getAccountKey(address);
+    const value = this.trie.get(accountKey);
+    return value ? JSON.parse(Buffer.from(value).toString()) : {};
   }
 }
+
+export { AccountStorage };
