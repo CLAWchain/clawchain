@@ -1,26 +1,56 @@
-import { getLatestBlock, getTransactionCount, getActiveAddressCount } from '../utils/chain';
+import { Block } from './block';
+import { StateTree } from './state';
 
-export async function getTransactionVolume(): Promise<number> {
-  const latestBlock = await getLatestBlock();
-  return latestBlock.transactions.length / 5; // Assuming 5 second block time
+export class Blockchain {
+  private blocks: Block[] = [];
+  private state: StateTree;
+  private checkpoints: Checkpoint[] = [];
+
+  constructor() {
+    this.state = new StateTree();
+  }
+
+  addBlock(block: Block) {
+    this.blocks.push(block);
+    this.state.applyTransactions(block.transactions);
+  }
+
+  getLatestBlock(): Block {
+    return this.blocks[this.blocks.length - 1];
+  }
+
+  createCheckpoint() {
+    const latestBlock = this.getLatestBlock();
+    this.checkpoints.push({
+      blockNumber: latestBlock.number,
+      blockHash: latestBlock.hash,
+      stateRoot: this.state.root
+    });
+  }
+
+  verifyFromCheckpoint(blockNumber: number): boolean {
+    const checkpoint = this.findCheckpoint(blockNumber);
+    if (!checkpoint) {
+      return false;
+    }
+
+    // Verify blocks from checkpoint to current
+    for (let i = checkpoint.blockNumber; i < this.blocks.length; i++) {
+      if (!this.blocks[i].verify()) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private findCheckpoint(blockNumber: number): Checkpoint | undefined {
+    return this.checkpoints.find(cp => cp.blockNumber <= blockNumber);
+  }
 }
 
-export async function getBlockTime(): Promise<number> {
-  const latestBlock = await getLatestBlock();
-  const prevBlock = await getLatestBlock(latestBlock.number - 1);
-  return (latestBlock.timestamp - prevBlock.timestamp);
-}
-
-export async function getDifficulty(): Promise<number> {
-  const latestBlock = await getLatestBlock();
-  return latestBlock.difficulty;
-}
-
-export async function getHashrate(): Promise<number> {
-  const latestBlock = await getLatestBlock();
-  return latestBlock.hashrate;
-}
-
-export async function getActiveAddresses(): Promise<number> {
-  return await getActiveAddressCount();
+interface Checkpoint {
+  blockNumber: number;
+  blockHash: string;
+  stateRoot: string;
 }
