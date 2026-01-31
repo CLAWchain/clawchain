@@ -14,6 +14,14 @@ type Transaction {
   value: String!
   gasUsed: Int!
   timestamp: Int!
+  status: String!
+  logs: [Log!]!
+}
+
+type Log {
+  address: String!
+  topics: [String!]!
+  data: String!
 }
 
 type Account {
@@ -26,4 +34,10 @@ type Query {
   getBlock(height: Int!): Block
   getTransaction(hash: String!): Transaction
   getAccount(address: String!): Account
+  getBlocks(limit: Int, offset: Int): [Block!]!
+  getTransactions(limit: Int, offset: Int): [Transaction!]!
+}
+
+type Mutation {
+  sendTransaction(from: String!, to: String!, value: String!, data: String): Transaction
 }

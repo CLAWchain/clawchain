@@ -1,5 +1,5 @@
-import { Block, Transaction, Account } from '../types';
-import { getBlock, getTransaction, getAccountInfo } from '../api/rpc';
+import { Block, Transaction, Account, Log } from '../types';
+import { getBlock, getTransaction, getAccountInfo, sendTransaction } from '../api/rpc';
 
 export const resolvers = {
   Query: {
@@ -18,6 +18,32 @@ export const resolvers = {
         balance: accountInfo.balance.toString(),
         transactions: accountInfo.transactions,
       };
+    },
+    getBlocks: async (_: any, { limit, offset }: { limit?: number; offset?: number }): Promise<Block[]> => {
+      // Implement pagination for blocks
+      throw new Error('Not implemented');
+    },
+    getTransactions: async (_: any, { limit, offset }: { limit?: number; offset?: number }): Promise<Transaction[]> => {
+      // Implement pagination for transactions
+      throw new Error('Not implemented');
+    },
+  },
+  Mutation: {
+    sendTransaction: async (
+      _: any,
+      { from, to, value, data }: { from: string; to: string; value: string; data?: string }
+    ): Promise<Transaction> => {
+      const tx = await sendTransaction(from, to, value, data);
+      return tx;
+    },
+  },
+  Transaction: {
+    block: async (tx: Transaction): Promise<Block> => {
+      return await getBlock(tx.block.height);
+    },
+    logs: async (tx: Transaction): Promise<Log[]> => {
+      // Implement log retrieval
+      throw new Error('Not implemented');
     },
   },
 };
