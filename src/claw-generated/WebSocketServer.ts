@@ -26,6 +26,15 @@ class WebSocketServer extends JsonRpcServer {
       ws.on('message', (data) => {
         this.handleWebSocketMessage(ws, data.toString());
       });
+
+      ws.on('close', (code, reason) => {
+        console.log('WebSocket connection closed:', code, reason);
+        this.subscriptions.unsubscribeAll(ws);
+      });
+
+      ws.on('error', (err) => {
+        console.error('WebSocket error:', err);
+      });
     });
 
     this.registerSubscriptionHandlers();
