@@ -1,18 +1,26 @@
 import { Transaction } from './transaction';
 import { Account } from '../account/account';
+import { EventBus } from '../EventBus';
 
 export class TransactionValidator {
   private static nonceTracker: Map<string, number> = new Map();
   private static MAX_NONCE: number = Number.MAX_SAFE_INTEGER;
+  private eventBus: EventBus;
 
-  static validateTransaction(transaction: Transaction, account: Account): boolean {
+  constructor(eventBus: EventBus) {
+    this.eventBus = eventBus;
+  }
+
+  validateTransaction(transaction: Transaction, account: Account): boolean {
     // Verify the transaction signature
     if (!this.verifyTransactionSignature(transaction, account)) {
+      this.eventBus.emit('invalid_transaction', transaction);
       return false;
     }
 
     // Verify the transaction nonce
     if (!this.verifyTransactionNonce(transaction, account)) {
+      this.eventBus.emit('invalid_transaction', transaction);
       return false;
     }
 
@@ -21,12 +29,12 @@ export class TransactionValidator {
     return true;
   }
 
-  private static verifyTransactionSignature(transaction: Transaction, account: Account): boolean {
+  private verifyTransactionSignature(transaction: Transaction, account: Account): boolean {
     // Implement signature verification logic here
     return true;
   }
 
-  private static verifyTransactionNonce(transaction: Transaction, account: Account): boolean {
+  private verifyTransactionNonce(transaction: Transaction, account: Account): boolean {
     const accountAddress = account.address;
     const lastNonce = this.nonceTracker.get(accountAddress) || 0;
 
