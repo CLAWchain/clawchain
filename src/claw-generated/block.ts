@@ -1,32 +1,19 @@
 import { Transaction } from './transaction';
 
 export class Block {
-  hash: string;
-  previousHash: string;
-  timestamp: number;
-  transactions: Transaction[];
-  nonce: number;
+  private transactions: Transaction[];
+  private blockReward: number;
 
-  constructor(
-    previousHash: string,
-    timestamp: number,
-    transactions: Transaction[],
-    nonce: number
-  ) {
-    this.previousHash = previousHash;
-    this.timestamp = timestamp;
+  constructor(transactions: Transaction[]) {
     this.transactions = transactions;
-    this.nonce = nonce;
-    this.hash = this.calculateHash();
+    this.blockReward = this.calculateBlockReward();
   }
 
-  calculateHash(): string {
-    // Implement hash calculation logic
-    return '';
-  }
-
-  validateBlock(): boolean {
-    // Implement block validation logic
-    return true;
+  private calculateBlockReward(): number {
+    let totalFees = 0;
+    for (const tx of this.transactions) {
+      totalFees += tx.calculateFee();
+    }
+    return 10 + totalFees; // Base reward + total transaction fees
   }
 }
