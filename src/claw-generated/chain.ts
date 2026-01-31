@@ -1,118 +1,42 @@
-import { Account } from "./account";
-import { Transaction } from "./transaction";
-import { VM, ContractState } from "./vm";
+import { AbstractAccount } from './abstract-account';
+import { Block } from './block';
+import { TransactionPool } from './transaction-pool';
 
-class Chain {
+export class Chain {
   private blocks: Block[] = [];
-  private transactionPool: Transaction[] = [];
-  private accountState: Map<string, Account> = new Map();
+  private accounts: Map<string, AbstractAccount> = new Map();
+  private transactionPool: TransactionPool = new TransactionPool();
 
-  addBlock(block: Block): void {
-    // Validate the block
-    if (!this.isBlockValid(block)) {
-      throw new Error("Invalid block");
+  addBlock(block: Block): boolean {
+    // Process the transactions in the block
+    for (const tx of block.transactions) {
+      const sender = this.getAccount(tx.from);
+      if (!sender.validateTransaction(tx)) {
+        return false;
+      }
+
+      // Update the sender and recipient accounts
+      sender.nonce++;
+      sender.balance -= BigInt(tx.value);
+      const recipient = this.getAccount(tx.to);
+      recipient.balance += BigInt(tx.value);
     }
 
-    // Update the chain
+    // Add the block to the chain
     this.blocks.push(block);
-
-    // Update the account state
-    block.transactions.forEach(tx => {
-      this.updateAccountState(tx);
-    });
-
-    // Clear the transaction pool
-    this.transactionPool = this.transactionPool.filter(tx => {
-      return !block.transactions.includes(tx);
-    });
-  }
-
-  private isBlockValid(block: Block): boolean {
-    // Check the block header
-    // Check the transactions
-    // Check the merkle root
     return true;
   }
 
-  private updateAccountState(tx: Transaction): void {
-    let fromAccount = this.getAccount(tx.from.address);
-    let toAccount = this.getAccount(tx.to.address);
-
-    fromAccount.balance -= tx.amount;
-    fromAccount.nonce++;
-
-    toAccount.balance += tx.amount;
-
-    this.accountState.set(tx.from.address, fromAccount);
-    this.accountState.set(tx.to.address, toAccount);
-  }
-
-  private getAccount(address: string): Account {
-    if (!this.accountState.has(address)) {
-      this.accountState.set(address, new Account());
+  getAccount(address: string): AbstractAccount {
+    let account = this.accounts.get(address);
+    if (!account) {
+      account = new AbstractAccount();
+      this.accounts.set(address, account);
     }
-    return this.accountState.get(address)!;
+    return account;
   }
 
-  revertChain(newChain: Block[]): void {
-    // Revert the transactions from the old chain
-    this.blocks.forEach(block => {
-      block.transactions.forEach(tx => {
-        this.revertTransaction(tx);
-      });
-    });
-
-    // Update the chain to the new longer chain
-    this.blocks = newChain;
-
-    // Replay the transactions from the new chain
-    newChain.forEach(block => {
-      block.transactions.forEach(tx => {
-        this.updateAccountState(tx);
-      });
-    });
-
-    // Update the transaction pool
-    this.updateTransactionPool();
+  getTransactionPool(): TransactionPool {
+    return this.transactionPool;
   }
-
-  private revertTransaction(tx: Transaction): void {
-    let fromAccount = this.getAccount(tx.from.address);
-    let toAccount = this.getAccount(tx.to.address);
-
-    fromAccount.balance += tx.amount;
-    fromAccount.nonce--;
-
-    toAccount.balance -= tx.amount;
-
-    this.accountState.set(tx.from.address, fromAccount);
-    this.accountState.set(tx.to.address, toAccount);
-  }
-
-  private updateTransactionPool(): void {
-    // Remove any transactions that are now invalid on the new chain
-    // Add any new valid transactions to the pool
-  }
-}
-
-class Block {
-  header: BlockHeader;
-  transactions: Transaction[];
-  contractStates: Map<string, ContractState>;
-
-  constructor(
-    header: BlockHeader,
-    transactions: Transaction[],
-    contractStates: Map<string, ContractState>
-  ) {
-    this.header = header;
-    this.transactions = transactions;
-    this.contractStates = contractStates;
-  }
-}
-
-class BlockHeader {
-  parentHash: string;
-  timestamp: number;
-  merkleRoot: string;
 }
