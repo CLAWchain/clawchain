@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import WalletModal from './WalletModal';
+import Navigation from './Navigation';
 
 const AppPage: React.FC = () => {
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
@@ -39,8 +40,8 @@ const AppPage: React.FC = () => {
 
   return (
     <div className="app-page">
+      <Navigation />
       <header>
-        <h1>ClawChain</h1>
         {connectedAddress ? (
           <p>Connected wallet: {connectedAddress}</p>
         ) : (
