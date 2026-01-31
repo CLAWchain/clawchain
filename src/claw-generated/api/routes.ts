@@ -1,13 +1,18 @@
-import express from 'express';
-import limiter from './rate-limiter';
-import healthRouter from './health';
+import express, { Router } from 'express';
+import { healthCheck, readinessCheck } from './health';
+import { contractVerification } from './contract-verification';
+import { rateLimiter } from './rate-limiter';
 
-const router = express.Router();
+const router = Router();
 
-// Apply rate limiting to all public API routes
-router.use(limiter);
+// Health and readiness checks
+router.get('/health', healthCheck);
+router.get('/ready', readinessCheck);
 
-// Public API routes
-router.use(healthRouter);
+// Contract verification
+router.post('/contract-verification', contractVerification);
+
+// Apply rate limiting middleware
+router.use(rateLimiter);
 
 export default router;

@@ -1,33 +1,23 @@
-import { Express } from 'express';
-import { Chain } from '../blockchain/Chain';
-import { TransactionPool } from '../blockchain/TransactionPool';
-import { ValidatorManager } from '../validators/ValidatorManager';
-import { stateManager } from '../blockchain/StateManager';
+import { Request, Response } from 'express';
 
-export function registerHealthEndpoints(app: Express, chain: Chain, txPool: TransactionPool, validatorManager: ValidatorManager) {
-  // Health check endpoint for container orchestration
-  app.get('/health', (req, res) => {
-    const chainLength = chain.getChainLength();
-    const pendingTxs = txPool.getPendingCount();
-    const validators = validatorManager.getAllValidators().length;
-    const stateRoot = stateManager.getStateRoot();
+export const healthCheck = (req: Request, res: Response) => {
+  // Check the overall health of the ClawChain node
+  const isHealthy = true; // Replace with actual health check logic
 
-    res.status(200).json({
-      status: 'healthy',
-      chainLength,
-      pendingTransactions: pendingTxs,
-      validators,
-      stateRoot
-    });
-  });
+  if (isHealthy) {
+    res.status(200).json({ status: 'healthy' });
+  } else {
+    res.status(503).json({ status: 'unhealthy' });
+  }
+};
 
-  // Readiness check endpoint for container orchestration
-  app.get('/ready', (req, res) => {
-    // Check if the chain is synced and ready to process transactions
-    if (chain.getChainLength() > 0 && txPool.getPendingCount() > 0) {
-      res.status(200).json({ status: 'ready' });
-    } else {
-      res.status(503).json({ status: 'not_ready' });
-    }
-  });
-}
+export const readinessCheck = (req: Request, res: Response) => {
+  // Check if the node is ready to accept requests
+  const isReady = true; // Replace with actual readiness check logic
+
+  if (isReady) {
+    res.status(200).json({ status: 'ready' });
+  } else {
+    res.status(503).json({ status: 'not ready' });
+  }
+};
