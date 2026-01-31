@@ -1,39 +1,37 @@
-import { BigNumber } from 'ethers';
-import { Account } from './account';
-import { StateManager } from './StateManager';
+import { BigNumber } from 'bignumber.js';
+import { StakingManager, Stake } from './stake';
 
-class StakingContract {
-  private stateManager: StateManager;
+export class StakingService {
+  private stakingManager: StakingManager = new StakingManager();
 
-  constructor(stateManager: StateManager) {
-    this.stateManager = stateManager;
+  stake(address: string, amount: BigNumber): void {
+    const stake = this.stakingManager.getStake(address);
+    stake.amount = stake.amount.plus(amount);
+    stake.lastUpdateTimestamp = Date.now();
+    this.stakingManager.updateStake(address, stake);
   }
 
-  async stake(amount: BigNumber, delegateTo?: string): Promise<void> {
-    // 1. Validate the stake amount
-    // 2. Update the staker's balance in the state trie
-    // 3. Track the delegation, if provided
-    // 4. Emit a staking event
+  unstake(address: string, amount: BigNumber): void {
+    const stake = this.stakingManager.getStake(address);
+    stake.amount = stake.amount.minus(amount);
+    stake.lastUpdateTimestamp = Date.now();
+    this.stakingManager.updateStake(address, stake);
   }
 
-  async withdraw(amount: BigNumber): Promise<void> {
-    // 1. Validate the withdrawal amount
-    // 2. Update the staker's balance in the state trie
-    // 3. Emit a withdrawal event
+  claimRewards(address: string): BigNumber {
+    const stake = this.stakingManager.getStake(address);
+    const rewards = stake.accumulatedRewards;
+    stake.accumulatedRewards = new BigNumber(0);
+    this.stakingManager.updateStake(address, stake);
+    return rewards;
   }
 
-  async claimRewards(): Promise<void> {
-    // 1. Calculate the staker's rewards based on their stake and the total staked
-    // 2. Transfer the rewards to the staker's account
-    // 3. Emit a rewards event
-  }
-
-  private calculateRewards(staker: Account): BigNumber {
-    // 1. Get the staker's stake amount
-    // 2. Get the total staked amount
-    // 3. Calculate the rewards based on the stake percentage and the reward rate
-    // 4. Return the rewards amount
+  updateRewards(address: string, rewardRate: BigNumber): void {
+    const stake = this.stakingManager.getStake(address);
+    const timeSinceLastUpdate = Date.now() - stake.lastUpdateTimestamp;
+    const newRewards = rewardRate.multipliedBy(timeSinceLastUpdate / 1000); // assume rewards per second
+    stake.accumulatedRewards = stake.accumulatedRewards.plus(newRewards);
+    stake.lastUpdateTimestamp = Date.now();
+    this.stakingManager.updateStake(address, stake);
   }
 }
-
-export { StakingContract };
