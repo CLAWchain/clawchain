@@ -1,159 +1,61 @@
-import { expect } from 'chai';
-import { Block, Transaction, generateRandomBase58, generateHash, hexToBase58 } from './Block';
+import { Block } from './Block';
+import { Transaction } from './Transaction';
+import { MerkleTree } from './MerkleTree';
 
 describe('Block', () => {
-  describe('constructor', () => {
-    it('should create a new block with the correct header', () => {
-      const transactions: Transaction[] = [
-        {
-          hash: generateRandomBase58(),
-          from: generateRandomBase58(),
-          to: generateRandomBase58(),
-          value: BigInt(1000),
-          gasPrice: BigInt(10),
-          gasLimit: BigInt(21000),
-          nonce: 0,
-          signature: generateRandomBase58()
-        }
-      ];
+  let transactions: Transaction[];
+  let previousHash: string;
 
-      const block = new Block(1, generateRandomBase58(), generateRandomBase58(), transactions);
-
-      expect(block.header.height).to.equal(1);
-      expect(block.header.parentHash).to.be.a('string');
-      expect(block.header.producer).to.be.a('string');
-      expect(block.header.timestamp).to.be.a('number');
-      expect(block.header.nonce).to.equal(0);
-      expect(block.header.difficulty).to.equal(1);
-      expect(block.header.gasUsed).to.be.a('bigint');
-      expect(block.header.gasLimit).to.equal(30000000n);
-      expect(block.header.stateRoot).to.be.a('string');
-      expect(block.header.transactionsRoot).to.be.a('string');
-      expect(block.header.receiptsRoot).to.be.a('string');
-      expect(block.header.hash).to.be.a('string');
-      expect(block.transactions).to.deep.equal(transactions);
-    });
+  beforeEach(() => {
+    transactions = [
+      new Transaction(
+        'sender1',
+        'recipient1',
+        100,
+        1234567890
+      ),
+      new Transaction(
+        'sender2',
+        'recipient2',
+        50,
+        1234567891
+      )
+    ];
+    previousHash = '0123456789abcdef';
   });
 
-  describe('calculateHash', () => {
-    it('should calculate the correct block hash', () => {
-      const transactions: Transaction[] = [
-        {
-          hash: generateRandomBase58(),
-          from: generateRandomBase58(),
-          to: generateRandomBase58(),
-          value: BigInt(1000),
-          gasPrice: BigInt(10),
-          gasLimit: BigInt(21000),
-          nonce: 0,
-          signature: generateRandomBase58()
-        }
-      ];
-
-      const block = new Block(1, generateRandomBase58(), generateRandomBase58(), transactions);
-      const expectedHash = block.calculateHash();
-      expect(block.header.hash).to.equal(expectedHash);
-    });
+  it('should create a new block with correct properties', () => {
+    const block = new Block(1, 1234567890, transactions, previousHash);
+    expect(block.version).toEqual(1);
+    expect(block.timestamp).toEqual(1234567890);
+    expect(block.transactions).toEqual(transactions);
+    expect(block.previousHash).toEqual(previousHash);
+    expect(block.merkleRoot).not.toBeEmpty();
+    expect(block.nonce).toEqual(0);
+    expect(block.hash).not.toBeEmpty();
   });
 
-  describe('isValid', () => {
-    it('should return true for a valid block', () => {
-      const transactions: Transaction[] = [
-        {
-          hash: generateRandomBase58(),
-          from: generateRandomBase58(),
-          to: generateRandomBase58(),
-          value: BigInt(1000),
-          gasPrice: BigInt(10),
-          gasLimit: BigInt(21000),
-          nonce: 0,
-          signature: generateRandomBase58()
-        }
-      ];
-
-      const prevBlock = new Block(1, generateRandomBase58(), generateRandomBase58(), transactions);
-      const block = new Block(2, prevBlock.header.hash, generateRandomBase58(), transactions);
-
-      expect(block.isValid(prevBlock)).to.be.true;
-    });
-
-    it('should return false for an invalid block', () => {
-      const transactions: Transaction[] = [
-        {
-          hash: generateRandomBase58(),
-          from: generateRandomBase58(),
-          to: generateRandomBase58(),
-          value: BigInt(1000),
-          gasPrice: BigInt(10),
-          gasLimit: BigInt(21000),
-          nonce: 0,
-          signature: generateRandomBase58()
-        }
-      ];
-
-      const prevBlock = new Block(1, generateRandomBase58(), generateRandomBase58(), transactions);
-      const block = new Block(1, generateRandomBase58(), generateRandomBase58(), transactions);
-
-      expect(block.isValid(prevBlock)).to.be.false;
-    });
+  it('should calculate the correct merkle root', () => {
+    const block = new Block(1, 1234567890, transactions, previousHash);
+    const merkleTree = new MerkleTree(transactions);
+    expect(block.merkleRoot).toEqual(merkleTree.getRoot());
   });
 
-  describe('toJSON', () => {
-    it('should serialize the block to JSON', () => {
-      const transactions: Transaction[] = [
-        {
-          hash: generateRandomBase58(),
-          from: generateRandomBase58(),
-          to: generateRandomBase58(),
-          value: BigInt(1000),
-          gasPrice: BigInt(10),
-          gasLimit: BigInt(21000),
-          nonce: 0,
-          signature: generateRandomBase58()
-        }
-      ];
-
-      const block = new Block(1, generateRandomBase58(), generateRandomBase58(), transactions);
-      const json = block.toJSON();
-
-      expect(json).to.have.property('height', 1);
-      expect(json).to.have.property('hash', block.header.hash);
-      expect(json).to.have.property('parentHash', block.header.parentHash);
-      expect(json).to.have.property('producer', block.header.producer);
-      expect(json).to.have.property('timestamp', block.header.timestamp);
-      expect(json).to.have.property('nonce', 0);
-      expect(json).to.have.property('difficulty', 1);
-      expect(json).to.have.property('gasUsed', block.header.gasUsed.toString());
-      expect(json).to.have.property('gasLimit', block.header.gasLimit.toString());
-      expect(json).to.have.property('stateRoot', block.header.stateRoot);
-      expect(json).to.have.property('transactionsRoot', block.header.transactionsRoot);
-      expect(json).to.have.property('receiptsRoot', block.header.receiptsRoot);
-      expect(json.transactions).to.be.an('array');
-      expect(json.transactions[0]).to.have.property('value', transactions[0].value.toString());
-      expect(json.transactions[0]).to.have.property('gasPrice', transactions[0].gasPrice.toString());
-      expect(json.transactions[0]).to.have.property('gasLimit', transactions[0].gasLimit.toString());
-    });
+  it('should validate a correct block', () => {
+    const block = new Block(1, 1234567890, transactions, previousHash);
+    expect(block.validate()).toBeTrue();
   });
 
-  describe('helper functions', () => {
-    it('should generate a random base58 string', () => {
-      const randomBase58 = generateRandomBase58();
-      expect(randomBase58).to.be.a('string');
-      expect(randomBase58.length).to.be.within(43, 45);
-    });
-
-    it('should convert hex to base58', () => {
-      const hex = '123456789abcdef';
-      const base58 = hexToBase58(hex);
-      expect(base58).to.be.a('string');
-      expect(base58).to.equal('2Uasdf8o9Asdf9');
-    });
-
-    it('should generate a hash', () => {
-      const data = 'hello, world';
-      const hash = generateHash(data);
-      expect(hash).to.be.a('string');
-      expect(hash.length).to.equal(44);
-    });
+  it('should serialize and deserialize a block correctly', () => {
+    const block = new Block(1, 1234567890, transactions, previousHash);
+    const serializedBlock = block.serialize();
+    const deserializedBlock = JSON.parse(serializedBlock);
+    expect(deserializedBlock.version).toEqual(block.version);
+    expect(deserializedBlock.timestamp).toEqual(block.timestamp);
+    expect(deserializedBlock.transactions).toEqual(block.transactions);
+    expect(deserializedBlock.previousHash).toEqual(block.previousHash);
+    expect(deserializedBlock.merkleRoot).toEqual(block.merkleRoot);
+    expect(deserializedBlock.nonce).toEqual(block.nonce);
+    expect(deserializedBlock.hash).toEqual(block.hash);
   });
 });
