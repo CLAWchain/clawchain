@@ -1,10 +1,6 @@
 export type Instruction = {
-  opcode: string;
-  operand?: any;
+  opcode: number;
+  operands: any[];
 };
 
-export type VMState = {
-  stack: any[];
-  pc: number;
-  memory: Uint8Array;
-};
+export type OperationHandler = (vm: VirtualMachine, operands: any[]) => void;
