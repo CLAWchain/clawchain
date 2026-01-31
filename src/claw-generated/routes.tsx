@@ -1,19 +1,27 @@
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import ContractVerificationPage from './ContractVerificationPage';
-import AppPage from './AppPage';
+import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+import App from './App';
 import BlockExplorerPage from './BlockExplorerPage';
+import TransactionExplorerPage from './TransactionExplorerPage';
+import ContractVerificationPage from './ContractVerificationPage';
+import GovernancePage from './GovernancePage';
+import NetworkStatsPage from './NetworkStatsPage';
+import TokenTrackerPage from './TokenTrackerPage';
 
-const AppRoutes: React.FC = () => {
+const Routes: React.FC = () => {
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<AppPage />} />
-        <Route path="/contract-verification" element={<ContractVerificationPage />} />
-        <Route path="/block-explorer" element={<BlockExplorerPage />} />
-      </Routes>
+      <Switch>
+        <Route exact path="/" component={App} />
+        <Route path="/block-explorer" component={BlockExplorerPage} />
+        <Route path="/transaction-explorer" component={TransactionExplorerPage} />
+        <Route path="/contract-verification" component={ContractVerificationPage} />
+        <Route path="/governance" component={GovernancePage} />
+        <Route path="/network-stats" component={NetworkStatsPage} />
+        <Route path="/token-tracker" component={TokenTrackerPage} />
+      </Switch>
     </Router>
   );
 };
 
-export default AppRoutes;
+export default Routes;

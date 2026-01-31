@@ -1,43 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { getTokens, getTokenHolders, getTokenTransfers } from '../explorer/api';
+import { useQuery } from '@apollo/client';
+import { gql } from '@apollo/client';
 
-interface Token {
-  address: string;
-  name: string;
-  symbol: string;
-  totalSupply: string;
-  holderCount: number;
-  transfers: {
-    from: string;
-    to: string;
-    value: string;
-    timestamp: number;
-  }[];
-}
+const GET_CRC20_TOKENS = gql`
+  query GetCRC20Tokens {
+    crc20Tokens {
+      address
+      name
+      symbol
+      totalSupply
+      holders
+      transfers(last: 10) {
+        from
+        to
+        amount
+        timestamp
+      }
+    }
+  }
+`;
 
 const TokenTrackerPage: React.FC = () => {
-  const [tokens, setTokens] = useState<Token[]>([]);
+  const { loading, error, data } = useQuery(GET_CRC20_TOKENS);
+  const [tokens, setTokens] = useState([]);
 
   useEffect(() => {
-    const fetchTokenData = async () => {
-      const tokenList = await getTokens();
-      const tokenData = await Promise.all(
-        tokenList.map(async (token) => {
-          const [holders, transfers] = await Promise.all([
-            getTokenHolders(token.address),
-            getTokenTransfers(token.address),
-          ]);
-          return {
-            ...token,
-            holderCount: holders.length,
-            transfers: transfers.slice(0, 10),
-          };
-        })
-      );
-      setTokens(tokenData);
-    };
-    fetchTokenData();
-  }, []);
+    if (data && data.crc20Tokens) {
+      setTokens(data.crc20Tokens);
+    }
+  }, [data]);
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
 
   return (
     <div>
@@ -46,24 +40,24 @@ const TokenTrackerPage: React.FC = () => {
         <thead>
           <tr>
             <th>Token</th>
-            <th>Symbol</th>
+            <th>Address</th>
             <th>Total Supply</th>
             <th>Holders</th>
             <th>Recent Transfers</th>
           </tr>
         </thead>
         <tbody>
-          {tokens.map((token, index) => (
-            <tr key={index}>
-              <td>{token.name}</td>
-              <td>{token.symbol}</td>
+          {tokens.map((token) => (
+            <tr key={token.address}>
+              <td>{token.name} ({token.symbol})</td>
+              <td>{token.address}</td>
               <td>{token.totalSupply}</td>
-              <td>{token.holderCount}</td>
+              <td>{token.holders}</td>
               <td>
                 <ul>
-                  {token.transfers.map((transfer, i) => (
-                    <li key={i}>
-                      {transfer.from} → {transfer.to} ({transfer.value})
+                  {token.transfers.map((transfer, index) => (
+                    <li key={index}>
+                      {transfer.from} → {transfer.to}: {transfer.amount} ({transfer.timestamp})
                     </li>
                   ))}
                 </ul>
