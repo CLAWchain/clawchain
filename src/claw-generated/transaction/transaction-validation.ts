@@ -24,6 +24,12 @@ export class TransactionValidator {
       return false;
     }
 
+    // Check for integer overflows
+    if (this.checkForIntegerOverflows(transaction)) {
+      this.eventBus.emit('invalid_transaction', transaction);
+      return false;
+    }
+
     // Other validation checks...
 
     return true;
@@ -44,5 +50,16 @@ export class TransactionValidator {
 
     this.nonceTracker.set(accountAddress, transaction.nonce);
     return true;
+  }
+
+  private checkForIntegerOverflows(transaction: Transaction): boolean {
+    // Check for integer overflows in the transaction nonce and other numeric values
+    if (transaction.nonce > this.MAX_NONCE) {
+      return true;
+    }
+
+    // Add more checks for other numeric fields
+
+    return false;
   }
 }
