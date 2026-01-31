@@ -1,23 +1,24 @@
-import { Transaction } from './transaction';
-
 export class Block {
-  public id: string;
-  public parentId: string;
-  public timestamp: number;
-  public transactions: Transaction[];
-  public nonce: number;
+  public readonly index: number;
+  public readonly timestamp: number;
+  public readonly data: any;
+  public readonly previousHash: string;
+  public readonly hash: string;
+  public readonly size: number;
 
   constructor(
-    id: string,
-    parentId: string,
+    index: number,
     timestamp: number,
-    transactions: Transaction[],
-    nonce: number
+    data: any,
+    previousHash: string,
+    hash: string,
+    size: number
   ) {
-    this.id = id;
-    this.parentId = parentId;
+    this.index = index;
     this.timestamp = timestamp;
-    this.transactions = transactions;
-    this.nonce = nonce;
+    this.data = data;
+    this.previousHash = previousHash;
+    this.hash = hash;
+    this.size = size;
   }
 }
