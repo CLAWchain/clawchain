@@ -1,34 +1,39 @@
 import { BigNumber } from 'ethers';
+import { Account } from './account';
+import { StateManager } from './StateManager';
 
-export class StakingRewardsManager {
-  private delegations: Map<string, BigNumber> = new Map();
-  private totalStaked: BigNumber = BigNumber.from(0);
-  private rewardRate: BigNumber = BigNumber.from(0);
+class StakingContract {
+  private stateManager: StateManager;
 
-  constructor(rewardRate: BigNumber) {
-    this.rewardRate = rewardRate;
+  constructor(stateManager: StateManager) {
+    this.stateManager = stateManager;
   }
 
-  stake(address: string, amount: BigNumber): void {
-    this.delegations.set(address, this.delegations.get(address)?.add(amount) || amount);
-    this.totalStaked = this.totalStaked.add(amount);
+  async stake(amount: BigNumber, delegateTo?: string): Promise<void> {
+    // 1. Validate the stake amount
+    // 2. Update the staker's balance in the state trie
+    // 3. Track the delegation, if provided
+    // 4. Emit a staking event
   }
 
-  unstake(address: string, amount: BigNumber): void {
-    const currentStake = this.delegations.get(address) || BigNumber.from(0);
-    const newStake = currentStake.sub(amount);
-    this.delegations.set(address, newStake);
-    this.totalStaked = this.totalStaked.sub(amount);
+  async withdraw(amount: BigNumber): Promise<void> {
+    // 1. Validate the withdrawal amount
+    // 2. Update the staker's balance in the state trie
+    // 3. Emit a withdrawal event
   }
 
-  claimRewards(address: string): BigNumber {
-    const currentStake = this.delegations.get(address) || BigNumber.from(0);
-    const rewards = currentStake.mul(this.rewardRate).div(100);
-    this.delegations.set(address, currentStake.add(rewards));
-    return rewards;
+  async claimRewards(): Promise<void> {
+    // 1. Calculate the staker's rewards based on their stake and the total staked
+    // 2. Transfer the rewards to the staker's account
+    // 3. Emit a rewards event
   }
 
-  getTotalStaked(): BigNumber {
-    return this.totalStaked;
+  private calculateRewards(staker: Account): BigNumber {
+    // 1. Get the staker's stake amount
+    // 2. Get the total staked amount
+    // 3. Calculate the rewards based on the stake percentage and the reward rate
+    // 4. Return the rewards amount
   }
 }
+
+export { StakingContract };
