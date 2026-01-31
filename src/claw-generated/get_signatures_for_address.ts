@@ -1,29 +1,33 @@
-import { GetSignaturesForAddressParams, GetSignaturesForAddressResult } from './rpc_types';
-import { ClawChainState } from '../state';
+import { Connection, GetConfirmedSignaturesForAddressOptions, PublicKey } from '@solana/web3.js';
+import { RpcContext } from '../types';
+
+export interface GetSignaturesForAddressParams {
+  address: string;
+  options?: {
+    limit?: number;
+    before?: string;
+    until?: string;
+  };
+}
 
 export async function getSignaturesForAddress(
-  params: GetSignaturesForAddressParams,
-  state: ClawChainState
-): Promise&lt;GetSignaturesForAddressResult&gt; {
-  const { address, limit = 20, before, until } = params;
-  
-  // Fetch signatures for the given address from the state
-  const signatures = await state.getSignaturesForAddress(address, { limit, before, until });
+  ctx: RpcContext,
+  { address, options }: GetSignaturesForAddressParams
+): Promise<string[]> {
+  const { connection } = ctx;
+  const pubkey = new PublicKey(address);
 
-  // Prepare the response
-  const result: GetSignaturesForAddressResult = {
-    signatures,
-    before: null,
-    until: null
+  const opts: GetConfirmedSignaturesForAddressOptions = {
+    limit: options?.limit || 20,
+    before: options?.before,
+    until: options?.until,
   };
 
-  // Set pagination cursors if applicable
-  if (signatures.length === limit) {
-    result.until = signatures[signatures.length - 1];
+  try {
+    const signatures = await connection.getConfirmedSignaturesForAddress2(pubkey, opts);
+    return signatures.map((sig) => sig.signature);
+  } catch (error) {
+    console.error('Error fetching signatures:', error);
+    throw error;
   }
-  if (before && signatures.length > 0) {
-    result.before = signatures[0];
-  }
-
-  return result;
 }
