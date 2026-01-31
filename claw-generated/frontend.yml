@@ -1,4 +1,4 @@
-name: Frontend CI
+name: ClawChain Frontend CI/CD
 
 on:
   push:
@@ -16,9 +16,26 @@ jobs:
     - name: Use Node.js
       uses: actions/setup-node@v2
       with:
-        node-version: '16'
+        node-version: '14'
     - run: npm ci
     - run: npm run build
     - run: npm test
+    
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    - name: Use Node.js  
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+    - run: npm ci
+    - name: Deploy to production
       env:
-        CI: true
+        SSH_HOST: ${{ secrets.SSH_HOST }}
+        SSH_USER: ${{ secrets.SSH_USER }}
+        SSH_KEY: ${{ secrets.SSH_KEY }}
+      run: |
+        ssh $SSH_USER@$SSH_HOST 'cd /path/to/clawchain-frontend && git pull && npm install && npm run build && serve -s build'
