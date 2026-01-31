@@ -1,13 +1,14 @@
 import { Account } from '../account/account';
 import { TransactionValidator } from './transaction-validation';
-import * as crypto from 'crypto';
+import { verifyEd25519Signature } from '../crypto/ed25519';
 
 export interface Transaction {
   from: Account;
   to: Account;
   amount: number;
   nonce: number;
-  signatures: string[];
+  signature: string;
+  publicKey: Uint8Array;
 }
 
 export class TransactionManager {
@@ -17,61 +18,32 @@ export class TransactionManager {
       to,
       amount,
       nonce,
-      signatures: []
+      signature: '',
+      publicKey: from.publicKey
     };
   }
 
-  static signTransaction(transaction: Transaction, privateKey: string): Transaction {
-    // Hash the transaction data
-    const transactionData = JSON.stringify({
-      from: transaction.from.address,
-      to: transaction.to.address,
-      amount: transaction.amount,
-      nonce: transaction.nonce
-    });
-    const hash = crypto.createHash('sha256').update(transactionData).digest('hex');
-
-    // Sign the hash with the private key
-    const signature = crypto.createSign('SHA256')
-      .update(hash)
-      .sign(privateKey, 'hex');
-
-    // Add the signature to the transaction
-    transaction.signatures.push(signature);
-    return transaction;
+  static signTransaction(transaction: Transaction, privateKey: Uint8Array): Transaction {
+    const transactionData = this.hashTransaction(transaction);
+    const signature = this.signEd25519(transactionData, privateKey);
+    return {
+      ...transaction,
+      signature: Buffer.from(signature).toString('hex')
+    };
   }
 
-  static verifyTransaction(transaction: Transaction, account: Account): boolean {
-    return TransactionValidator.validateTransaction(transaction, account);
+  private static hashTransaction(transaction: Transaction): Buffer {
+    return Buffer.from(
+      JSON.stringify({
+        from: transaction.from.address,
+        to: transaction.to.address,
+        amount: transaction.amount,
+        nonce: transaction.nonce
+      })
+    );
   }
 
-  static verifyMultiSignatures(transaction: Transaction, publicKeys: string[], signatures: string[]): boolean {
-    // Verify that the number of signatures matches the number of public keys
-    if (signatures.length !== publicKeys.length) {
-      return false;
-    }
-
-    // Hash the transaction data
-    const transactionData = JSON.stringify({
-      from: transaction.from.address,
-      to: transaction.to.address,
-      amount: transaction.amount,
-      nonce: transaction.nonce
-    });
-    const hash = crypto.createHash('sha256').update(transactionData).digest('hex');
-
-    // Verify each signature against the corresponding public key
-    for (let i = 0; i < signatures.length; i++) {
-      const publicKey = publicKeys[i];
-      const signature = signatures[i];
-
-      const verifier = crypto.createVerify('SHA256');
-      verifier.update(hash);
-      if (!verifier.verify(publicKey, signature, 'hex')) {
-        return false;
-      }
-    }
-
-    return true;
+  private static signEd25519(data: Buffer, privateKey: Uint8Array): Uint8Array {
+    return ed25519.sign(data, privateKey);
   }
 }
