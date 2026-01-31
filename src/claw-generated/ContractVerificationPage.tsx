@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Button, Divider, Input, Result, Typography } from 'antd';
+import { Button, Divider, Input, Result, Typography, Upload } from 'antd';
 import { useContractVerification } from './api/contract-verification';
+import { UploadOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
@@ -9,9 +10,16 @@ const ContractVerificationPage: React.FC = () => {
   const [verificationResult, setVerificationResult] = useState<{
     valid: boolean;
     errors: string[];
+    warnings: string[];
   } | null>(null);
 
   const { verifyContract } = useContractVerification();
+
+  const handleFileUpload = (info: any) => {
+    if (info.file.status === 'done') {
+      setContractSource(info.file.response);
+    }
+  };
 
   const handleVerify = async () => {
     try {
@@ -22,6 +30,7 @@ const ContractVerificationPage: React.FC = () => {
       setVerificationResult({
         valid: false,
         errors: ['Contract verification failed. Please try again.'],
+        warnings: [],
       });
     }
   };
@@ -34,12 +43,14 @@ const ContractVerificationPage: React.FC = () => {
         blockchain.
       </Text>
       <Divider />
-      <Input.TextArea
-        rows={10}
-        placeholder="Enter your contract source code"
-        value={contractSource}
-        onChange={(e) => setContractSource(e.target.value)}
-      />
+      <Upload
+        name="contract-source"
+        action="/api/contract-verification"
+        onChange={handleFileUpload}
+        showUploadList={false}
+      >
+        <Button icon={<UploadOutlined />}>Upload Contract Source</Button>
+      </Upload>
       <Button type="primary" onClick={handleVerify}>
         Verify Contract
       </Button>
@@ -53,11 +64,24 @@ const ContractVerificationPage: React.FC = () => {
               status="error"
               title="Contract Verification Failed"
               subTitle={
-                <ul>
-                  {verificationResult.errors.map((error, index) => (
-                    <li key={index}>{error}</li>
-                  ))}
-                </ul>
+                <>
+                  <p>Errors:</p>
+                  <ul>
+                    {verificationResult.errors.map((error, index) => (
+                      <li key={index}>{error}</li>
+                    ))}
+                  </ul>
+                  {verificationResult.warnings.length > 0 && (
+                    <>
+                      <p>Warnings:</p>
+                      <ul>
+                        {verificationResult.warnings.map((warning, index) => (
+                          <li key={index}>{warning}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </>
               }
             />
           )}
