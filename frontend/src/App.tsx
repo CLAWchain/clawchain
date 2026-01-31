@@ -5,7 +5,7 @@ import AdminDashboard from './AdminDashboard';
 import BlockExplorer from './BlockExplorer';
 
 // Types
-type TabType = 'terminal' | 'genesis' | 'molt' | 'updates' | 'logs' | 'explorer' | 'admin';
+type TabType = 'terminal' | 'genesis' | 'molt' | 'updates' | 'logs' | 'explorer' | 'faucet' | 'wallet' | 'admin';
 
 // Mobile menu icon component
 const MenuIcon = ({ open }: { open: boolean }) => (
@@ -129,7 +129,7 @@ export default function App() {
   // Sync route to tab
   useEffect(() => {
     const path = location.pathname.slice(1) || 'terminal';
-    const validTabs: TabType[] = ['terminal', 'genesis', 'molt', 'updates', 'logs', 'explorer', 'admin'];
+    const validTabs: TabType[] = ['terminal', 'genesis', 'molt', 'updates', 'logs', 'explorer', 'faucet', 'wallet', 'admin'];
     if (validTabs.includes(path as TabType)) {
       setActiveTab(path as TabType);
     }
@@ -234,6 +234,8 @@ export default function App() {
     { id: 'terminal', label: 'Terminal' },
     { id: 'molt', label: 'Claw' },
     { id: 'explorer', label: 'Explorer' },
+    { id: 'faucet', label: 'Faucet' },
+    { id: 'wallet', label: 'Wallet' },
     { id: 'updates', label: 'Updates' },
     { id: 'logs', label: 'Logs' },
     { id: 'admin', label: 'Admin' },
@@ -248,6 +250,10 @@ export default function App() {
         return renderChat();
       case 'explorer':
         return <BlockExplorer />;
+      case 'faucet':
+        return renderFaucet();
+      case 'wallet':
+        return renderWallet();
       case 'updates':
         return renderUpdates();
       case 'logs':
@@ -258,6 +264,89 @@ export default function App() {
         return renderTerminal();
     }
   };
+
+  const renderFaucet = () => (
+    <div style={{ padding: isMobile ? '24px 16px' : '40px 24px', maxWidth: 600, margin: '0 auto' }}>
+      <div className="card" style={{ padding: 32, textAlign: 'center' }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>🚰</div>
+        <h2 style={{ fontSize: 24, marginBottom: 8, color: 'var(--text-primary)' }}>ClawChain Faucet</h2>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
+          Get testnet CLAW tokens to experiment with the network
+        </p>
+        <div style={{ marginBottom: 24 }}>
+          <input 
+            type="text" 
+            placeholder="Enter your wallet address"
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              color: 'var(--text-primary)',
+              fontSize: 14,
+              fontFamily: "'JetBrains Mono', monospace",
+            }}
+          />
+        </div>
+        <button style={{
+          background: 'var(--teal)',
+          color: 'var(--bg-primary)',
+          border: 'none',
+          borderRadius: 8,
+          padding: '12px 32px',
+          fontSize: 14,
+          fontWeight: 600,
+          cursor: 'pointer',
+        }}>
+          Request 10 CLAW
+        </button>
+        <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 16 }}>
+          Limited to 1 request per address per day
+        </p>
+      </div>
+    </div>
+  );
+
+  const renderWallet = () => (
+    <div style={{ padding: isMobile ? '24px 16px' : '40px 24px', maxWidth: 600, margin: '0 auto' }}>
+      <div className="card" style={{ padding: 32, textAlign: 'center' }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>👛</div>
+        <h2 style={{ fontSize: 24, marginBottom: 8, color: 'var(--text-primary)' }}>ClawChain Wallet</h2>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
+          Manage your CLAW tokens and interact with the network
+        </p>
+        <button style={{
+          background: 'var(--coral)',
+          color: 'white',
+          border: 'none',
+          borderRadius: 8,
+          padding: '12px 32px',
+          fontSize: 14,
+          fontWeight: 600,
+          cursor: 'pointer',
+          marginBottom: 16,
+        }}>
+          Create New Wallet
+        </button>
+        <div style={{ marginBottom: 16 }}>
+          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>or</span>
+        </div>
+        <button style={{
+          background: 'transparent',
+          color: 'var(--teal)',
+          border: '1px solid var(--teal)',
+          borderRadius: 8,
+          padding: '12px 32px',
+          fontSize: 14,
+          fontWeight: 600,
+          cursor: 'pointer',
+        }}>
+          Import Existing Wallet
+        </button>
+      </div>
+    </div>
+  );
 
   const renderTerminal = () => (
     <div style={{ padding: isMobile ? '24px 16px' : '40px 24px', maxWidth: 1000, margin: '0 auto' }}>

@@ -7,6 +7,52 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getBacklogProgress = exports.markBacklogTaskComplete = exports.getNextBacklogTask = exports.getTasksByType = exports.getTasksByPriority = exports.getTotalEstimatedTime = exports.TASK_BACKLOG = void 0;
 // Comprehensive task backlog - organized by category
 exports.TASK_BACKLOG = [
+    // ============ FAUCET & WALLET ============
+    {
+        id: 'faucet-001',
+        title: 'Build testnet faucet backend',
+        description: 'Create a faucet API endpoint that dispenses testnet CLAW tokens. Rate limit to 1 request per address per day. Track dispensed addresses in database. Mint 10 CLAW per request.',
+        type: 'feature',
+        priority: 10,
+        estimatedMinutes: 45,
+        tags: ['faucet', 'api', 'economics']
+    },
+    {
+        id: 'faucet-002',
+        title: 'Add faucet rate limiting and anti-abuse',
+        description: 'Implement rate limiting for faucet requests. Track by IP and address. Add cooldown period. Prevent abuse with captcha or proof-of-work.',
+        type: 'build',
+        priority: 9,
+        estimatedMinutes: 30,
+        tags: ['faucet', 'security']
+    },
+    {
+        id: 'wallet-001',
+        title: 'Build wallet keypair generation',
+        description: 'Create Ed25519 keypair generation for wallets. Support seed phrase (BIP39) for recovery. Derive addresses from public keys in base58 format.',
+        type: 'feature',
+        priority: 10,
+        estimatedMinutes: 40,
+        tags: ['wallet', 'crypto', 'security']
+    },
+    {
+        id: 'wallet-002',
+        title: 'Implement wallet transaction signing',
+        description: 'Add transaction signing with Ed25519 private keys. Build transaction serialization. Create signed transaction broadcast to network.',
+        type: 'build',
+        priority: 9,
+        estimatedMinutes: 35,
+        tags: ['wallet', 'crypto', 'blockchain']
+    },
+    {
+        id: 'wallet-003',
+        title: 'Add wallet balance and transaction history',
+        description: 'Fetch account balance from chain state. Display transaction history for address. Show pending and confirmed transactions.',
+        type: 'build',
+        priority: 8,
+        estimatedMinutes: 30,
+        tags: ['wallet', 'api']
+    },
     // ============ BLOCKCHAIN CORE ============
     {
         id: 'bc-001',
