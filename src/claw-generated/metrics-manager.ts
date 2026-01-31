@@ -1,58 +1,44 @@
-import { 
-  blocksCreated,
-  blockTime,
-  blockSize,
-  transactionsProcessed,
-  transactionPoolSize,
-  transactionGasUsage,
-  connectedPeers,
-  peerChurn,
-  messageLantency,
-  cpuUsage,
-  memoryUsage,
-  diskUsage
-} from './metrics';
+import { Counter, Gauge, Registry } from 'prom-client';
 
-class MetricsManager {
-  constructor() {
-    // Initialize metrics
-    blocksCreated.inc(0);
-    blockTime.set(0);
-    blockSize.set(0);
-    transactionsProcessed.inc(0);
-    transactionPoolSize.set(0);
-    transactionGasUsage.set(0);
-    connectedPeers.set(0);
-    peerChurn.inc(0);
-    messageLantency.set(0);
-    cpuUsage.set(0);
-    memoryUsage.set(0);
-    diskUsage.set(0);
-  }
+const registry = new Registry();
 
-  updateBlockMetrics(blockCount: number, blockTimeSeconds: number, blockSizeBytes: number) {
-    blocksCreated.inc(blockCount);
-    blockTime.set(blockTimeSeconds);
-    blockSize.set(blockSizeBytes);
-  }
+// Block metrics
+export const blocksProduced = new Counter({
+  name: 'blocks_produced_total',
+  help: 'Total number of blocks produced',
+  registers: [registry]
+});
 
-  updateTransactionMetrics(txProcessed: number, poolSize: number, gasUsed: number) {
-    transactionsProcessed.inc(txProcessed);
-    transactionPoolSize.set(poolSize);
-    transactionGasUsage.set(gasUsed);
-  }
+export const blockProductionRate = new Gauge({
+  name: 'block_production_rate',
+  help: 'Blocks produced per second',
+  registers: [registry]
+});
 
-  updatePeerMetrics(connectedPeersCount: number, peerChurnCount: number, messageLatencyMs: number) {
-    connectedPeers.set(connectedPeersCount);
-    peerChurn.inc(peerChurnCount);
-    messageLantency.set(messageLatencyMs);
-  }
+// Transaction metrics  
+export const transactionsProcessed = new Counter({
+  name: 'transactions_processed_total',
+  help: 'Total number of transactions processed',
+  registers: [registry]
+});
 
-  updateResourceMetrics(cpuUsagePercent: number, memoryUsageBytes: number, diskUsagePercent: number) {
-    cpuUsage.set(cpuUsagePercent);
-    memoryUsage.set(memoryUsageBytes);
-    diskUsage.set(diskUsagePercent);
-  }
-}
+export const transactionThroughput = new Gauge({
+  name: 'transaction_throughput',
+  help: 'Transactions processed per second',
+  registers: [registry]
+});
 
-export default MetricsManager;
+// Peer metrics
+export const peerConnections = new Gauge({
+  name: 'peer_connections',
+  help: 'Number of active peer connections',
+  registers: [registry]
+});
+
+export const peerReputation = new Gauge({
+  name: 'peer_reputation',
+  help: 'Average peer reputation score',
+  registers: [registry]
+});
+
+export const getMetrics = () => registry.metrics();

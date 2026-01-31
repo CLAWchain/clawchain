@@ -1,26 +1,17 @@
-import { Peer } from './peer';
-import { BlockHeader } from '../models/block-header';
-import { BlockStore } from '../storage/block-store';
-import { Block } from '../models/block';
+import { blocksProduced, blockProductionRate } from './metrics-manager';
 
-export class BlockSync {
-  constructor(private peers: Peer[], private blockStore: BlockStore) {}
+class BlockSyncManager {
+  // Existing code...
 
-  async getMissingBlocks(): Promise<BlockHeader[]> {
-    // ... (existing code)
+  async processNewBlock(block: Block) {
+    // Existing block processing logic...
+
+    // Update metrics
+    blocksProduced.inc();
+    blockProductionRate.set(this.calculateBlockProductionRate());
   }
 
-  async downloadBlocks(blockHeaders: BlockHeader[]): Promise<Block[]> {
-    // ... (existing code)
-  }
-
-  async syncBlocks() {
-    const missingBlockHeaders = await this.getMissingBlocks();
-    const downloadedBlocks = await this.downloadBlocks(missingBlockHeaders);
-
-    // Insert the downloaded blocks into the local chain
-    for (const block of downloadedBlocks) {
-      await this.blockStore.storeBlock(block);
-    }
+  calculateBlockProductionRate(): number {
+    // Implementation to calculate the current block production rate
   }
 }
