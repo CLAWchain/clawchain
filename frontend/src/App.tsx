@@ -94,6 +94,9 @@ export default function App() {
     tps: 0
   });
   const [uptime, setUptime] = useState('0h 0m');
+  const [networkAgents, setNetworkAgents] = useState<any[]>([]);
+  const [networkMessages, setNetworkMessages] = useState<any[]>([]);
+  const [networkStats, setNetworkStats] = useState({ totalAgents: 1, activeAgents: 1, totalMessages: 0, commitsToday: 0 });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -123,6 +126,38 @@ export default function App() {
     const interval = setInterval(updateUptime, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Fetch network data
+  useEffect(() => {
+    const fetchNetworkData = async () => {
+      try {
+        const [agentsRes, messagesRes, statsRes] = await Promise.all([
+          fetch(`${API_BASE}/api/network/agents`),
+          fetch(`${API_BASE}/api/network/messages`),
+          fetch(`${API_BASE}/api/network/stats`),
+        ]);
+        
+        if (agentsRes.ok) {
+          const data = await agentsRes.json();
+          setNetworkAgents(data.agents || []);
+        }
+        if (messagesRes.ok) {
+          const data = await messagesRes.json();
+          setNetworkMessages(data.messages || []);
+        }
+        if (statsRes.ok) {
+          const data = await statsRes.json();
+          setNetworkStats(data);
+        }
+      } catch (e) {
+        // Silently fail
+      }
+    };
+    
+    fetchNetworkData();
+    const interval = setInterval(fetchNetworkData, 5000);
+    return () => clearInterval(interval);
+  }, [API_BASE]);
 
   const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:4000' : '';
 
@@ -351,44 +386,7 @@ export default function App() {
     </div>
   );
 
-  const renderNetwork = () => {
-    // Real data only - fetched from API
-    const [networkAgents, setNetworkAgents] = useState<any[]>([]);
-    const [networkMessages, setNetworkMessages] = useState<any[]>([]);
-    const [networkStats, setNetworkStats] = useState({ totalAgents: 1, activeAgents: 1, totalMessages: 0, commitsToday: 0 });
-
-    useEffect(() => {
-      const fetchNetworkData = async () => {
-        try {
-          const [agentsRes, messagesRes, statsRes] = await Promise.all([
-            fetch(`${API_BASE}/api/network/agents`),
-            fetch(`${API_BASE}/api/network/messages`),
-            fetch(`${API_BASE}/api/network/stats`),
-          ]);
-          
-          if (agentsRes.ok) {
-            const data = await agentsRes.json();
-            setNetworkAgents(data.agents || []);
-          }
-          if (messagesRes.ok) {
-            const data = await messagesRes.json();
-            setNetworkMessages(data.messages || []);
-          }
-          if (statsRes.ok) {
-            const data = await statsRes.json();
-            setNetworkStats(data);
-          }
-        } catch (e) {
-          console.error('Failed to fetch network data:', e);
-        }
-      };
-      
-      fetchNetworkData();
-      const interval = setInterval(fetchNetworkData, 5000);
-      return () => clearInterval(interval);
-    }, []);
-
-    return (
+  const renderNetwork = () => (
       <div style={{ padding: isMobile ? '16px' : '24px', maxWidth: 1200, margin: '0 auto' }}>
         {/* Header */}
         <div style={{ marginBottom: 24 }}>
@@ -585,7 +583,6 @@ export default function App() {
         </div>
       </div>
     );
-  };
 
   const renderTerminal = () => (
     <div style={{ padding: isMobile ? '24px 16px' : '40px 24px', maxWidth: 1000, margin: '0 auto' }}>
