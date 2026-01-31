@@ -2,15 +2,14 @@
 pragma solidity ^0.8.0;
 
 /**
- * @title CLAW Token Standard (CRC-20)
- * @dev Implementation of the basic standard for fungible tokens, with extra features.
+ * @title CRC-20 Token Standard
+ * @dev Implementation of the basic standard for fungible tokens on ClawChain.
+ * Based on the ERC-20 standard, with a few minor changes to fit the ClawChain ecosystem.
  */
 contract CRC20 {
     // Events
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
-    event Mint(address indexed to, uint256 value);
-    event Burn(address indexed from, uint256 value);
 
     // Token Metadata
     string public name;
@@ -23,10 +22,10 @@ contract CRC20 {
     uint256 public totalSupply;
 
     /**
-     * @dev Constructor to initialize token metadata.
-     * @param _name Token name
-     * @param _symbol Token symbol
-     * @param _decimals Number of decimal places
+     * @dev Constructor to initialize the token metadata.
+     * @param _name The name of the token.
+     * @param _symbol The symbol of the token.
+     * @param _decimals The number of decimal places the token supports.
      */
     constructor(string memory _name, string memory _symbol, uint8 _decimals) {
         name = _name;
@@ -35,68 +34,50 @@ contract CRC20 {
     }
 
     /**
-     * @dev Transfer tokens from the caller to a recipient.
-     * @param to The address to transfer to.
-     * @param value The amount to be transferred.
-     * @return bool true if the transfer was successful, false otherwise.
+     * @dev Transfers tokens from the caller's account to the specified address.
+     * @param recipient The address to transfer tokens to.
+     * @param amount The amount of tokens to transfer.
+     * @return bool True if the transfer was successful.
      */
-    function transfer(address to, uint256 value) public virtual returns (bool) {
-        require(balanceOf[msg.sender] &gt;= value, "Insufficient balance");
-        balanceOf[msg.sender] -= value;
-        balanceOf[to] += value;
-        emit Transfer(msg.sender, to, value);
+    function transfer(address recipient, uint256 amount) public virtual returns (bool) {
+        require(recipient != address(0), "CRC20: cannot transfer to the zero address");
+        require(amount &lt;= balanceOf[msg.sender], "CRC20: insufficient balance");
+
+        balanceOf[msg.sender] -= amount;
+        balanceOf[recipient] += amount;
+        emit Transfer(msg.sender, recipient, amount);
         return true;
     }
 
     /**
-     * @dev Approve the passed address to spend the specified amount of tokens on behalf of the caller.
-     * @param spender The address which will spend the funds.
-     * @param value The amount of tokens to be spent.
-     * @return bool true if the approval was successful, false otherwise.
+     * @dev Allows the spender to withdraw from the caller's account multiple times, up to the value amount.
+     * @param spender The address to approve for spending.
+     * @param amount The amount of tokens to be approved for spending.
+     * @return bool True if the approval was successful.
      */
-    function approve(address spender, uint256 value) public virtual returns (bool) {
-        allowance[msg.sender][spender] = value;
-        emit Approval(msg.sender, spender, value);
+    function approve(address spender, uint256 amount) public virtual returns (bool) {
+        require(spender != address(0), "CRC20: cannot approve the zero address");
+        allowance[msg.sender][spender] = amount;
+        emit Approval(msg.sender, spender, amount);
         return true;
     }
 
     /**
-     * @dev Transfer tokens from one address to another on behalf of the caller.
-     * @param from The address to send tokens from.
-     * @param to The address to transfer to.
-     * @param value The amount of tokens to be transferred.
-     * @return bool true if the transfer was successful, false otherwise.
+     * @dev Transfers tokens from the specified address to the recipient, provided the caller has sufficient allowance.
+     * @param sender The address to transfer tokens from.
+     * @param recipient The address to transfer tokens to.
+     * @param amount The amount of tokens to transfer.
+     * @return bool True if the transfer was successful.
      */
-    function transferFrom(address from, address to, uint256 value) public virtual returns (bool) {
-        require(value &lt;= balanceOf[from], "Insufficient balance");
-        require(value &lt;= allowance[from][msg.sender], "Insufficient allowance");
-        balanceOf[from] -= value;
-        balanceOf[to] += value;
-        allowance[from][msg.sender] -= value;
-        emit Transfer(from, to, value);
+    function transferFrom(address sender, address recipient, uint256 amount) public virtual returns (bool) {
+        require(recipient != address(0), "CRC20: cannot transfer to the zero address");
+        require(amount &lt;= balanceOf[sender], "CRC20: insufficient balance");
+        require(amount &lt;= allowance[sender][msg.sender], "CRC20: insufficient allowance");
+
+        balanceOf[sender] -= amount;
+        balanceOf[recipient] += amount;
+        allowance[sender][msg.sender] -= amount;
+        emit Transfer(sender, recipient, amount);
         return true;
-    }
-
-    /**
-     * @dev Mint new tokens and add them to the total supply.
-     * @param to The address to receive the minted tokens.
-     * @param value The amount of tokens to mint.
-     */
-    function mint(address to, uint256 value) public virtual {
-        totalSupply += value;
-        balanceOf[to] += value;
-        emit Mint(to, value);
-    }
-
-    /**
-     * @dev Burn tokens, reducing the total supply.
-     * @param from The address to burn tokens from.
-     * @param value The amount of tokens to burn.
-     */
-    function burn(address from, uint256 value) public virtual {
-        require(balanceOf[from] &gt;= value, "Insufficient balance");
-        balanceOf[from] -= value;
-        totalSupply -= value;
-        emit Burn(from, value);
     }
 }
