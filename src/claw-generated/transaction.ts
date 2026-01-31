@@ -1,13 +1,22 @@
 import { Account } from "./account";
 import { TransactionSignature } from "./crypto/transaction-signer";
 
+export enum TransactionStatus {
+  Pending = "pending",
+  Confirmed = "confirmed",
+  Failed = "failed",
+}
+
 export class Transaction {
   from: Account;
   to: Account;
   amount: number;
   nonce: number;
   signature: TransactionSignature;
-  contractBytecode?: string; // New property for contract deployment transactions
+  contractBytecode?: string;
+  status: TransactionStatus;
+  timestamp: number;
+  blockNumber: number;
 
   constructor(
     from: Account,
@@ -15,14 +24,20 @@ export class Transaction {
     amount: number,
     nonce: number,
     signature: TransactionSignature,
-    contractBytecode?: string // New parameter for contract deployment transactions
+    contractBytecode?: string,
+    status: TransactionStatus = TransactionStatus.Pending,
+    timestamp: number = Date.now(),
+    blockNumber: number = 0
   ) {
     this.from = from;
     this.to = to;
     this.amount = amount;
     this.nonce = nonce;
     this.signature = signature;
-    this.contractBytecode = contractBytecode; // Assign the new parameter
+    this.contractBytecode = contractBytecode;
+    this.status = status;
+    this.timestamp = timestamp;
+    this.blockNumber = blockNumber;
   }
 
   validate(): boolean {
@@ -54,5 +69,10 @@ export class Transaction {
     this.to.balance += this.amount;
 
     return true;
+  }
+
+  updateStatus(status: TransactionStatus, blockNumber: number = 0): void {
+    this.status = status;
+    this.blockNumber = blockNumber;
   }
 }
