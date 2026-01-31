@@ -19,4 +19,21 @@ export class AccountStorage {
     }
     accountStorage.set(key, value);
   }
+
+  /**
+   * Retrieves the entire storage for a given account address.
+   * @param address The Ethereum address to retrieve the storage for.
+   * @returns A Map containing the key-value pairs for the given address.
+   */
+  getAccountStorage(address: string): Map<string, BigNumber> {
+    return this.storage.get(address) || new Map();
+  }
+
+  /**
+   * Clears the storage for a given account address.
+   * @param address The Ethereum address to clear the storage for.
+   */
+  clearAccountStorage(address: string): void {
+    this.storage.delete(address);
+  }
 }
