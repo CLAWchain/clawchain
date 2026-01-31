@@ -1,27 +1,15 @@
-import { Transaction } from '../types';
-import { broadcastTransaction } from '../network';
+import { Account } from '../state/account';
+import { StateManager } from '../state/manager';
 
-export interface RPCMethods {
-  sendTransaction: (rawTransaction: string) => Promise<string>;
-}
+export class RPCServer {
+  private stateManager: StateManager;
 
-export const rpcMethods: RPCMethods = {
-  sendTransaction: async (rawTransaction: string): Promise<string> => {
-    try {
-      // 1. Decode the base64-encoded raw transaction
-      const transaction = Transaction.from(Buffer.from(rawTransaction, 'base64'));
-
-      // 2. Validate the transaction
-      if (!transaction.verifySignatures()) {
-        throw new Error('Invalid transaction signatures');
-      }
-
-      // 3. Broadcast the valid transaction to the network
-      const txHash = await broadcastTransaction(transaction);
-      return txHash;
-    } catch (error) {
-      console.error('Error processing sendTransaction RPC:', error);
-      throw error;
-    }
+  constructor(stateManager: StateManager) {
+    this.stateManager = stateManager;
   }
-};
+
+  async getBalance(pubkey: string): Promise<number> {
+    const account = await this.stateManager.getAccount(pubkey);
+    return account ? account.balance : 0;
+  }
+}
