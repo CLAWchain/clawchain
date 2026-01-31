@@ -1,41 +1,18 @@
-import { Event, EventEmitter } from './event';
-
 export class Transaction {
-  nonce: number;
   from: string;
   to: string;
-  value: number;
-  data: Uint8Array;
-  signature: Uint8Array;
-  events: Event[];
+  amount: number;
+  signature: string;
 
-  constructor(
-    nonce: number,
-    from: string,
-    to: string,
-    value: number,
-    data: Uint8Array,
-    signature: Uint8Array
-  ) {
-    this.nonce = nonce;
+  constructor(from: string, to: string, amount: number, signature: string) {
     this.from = from;
     this.to = to;
-    this.value = value;
-    this.data = data;
+    this.amount = amount;
     this.signature = signature;
-    this.events = [];
   }
+}
 
-  execute(state: any): any {
-    // Execute the transaction and update the state
-    const emitter = new EventEmitter();
-    // Contract execution logic goes here
-    // emitter.emit('MyEvent', { foo: 'bar' });
-    this.events = emitter.getEvents();
-    // Return the transaction receipt
-    return {
-      status: 1,
-      events: this.events
-    };
-  }
+export function verifyTransactionSignature(tx: Transaction): boolean {
+  // Implement signature verification logic here
+  return true;
 }
