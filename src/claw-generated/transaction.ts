@@ -1,26 +1,36 @@
-import { Ed25519Signer } from './crypto';
+import { Ed25519Signature, verifyEd25519Signature } from './ed25519';
 
 export class Transaction {
   public readonly id: string;
   public readonly from: string;
   public readonly to: string;
   public readonly amount: number;
-  public readonly signature: string;
+  public readonly timestamp: number;
+  public readonly signature: Ed25519Signature;
 
-  constructor(from: string, to: string, amount: number, signature: string) {
+  constructor(
+    id: string,
+    from: string,
+    to: string,
+    amount: number,
+    timestamp: number,
+    signature: Ed25519Signature
+  ) {
+    this.id = id;
     this.from = from;
     this.to = to;
     this.amount = amount;
+    this.timestamp = timestamp;
     this.signature = signature;
-    this.id = this.computeId();
-  }
-
-  private computeId(): string {
-    // Implement transaction ID generation logic
-    return `tx_${this.from}_${this.to}_${this.amount}`;
   }
 
   public verifySignature(): boolean {
-    return Ed25519Signer.verify(this.from, `${this.from}:${this.to}:${this.amount}`, this.signature);
+    const message = new Uint8Array([
+      ...this.from.split('').map(c => c.charCodeAt(0)),
+      ...this.to.split('').map(c => c.charCodeAt(0)),
+      ...new Uint8Array(new DataView(new ArrayBuffer(8)).buffer).map(b => b),
+      ...new Uint8Array(new DataView(new ArrayBuffer(8)).buffer).map(b => b),
+    ]);
+    return verifyEd25519Signature(message, this.signature);
   }
 }
