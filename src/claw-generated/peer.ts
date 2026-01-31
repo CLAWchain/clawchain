@@ -1,22 +1,24 @@
-import { Connection } from './connection';
+import { EventEmitter } from 'events';
 
-export class Peer {
-  public connection: Connection;
-  public status: 'connected' | 'disconnected' = 'disconnected';
+export class Peer extends EventEmitter {
+  public address: string;
+  public port: number;
 
-  constructor(public id: string) {
-    this.connection = new Connection(this.id);
+  constructor(address: string, port: number) {
+    super();
+    this.address = address;
+    this.port = port;
   }
 
   connect() {
-    // Establish a connection to the peer
-    this.connection.connect();
-    this.status = 'connected';
+    // Connect to the peer
   }
 
   disconnect() {
-    // Close the connection to the peer
-    this.connection.disconnect();
-    this.status = 'disconnected';
+    // Disconnect from the peer
+  }
+
+  sendMessage(message: any) {
+    // Send a message to the peer
   }
 }
