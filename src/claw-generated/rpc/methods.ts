@@ -1,5 +1,6 @@
 import { JsonRpcServer } from './server';
 import { ClawChain } from '../chain';
+import { TransactionReceipt } from '../transaction/TransactionReceipt';
 
 class RpcMethods {
   private chain: ClawChain;
@@ -15,6 +16,7 @@ class RpcMethods {
     this.rpcServer.registerMethod('clawchain_sendTransaction', this.sendTransaction);
     this.rpcServer.registerMethod('clawchain_getTransactionReceipt', this.getTransactionReceipt);
     this.rpcServer.registerMethod('clawchain_call', this.call);
+    this.rpcServer.registerMethod('clawchain_simulateTransaction', this.simulateTransaction);
   }
 
   private async getBalance(address: string): Promise<string> {
@@ -32,7 +34,7 @@ class RpcMethods {
     return txHash;
   }
 
-  private async getTransactionReceipt(txHash: string): Promise<any> {
+  private async getTransactionReceipt(txHash: string): Promise<TransactionReceipt> {
     const receipt = await this.chain.getTransactionReceipt(txHash);
     return receipt;
   }
@@ -45,6 +47,16 @@ class RpcMethods {
   ): Promise<string> {
     const result = await this.chain.call(from, to, value, data);
     return result;
+  }
+
+  private async simulateTransaction(
+    from: string,
+    to: string,
+    value: string,
+    data: string
+  ): Promise<{ logs: string[], computeUnits: number }> {
+    const { logs, computeUnits } = await this.chain.simulateTransaction(from, to, value, data);
+    return { logs, computeUnits };
   }
 }
 
