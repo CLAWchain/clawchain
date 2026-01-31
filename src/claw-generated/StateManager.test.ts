@@ -1,6 +1,5 @@
 import { StateManager } from './StateManager';
-import { Account } from '../models/Account';
-import { TransactionReceipt } from '../models/TransactionReceipt';
+import { Account, Block, Transaction } from '../types';
 
 describe('StateManager', () => {
   let stateManager: StateManager;
@@ -9,48 +8,88 @@ describe('StateManager', () => {
     stateManager = new StateManager();
   });
 
-  it('should update account balances', () => {
-    const address1 = Buffer.from('address1');
-    const address2 = Buffer.from('address2');
-
-    stateManager.updateBalance(address1, 100n);
-    stateManager.updateBalance(address2, 50n);
-
-    const account1 = stateManager.getAccount(address1);
-    const account2 = stateManager.getAccount(address2);
-
-    expect(account1.balance).toEqual(100n);
-    expect(account2.balance).toEqual(50n);
+  describe('updateBalance', () => {
+    it('should update the balance of an account', () => {
+      const address = '0x123';
+      stateManager.updateBalance(address, 100);
+      const account = stateManager.getAccount(address);
+      expect(account.balance).toBe(100);
+    });
   });
 
-  it('should calculate the state root correctly', () => {
-    const address1 = Buffer.from('address1');
-    const address2 = Buffer.from('address2');
+  describe('applyTransaction', () => {
+    it('should update the balances and nonce correctly', () => {
+      const senderAddress = '0x123';
+      const receiverAddress = '0x456';
+      stateManager.updateBalance(senderAddress, 1000);
+      stateManager.updateBalance(receiverAddress, 0);
 
-    stateManager.updateBalance(address1, 100n);
-    stateManager.updateBalance(address2, 50n);
+      const tx: Transaction = {
+        from: senderAddress,
+        to: receiverAddress,
+        value: 100,
+        nonce: 0,
+        signature: 'TODO'
+      };
 
-    const stateRoot = stateManager.getStateRoot();
-    expect(stateRoot).not.toEqual(Buffer.alloc(32));
+      stateManager.applyTransaction(tx);
+
+      const senderAccount = stateManager.getAccount(senderAddress);
+      const receiverAccount = stateManager.getAccount(receiverAddress);
+
+      expect(senderAccount.balance).toBe(900);
+      expect(senderAccount.nonce).toBe(1);
+      expect(receiverAccount.balance).toBe(100);
+    });
   });
 
-  it('should apply transactions correctly', () => {
-    const address1 = Buffer.from('address1');
-    const address2 = Buffer.from('address2');
+  describe('applyBlock', () => {
+    it('should apply all transactions in a block', () => {
+      const address1 = '0x123';
+      const address2 = '0x456';
+      const address3 = '0x789';
 
-    const tx1: TransactionReceipt = {
-      from: address1,
-      to: address2,
-      value: 50n,
-    };
+      stateManager.updateBalance(address1, 1000);
+      stateManager.updateBalance(address2, 0);
+      stateManager.updateBalance(address3, 0);
 
-    stateManager.updateBalance(address1, 100n);
-    stateManager.applyTransaction(tx1);
+      const tx1: Transaction = {
+        from: address1,
+        to: address2,
+        value: 100,
+        nonce: 0,
+        signature: 'TODO'
+      };
 
-    const account1 = stateManager.getAccount(address1);
-    const account2 = stateManager.getAccount(address2);
+      const tx2: Transaction = {
+        from: address1,
+        to: address3,
+        value: 200,
+        nonce: 1,
+        signature: 'TODO'
+      };
 
-    expect(account1.balance).toEqual(50n);
-    expect(account2.balance).toEqual(50n);
+      const block: Block = {
+        transactions: [tx1, tx2]
+      };
+
+      stateManager.applyBlock(block);
+
+      const account1 = stateManager.getAccount(address1);
+      const account2 = stateManager.getAccount(address2);
+      const account3 = stateManager.getAccount(address3);
+
+      expect(account1.balance).toBe(700);
+      expect(account1.nonce).toBe(2);
+      expect(account2.balance).toBe(100);
+      expect(account3.balance).toBe(200);
+    });
+  });
+
+  describe('getStateRoot', () => {
+    it('should return the current state root', () => {
+      const stateRoot = stateManager.getStateRoot();
+      expect(stateRoot).toBe('TODO');
+    });
   });
 });
