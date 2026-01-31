@@ -1,35 +1,24 @@
 import { Block } from '../block/block';
-import { Chain } from '../blockchain/Chain';
-import { TransactionReceipt } from '../transaction/TransactionReceipt';
 
-export interface GetBlockParams {
+export async function getBlock(params: {
   slot: number;
   includeTransactions?: boolean;
   encoding?: 'json' | 'binary';
-}
+}): Promise&lt;Block&gt; {
+  // Fetch the block data by slot number
+  const block = await Block.getBySlot(params.slot);
 
-export async function getBlock(params: GetBlockParams): Promise<Block | null> {
-  const { slot, includeTransactions = false, encoding = 'json' } = params;
-  const block = await Chain.instance.getBlockBySlot(slot);
-  if (!block) {
-    return null;
+  // Include transaction details if requested
+  if (params.includeTransactions) {
+    block.transactions = await Promise.all(block.transactionIds.map(
+      (txId) => Transaction.getByHash(txId)
+    ));
   }
 
-  if (includeTransactions) {
-    block.transactions = await Promise.all(block.transactionIds.map(async (txId) => {
-      const tx = await Chain.instance.getTransaction(txId);
-      if (tx) {
-        const receipt = await Chain.instance.getTransactionReceipt(txId);
-        return { ...tx, receipt: receipt as TransactionReceipt };
-      }
-      return null;
-    }));
+  // Encode the response as requested
+  if (params.encoding === 'binary') {
+    return block.toBinary();
+  } else {
+    return block.toJSON();
   }
-
-  if (encoding === 'binary') {
-    // Serialize the block to binary format
-    block.serialize();
-  }
-
-  return block;
 }
