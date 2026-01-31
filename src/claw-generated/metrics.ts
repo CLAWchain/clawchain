@@ -1,29 +1,30 @@
-import { Counter, Gauge, Histogram, register } from 'prom-client';
+import { Counter, Gauge, Registry } from 'prom-client';
 
-// Initialize Prometheus metrics
-export const blockProductionCounter = new Counter({
-  name: 'block_production_total',
-  help: 'Total number of blocks produced'
+const registry = new Registry();
+
+// Blockchain metrics
+export const blockProduced = new Counter({
+  name: 'claw_blocks_produced',
+  help: 'Total number of blocks produced',
+  registers: [registry]
 });
 
-export const transactionThroughputGauge = new Gauge({
-  name: 'transaction_throughput',
-  help: 'Current transaction throughput (transactions per second)'
+export const transactionsProcessed = new Counter({
+  name: 'claw_transactions_processed',
+  help: 'Total number of transactions processed',
+  registers: [registry]
 });
 
-export const peerCountGauge = new Gauge({
-  name: 'peer_count',
-  help: 'Number of connected peers'
+export const peersConnected = new Gauge({
+  name: 'claw_peers_connected',
+  help: 'Number of peers currently connected',
+  registers: [registry]
 });
 
-export const consensusStatusGauge = new Gauge({
-  name: 'consensus_status',
-  help: 'Current consensus status (0 = unhealthy, 1 = healthy)'
+export const chainHeight = new Gauge({
+  name: 'claw_chain_height',
+  help: 'Current height of the blockchain',
+  registers: [registry]
 });
 
-export const registerMetrics = () => {
-  register.registerMetric(blockProductionCounter);
-  register.registerMetric(transactionThroughputGauge);
-  register.registerMetric(peerCountGauge);
-  register.registerMetric(consensusStatusGauge);
-};
+export const getMetricsRegistry = () => registry;
