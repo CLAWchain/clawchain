@@ -1,61 +1,42 @@
-import { parseJsonRpcRequest, JsonRpcRequest, JsonRpcResponse, JsonRpcBatchRequest, JsonRpcBatchResponse } from './types';
+import express from 'express';
+import { promBundle } from 'express-prom-bundle';
+import MetricsManager from './metrics-manager';
 
-export class JsonRpcServer {
-  private methodHandlers: Record<string, (params: any[]) => Promise<any>> = {};
+const app = express();
 
-  registerMethod(name: string, handler: (params: any[]) => Promise<any>) {
-    this.methodHandlers[name] = handler;
-  }
+// Prometheus middleware
+app.use(
+  promBundle({
+    includeMethod: true,
+    includePath: true,
+    includeStatusCode: true,
+    includeUp: true,
+    metricsPath: '/metrics',
+  })
+);
 
-  async handleRequest(rawRequest: string): Promise<JsonRpcResponse | JsonRpcBatchResponse> {
-    try {
-      const requests = Array.isArray(JSON.parse(rawRequest))
-        ? (JSON.parse(rawRequest) as JsonRpcBatchRequest)
-        : [parseJsonRpcRequest(rawRequest)];
+// Initialize metrics manager
+const metricsManager = new MetricsManager();
 
-      const responses = await Promise.all(requests.map(async (request) => {
-        const handler = this.methodHandlers[request.method];
-        if (!handler) {
-          return {
-            jsonrpc: '2.0',
-            id: request.id,
-            error: {
-              code: -32601,
-              message: 'Method not found'
-            }
-          };
-        }
-        try {
-          const result = await handler(request.params || []);
-          return {
-            jsonrpc: '2.0',
-            id: request.id,
-            result
-          };
-        } catch (err) {
-          console.error('JSON-RPC error:', err);
-          return {
-            jsonrpc: '2.0',
-            id: request.id,
-            error: {
-              code: -32603,
-              message: 'Internal error'
-            }
-          };
-        }
-      }));
+// Example routes
+app.get('/blocks', (req, res) => {
+  const blockCount = 10;
+  const blockTimeSeconds = 5.2;
+  const blockSizeBytes = 1024;
 
-      return responses.length === 1 ? responses[0] : responses;
-    } catch (err) {
-      console.error('JSON-RPC error:', err);
-      return {
-        jsonrpc: '2.0',
-        id: null,
-        error: {
-          code: -32603,
-          message: 'Internal error'
-        }
-      };
-    }
-  }
-}
+  metricsManager.updateBlockMetrics(blockCount, blockTimeSeconds, blockSizeBytes);
+  res.send(`Produced ${blockCount} blocks.`);
+});
+
+app.get('/transactions', (req, res) {
+  const txProcessed = 100;
+  const poolSize = 50;
+  const gasUsed = 1000000;
+
+  metricsManager.updateTransactionMetrics(txProcessed, poolSize, gasUsed);
+  res.send(`Processed ${txProcessed} transactions.`);
+});
+
+app.listen(3000, () => {
+  console.log('Server started on port 3000');
+});
