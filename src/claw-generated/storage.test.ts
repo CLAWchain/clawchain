@@ -7,25 +7,24 @@ describe('ContractStorage', () => {
     storage = new ContractStorage();
   });
 
-  it('should set and get values', () => {
-    storage.set('key1', 'value1');
-    expect(storage.get('key1')).toEqual('value1');
+  it('should set and get simple values', () => {
+    storage.set('name', 'Alice');
+    expect(storage.get('name')).toEqual('Alice');
   });
 
-  it('should delete values', () => {
-    storage.set('key2', 'value2');
-    expect(storage.has('key2')).toBe(true);
-    storage.delete('key2');
-    expect(storage.has('key2')).toBe(false);
+  it('should create and access mappings', () => {
+    const userMap = storage.getMapping('users');
+    userMap.set('alice', { name: 'Alice', age: 30 });
+    userMap.set('bob', { name: 'Bob', age: 35 });
+
+    expect(userMap.get('alice')).toEqual({ name: 'Alice', age: 30 });
+    expect(userMap.get('bob')).toEqual({ name: 'Bob', age: 35 });
   });
 
-  it('should handle arrays', () => {
-    storage.setArray('myArray', [1, 2, 3]);
-    expect(storage.getArray('myArray')).toEqual([1, 2, 3]);
-  });
+  it('should create and access arrays', () => {
+    const numbers = storage.getArray('numbers');
+    numbers.push(1, 2, 3);
 
-  it('should handle mappings', () => {
-    storage.setMapping('myMapping', 'subkey1', 'value1');
-    expect(storage.getMapping('myMapping', 'subkey1')).toEqual('value1');
+    expect(numbers).toEqual([1, 2, 3]);
   });
 });

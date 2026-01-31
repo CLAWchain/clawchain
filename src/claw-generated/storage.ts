@@ -1,39 +1,37 @@
 export class ContractStorage {
-  private storage: Map<string, any> = new Map();
+  private store: Map<string, any> = new Map();
 
   get(key: string): any {
-    return this.storage.get(key);
+    return this.store.get(key);
   }
 
   set(key: string, value: any): void {
-    this.storage.set(key, value);
+    this.store.set(key, value);
   }
 
   delete(key: string): void {
-    this.storage.delete(key);
+    this.store.delete(key);
   }
 
   has(key: string): boolean {
-    return this.storage.has(key);
+    return this.store.has(key);
+  }
+
+  getMapping(key: string): Map<string, any> {
+    let mapping = this.get(key);
+    if (!mapping) {
+      mapping = new Map();
+      this.set(key, mapping);
+    }
+    return mapping as Map<string, any>;
   }
 
   getArray(key: string): any[] {
-    const value = this.get(key);
-    return Array.isArray(value) ? value : [];
-  }
-
-  setArray(key: string, values: any[]): void {
-    this.set(key, values);
-  }
-
-  getMapping(key: string, subkey: string): any {
-    const mapping = this.get(key) || {};
-    return mapping[subkey];
-  }
-
-  setMapping(key: string, subkey: string, value: any): void {
-    let mapping = this.get(key) || {};
-    mapping[subkey] = value;
-    this.set(key, mapping);
+    let array = this.get(key);
+    if (!array) {
+      array = [];
+      this.set(key, array);
+    }
+    return array as any[];
   }
 }
