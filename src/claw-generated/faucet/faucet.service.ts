@@ -1,34 +1,37 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { FaucetClaimEntity } from './faucet-claim.entity';
-import { TokenService } from '../token/token.service';
+import { FaucetRequest } from './entities/faucet-request.entity';
+import { ClawTokenService } from '../claw-token/claw-token.service';
 
 @Injectable()
 export class FaucetService {
   constructor(
-    @InjectRepository(FaucetClaimEntity)
-    private faucetClaimRepository: Repository<FaucetClaimEntity>,
-    private tokenService: TokenService
+    @InjectRepository(FaucetRequest)
+    private faucetRequestRepository: Repository<FaucetRequest>,
+    private clawTokenService: ClawTokenService,
   ) {}
 
-  async claimTokens(address: string, ip: string): Promise<{ success: boolean; message?: string }> {
-    const lastClaim = await this.faucetClaimRepository.findOne({ where: { address } });
-    const now = new Date();
+  async dispenseTokens(address: string, ipAddress: string): Promise<{ message: string }> {
+    // Check if address has already requested tokens today
+    const existingRequest = await this.faucetRequestRepository.findOne({
+      where: { address, requestedAt: new Date(new Date().toDateString()) },
+    });
 
-    if (lastClaim && lastClaim.claimedAt.getDate() === now.getDate()) {
-      return { success: false, message: 'You can only claim once per day' };
+    if (existingRequest) {
+      return { message: 'You can only request tokens once per day' };
     }
 
-    await this.tokenService.mint(address, 10);
+    // Mint 10 CLAW tokens for the user
+    await this.clawTokenService.mint(address, 10);
 
-    const claim = this.faucetClaimRepository.create({
+    // Save the faucet request to the database
+    await this.faucetRequestRepository.save({
       address,
-      ip,
-      claimedAt: now
+      ipAddress,
+      requestedAt: new Date(),
     });
-    await this.faucetClaimRepository.save(claim);
 
-    return { success: true };
+    return { message: 'Tokens dispensed successfully' };
   }
 }

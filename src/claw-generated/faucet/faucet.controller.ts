@@ -1,14 +1,14 @@
-import { Body, Controller, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req } from '@nestjs/common';
 import { FaucetService } from './faucet.service';
+import { FaucetRequestDto } from './dto/faucet-request.dto';
 import { Request } from 'express';
 
 @Controller('faucet')
 export class FaucetController {
-  constructor(private faucetService: FaucetService) {}
+  constructor(private readonly faucetService: FaucetService) {}
 
   @Post()
-  async claimTokens(@Req() req: Request, @Body() body: { address: string }) {
-    const { address } = body;
-    return this.faucetService.claimTokens(address, req.ip);
+  async requestTokens(@Body() faucetRequest: FaucetRequestDto, @Req() req: Request) {
+    return this.faucetService.dispenseTokens(faucetRequest.address, req.ip);
   }
 }
