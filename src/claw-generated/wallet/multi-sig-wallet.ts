@@ -1,54 +1,23 @@
-import { Account } from '../account/account';
+import { Wallet } from './wallet';
 import { Transaction } from '../transaction/transaction';
-import { Ed25519Keypair } from '../crypto/ed25519';
+import { Account } from '../account/account';
 
-export class MultiSigWallet {
-  public publicKeys: Ed25519Keypair[];
-  public threshold: number;
+export class MultiSigWallet extends Wallet {
+  private requiredSignatures: number;
+  private owners: Account[];
 
-  constructor(publicKeys: Ed25519Keypair[], threshold: number) {
-    this.publicKeys = publicKeys;
-    this.threshold = threshold;
+  constructor(requiredSignatures: number, owners: Account[]) {
+    super();
+    this.requiredSignatures = requiredSignatures;
+    this.owners = owners;
   }
 
-  /**
-   * Adds a new public key to the multi-sig wallet.
-   * @param publicKey The public key to add
-   */
-  addPublicKey(publicKey: Ed25519Keypair) {
-    this.publicKeys.push(publicKey);
+  addOwner(account: Account) {
+    this.owners.push(account);
   }
 
-  /**
-   * Removes a public key from the multi-sig wallet.
-   * @param publicKey The public key to remove
-   */
-  removePublicKey(publicKey: Ed25519Keypair) {
-    this.publicKeys = this.publicKeys.filter(key => key !== publicKey);
-  }
-
-  /**
-   * Changes the threshold for the multi-sig wallet.
-   * @param newThreshold The new threshold value
-   */
-  changeThreshold(newThreshold: number) {
-    this.threshold = newThreshold;
-  }
-
-  /**
-   * Aggregates the provided signatures and checks if the threshold is met.
-   * @param transaction The transaction to verify
-   * @param signatures The signatures to aggregate
-   * @returns True if the threshold is met, false otherwise
-   */
-  verifySignatures(transaction: Transaction, signatures: string[]): boolean {
-    // Verify that the number of signatures meets the threshold
-    if (signatures.length < this.threshold) {
-      return false;
-    }
-
-    // Aggregate the signatures and verify the transaction
-    const publicKeys = this.publicKeys.map(key => key.publicKey);
-    return transaction.verifyMultiSignatures(publicKeys, signatures);
+  sendTransaction(transaction: Transaction): boolean {
+    // TODO: Implement multi-signature transaction signing and verification
+    return false;
   }
 }

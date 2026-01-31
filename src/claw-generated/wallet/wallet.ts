@@ -1,30 +1,24 @@
-import { EncryptedKeypair, encryptKeypair, decryptKeypair } from './keypair';
-import { generateMnemonic, mnemonicToSeedSync } from './bip39';
+import { Transaction } from '../transaction/transaction';
+import { Account } from '../account/account';
+import { crypto } from '../utils/crypto';
 
 export class Wallet {
-  private encryptedKeypair: EncryptedKeypair;
-  private mnemonic: string;
+  private accounts: Account[];
 
-  constructor(private password: string) {}
-
-  async generateKeypairFromMnemonic(): Promise<void> {
-    this.mnemonic = generateMnemonic();
-    const seed = mnemonicToSeedSync(this.mnemonic, this.password);
-    this.encryptedKeypair = await encryptKeypair(seed, this.password);
+  constructor() {
+    this.accounts = [];
   }
 
-  async getKeypairFromMnemonic(): Promise<Uint8Array> {
-    const seed = mnemonicToSeedSync(this.mnemonic, this.password);
-    return await decryptKeypair(this.encryptedKeypair, this.password);
+  addAccount(account: Account) {
+    this.accounts.push(account);
   }
 
-  getMnemonic(): string {
-    return this.mnemonic;
+  sendTransaction(transaction: Transaction) {
+    // TODO: Implement transaction signing and sending
   }
 
-  async restoreFromMnemonic(mnemonic: string): Promise<void> {
-    this.mnemonic = mnemonic;
-    const seed = mnemonicToSeedSync(this.mnemonic, this.password);
-    this.encryptedKeypair = await encryptKeypair(seed, this.password);
+  signTransaction(transaction: Transaction, account: Account): Transaction {
+    const signature = crypto.sign(transaction.serialize(), account.privateKey);
+    return transaction.withSignature(signature);
   }
 }
