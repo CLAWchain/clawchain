@@ -1,58 +1,53 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./CLAW20.sol";
 
 contract Governance {
-    IERC20 public token;
-    mapping(address =&gt; uint256) public votes;
-    mapping(uint256 =&gt; Proposal) public proposals;
+    CLAW20 public token;
+    mapping(uint256 => Proposal) public proposals;
+    mapping(address => mapping(uint256 => bool)) public votes;
     uint256 public proposalCount;
 
     struct Proposal {
+        uint256 id;
         string description;
         uint256 startBlock;
         uint256 endBlock;
-        uint256 yesVotes;
-        uint256 noVotes;
+        uint256 forVotes;
+        uint256 againstVotes;
         bool executed;
     }
 
-    constructor(IERC20 _token) {
+    constructor(CLAW20 _token) {
         token = _token;
     }
 
-    function propose(string memory _description, uint256 _duration) public {
-        require(_duration &gt; 0, "Duration must be greater than 0");
-        uint256 proposalId = proposalCount++;
-        proposals[proposalId] = Proposal({
-            description: _description,
-            startBlock: block.number,
-            endBlock: block.number + _duration,
-            yesVotes: 0,
-            noVotes: 0,
-            executed: false
-        });
+    function createProposal(string memory description, uint256 votingPeriod) public {
+        require(token.balanceOf(msg.sender) >= 1000 * 10 ** 18, "Minimum 1000 CLAW tokens required to create a proposal");
+        uint256 startBlock = block.number;
+        uint256 endBlock = startBlock + votingPeriod;
+        proposals[proposalCount] = Proposal(proposalCount, description, startBlock, endBlock, 0, 0, false);
+        proposalCount++;
     }
 
-    function vote(uint256 _proposalId, bool _support) public {
-        Proposal storage proposal = proposals[_proposalId];
-        require(block.number &gt;= proposal.startBlock &amp;&amp; block.number &lt;= proposal.endBlock, "Voting period has ended");
-        require(votes[msg.sender] + token.balanceOf(msg.sender) &gt;= token.balanceOf(msg.sender), "Insufficient tokens to vote");
-        if (_support) {
-            proposal.yesVotes += token.balanceOf(msg.sender);
+    function vote(uint256 proposalId, bool support) public {
+        require(block.number >= proposals[proposalId].startBlock && block.number <= proposals[proposalId].endBlock, "Voting period has ended");
+        require(!votes[msg.sender][proposalId], "You have already voted on this proposal");
+        require(token.balanceOf(msg.sender) > 0, "You must hold CLAW tokens to vote");
+        votes[msg.sender][proposalId] = true;
+        if (support) {
+            proposals[proposalId].forVotes += token.balanceOf(msg.sender);
         } else {
-            proposal.noVotes += token.balanceOf(msg.sender);
+            proposals[proposalId].againstVotes += token.balanceOf(msg.sender);
         }
-        votes[msg.sender] += token.balanceOf(msg.sender);
     }
 
-    function execute(uint256 _proposalId) public {
-        Proposal storage proposal = proposals[_proposalId];
-        require(block.number &gt; proposal.endBlock, "Voting period has not ended");
-        require(!proposal.executed, "Proposal has already been executed");
-        require(proposal.yesVotes &gt; proposal.noVotes, "Proposal did not pass");
-        proposal.executed = true;
-        // Execute the proposal's actions here
+    function executeProposal(uint256 proposalId) public {
+        require(block.number > proposals[proposalId].endBlock, "Voting period has not ended");
+        require(!proposals[proposalId].executed, "Proposal has already been executed");
+        require(proposals[proposalId].forVotes > proposals[proposalId].againstVotes, "Proposal did not pass");
+        // Execute the proposal's logic here
+        proposals[proposalId].executed = true;
     }
 }
