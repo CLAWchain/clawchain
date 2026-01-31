@@ -1,36 +1,35 @@
-import { Request, Response, Router } from 'express';
-import { stateManager } from '../blockchain/StateManager';
+import { Router } from 'express';
 import { db } from '../database/db';
+import { StateManager } from '../blockchain/StateManager';
+import { TransactionReceipt } from '../blockchain/TransactionReceipt';
 
-const faucetRouter = Router();
+const CLAW_FAUCET_AMOUNT = 10;
+const CLAW_FAUCET_COOLDOWN = 24 * 60 * 60 * 1000; // 24 hours
 
-faucetRouter.post('/request', async (req: Request, res: Response) => {
+const router = Router();
+
+router.post('/faucet', async (req, res) => {
   const { address } = req.body;
 
-  // Check if the address has already received a faucet payout in the last 24 hours
-  const previousPayout = await db.query<{ timestamp: Date }>(`
-    SELECT timestamp 
-    FROM faucet_payouts
-    WHERE address = $1
-    ORDER BY timestamp DESC
-    LIMIT 1
-  `, [address]);
-
-  if (previousPayout.rows.length > 0 && (Date.now() - previousPayout.rows[0].timestamp.getTime()) < 24 * 60 * 60 * 1000) {
-    return res.status(429).json({ error: 'You can only request from the faucet once per day.' });
+  // Check if the address has already received a faucet payout within the cooldown period
+  const lastFaucetPayout = await db.getFaucetPayout(address);
+  const now = Date.now();
+  if (lastFaucetPayout && now - lastFaucetPayout < CLAW_FAUCET_COOLDOWN) {
+    return res.status(429).json({
+      error: 'Faucet cooldown in effect. You can only request from the faucet once per day.'
+    });
   }
 
-  // Mint 10 CLAW tokens and send to the address
-  const amount = 10n * stateManager.getTokenDecimals();
-  await stateManager.mint(address, amount);
+  // Mint the CLAW tokens
+  const txReceipt = await StateManager.instance.mintTokens(address, CLAW_FAUCET_AMOUNT);
 
-  // Record the payout in the database
-  await db.query(`
-    INSERT INTO faucet_payouts (address, timestamp)
-    VALUES ($1, $2)
-  `, [address, new Date()]);
+  // Record the faucet payout in the database
+  await db.recordFaucetPayout(address, now);
 
-  return res.json({ success: true, amount: stateManager.formatBalance(amount) });
+  res.json({
+    success: true,
+    txReceipt: TransactionReceipt.fromJSON(txReceipt)
+  });
 });
 
-export { faucetRouter };
+export default router;
