@@ -1,68 +1,73 @@
 # ClawChain Node Operator Guide
 
 ## Hardware Requirements
-To run a ClawChain node, you will need the following minimum hardware specifications:
+To run a ClawChain node, you'll need the following hardware:
 
-- CPU: Quad-core processor (Intel Core i5 or AMD Ryzen 5 equivalent or better)
-- RAM: 8GB or more
-- Storage: 500GB SSD or faster
-- Network: Stable internet connection with at least 10Mbps download and 5Mbps upload speeds
-
-The node will need to store the entire blockchain data, which can grow over time as more transactions are processed. An SSD is recommended for faster sync times and better overall performance.
-
-## Software Requirements
-ClawChain nodes can run on the following operating systems:
-
-- Ubuntu 20.04 LTS or later
-- Debian 10 or later
-- CentOS 8 or later
-- macOS 10.15 (Catalina) or later
-
-You will also need to have the following software installed:
-
-- Node.js 14.x or later
-- npm 6.x or later
-- Git
+- CPU: Minimum 2 cores, recommended 4 cores or more
+- RAM: Minimum 4GB, recommended 8GB or more
+- Storage: Minimum 100GB SSD, recommended 500GB SSD or more
+- Network: Stable internet connection with minimum 10Mbps download and 5Mbps upload speeds
 
 ## Node Configuration
-To configure your ClawChain node, follow these steps:
 
-1. Clone the ClawChain repository:
+### 1. Install Dependencies
+You'll need to install the following software on your system:
+
+- Node.js (version 14 or higher)
+- npm (version 6 or higher)
+- Git
+
+You can install these using your system's package manager (e.g., `apt-get`, `yum`, `brew`).
+
+### 2. Clone the ClawChain Repository
+Use Git to clone the ClawChain repository:
+
 ```
 git clone https://github.com/clawchain/clawchain.git
+cd clawchain
 ```
 
-2. Install the required dependencies:
+### 3. Install Node Dependencies
+Install the required Node.js dependencies by running:
+
 ```
-cd clawchain
 npm install
 ```
 
-3. Create a new node configuration file:
-```
-cp config.example.json config.json
+### 4. Configure Node Settings
+Create a new file called `node-config.json` in the project root directory. This file will contain your node's configuration settings.
+
+Here's an example configuration:
+
+```json
+{
+  "nodeUrl": "http://localhost:8545",
+  "privateKey": "YOUR_PRIVATE_KEY_HERE",
+  "genesisBlockHash": "0x...",
+  "chainId": 1234
+}
 ```
 
-4. Update the configuration file with your node settings, such as:
-   - `rpcPort`: The port for the JSON-RPC API (default: 8545)
-   - `p2pPort`: The port for the peer-to-peer network (default: 30303)
-   - `dataDir`: The directory to store the blockchain data
+### 5. Run the Node
+To start your ClawChain node, run the following command:
 
-5. Start the node:
 ```
 npm start
 ```
 
-Your node will now start syncing the blockchain data. This process can take several hours depending on your hardware and network connection.
+This will launch the node and connect it to the ClawChain network. You can monitor the node's status and logs using the provided CLI or web-based dashboard.
 
-## Monitoring and Maintenance
-To ensure your node remains healthy and up-to-date, you should regularly monitor its status and perform maintenance tasks. Some key things to watch for:
+### 6. Run as a Service
+For production use, you'll want to run the ClawChain node as a persistent service on your system. This ensures the node remains online and automatically restarts if the system reboots.
 
-- Disk space usage: Ensure you have enough free space to accommodate the growing blockchain data.
-- Sync status: Check that your node is staying in sync with the network.
-- Software updates: Keep your node software up-to-date with the latest releases.
-- Network connectivity: Ensure your node can communicate with other peers in the network.
+You can use a process manager like PM2 or systemd to run the node as a service. Refer to the relevant documentation for your operating system.
 
-You can use tools like PM2 or systemd to run the node as a service and automatically restart it if it crashes. Additionally, you may want to set up monitoring and alerting to receive notifications about any issues with your node.
+## Troubleshooting
+If you encounter any issues while running your ClawChain node, check the following:
 
-For more advanced node operations, such as running a validator or participating in consensus, please refer to the ClawChain validator documentation.
+- Ensure all dependencies are installed correctly
+- Verify the node configuration settings are correct
+- Check the node logs for any error messages
+- Ensure your system meets the minimum hardware requirements
+
+For further assistance, please reach out to the ClawChain community or the project maintainers.
