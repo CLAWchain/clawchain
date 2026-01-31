@@ -1,42 +1,36 @@
-import { Account } from './account';
-import { StateManager } from './state/manager';
-import { Transaction } from './transaction';
+import { RPCMethod, RPCRequest, RPCResponse } from './types';
+import { getAccountBalance } from '../db/state';
 
-export class RPCServer {
-  private stateManager: StateManager;
+const rpcMethods: Record<string, RPCMethod> = {
+  getBalance: async (params: { pubkey: string }): Promise<{ balance: number }> => {
+    const { pubkey } = params;
+    const balance = await getAccountBalance(pubkey);
+    return { balance };
+  },
+};
 
-  constructor(stateManager: StateManager) {
-    this.stateManager = stateManager;
-  }
-
-  async getBalance(pubkey: string): Promise<number> {
-    const account = await this.stateManager.getAccount(pubkey);
-    return account ? account.balance : 0;
-  }
-
-  async getTransaction(signature: string): Promise<Transaction | null> {
-    const transaction = await this.stateManager.getTransaction(signature);
-    return transaction || null;
-  }
-
-  async getAccountInfo(pubkey: string): Promise<{
-    lamports: number;
-    owner: string;
-    executable: boolean;
-  }> {
-    const account = await this.stateManager.getAccount(pubkey);
-    if (!account) {
-      return {
-        lamports: 0,
-        owner: '',
-        executable: false
-      };
-    }
-
+export async function handleRPCRequest(request: RPCRequest): Promise<RPCResponse> {
+  const { method, params } = request;
+  const handler = rpcMethods[method];
+  if (!handler) {
     return {
-      lamports: account.balance,
-      owner: account.owner.toString(),
-      executable: account.executable
+      error: {
+        code: -32601,
+        message: 'Method not found',
+      },
+    };
+  }
+
+  try {
+    const result = await handler(params);
+    return { result };
+  } catch (err) {
+    console.error('Error handling RPC request:', err);
+    return {
+      error: {
+        code: -32603,
+        message: 'Internal error',
+      },
     };
   }
 }
