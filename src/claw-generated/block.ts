@@ -1,47 +1,24 @@
-import { StateManager } from './state_manager';
-import { Transaction } from './transaction';
+import { Transaction } from '../transaction/transaction';
+import { Account } from '../account/account';
 
-class Block {
-  private stateManager: StateManager;
-  private transactions: Transaction[];
-  private previousHash: string;
-  private hash: string;
+export class Block {
+  transactions: Transaction[];
+  reward: number;
+  minerAddress: string;
 
-  constructor(
-    stateManager: StateManager,
-    transactions: Transaction[],
-    previousHash: string
-  ) {
-    this.stateManager = stateManager;
+  constructor(transactions: Transaction[], minerAddress: string) {
     this.transactions = transactions;
-    this.previousHash = previousHash;
-    this.hash = this.calculateHash();
+    this.minerAddress = minerAddress;
+    this.reward = 0;
   }
 
-  validateBlock(): boolean {
-    // Validate the block by:
-    // 1. Verifying the transactions
-    // 2. Updating the state with the transactions
-    // 3. Verifying the state root hash
-
-    let currentState = this.stateManager.getStateRoot();
-
+  processTransactions(): void {
     for (const tx of this.transactions) {
-      if (!tx.verify()) {
-        return false;
-      }
-
-      tx.apply(this.stateManager);
-      currentState = this.stateManager.getStateRoot();
+      tx.apply(this);
     }
-
-    return currentState === this.hash;
   }
 
-  private calculateHash(): string {
-    // Calculate the block hash based on the state root, previous hash, and transactions
-    // (implementation omitted for brevity)
+  getMinerReward(): number {
+    return this.reward;
   }
 }
-
-export { Block };

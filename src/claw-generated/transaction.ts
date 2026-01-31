@@ -1,30 +1,50 @@
-import { StateManager } from './state_manager';
+import { Block } from '../block/block';
+import { Account } from '../account/account';
 
-class Transaction {
-  private from: string;
-  private to: string;
-  private value: number;
-  private nonce: number;
+export class Transaction {
+  sender: Account;
+  recipient: Account;
+  amount: number;
+  fee: number;
 
-  constructor(from: string, to: string, value: number, nonce: number) {
-    this.from = from;
-    this.to = to;
-    this.value = value;
-    this.nonce = nonce;
+  constructor(sender: Account, recipient: Account, amount: number, fee: number) {
+    this.sender = sender;
+    this.recipient = recipient;
+    this.amount = amount;
+    this.fee = fee;
   }
 
-  verify(): boolean {
-    // Verify the transaction signature and nonce
-    // (implementation omitted for brevity)
+  validate(): boolean {
+    // Validate the transaction (e.g., check sender balance, signature, etc.)
     return true;
   }
 
-  apply(stateManager: StateManager): void {
-    // Update the state based on the transaction
-    stateManager.setState(this.from, (parseInt(stateManager.getState(this.from)) - this.value).toString());
-    stateManager.setState(this.to, (parseInt(stateManager.getState(this.to)) + this.value).toString());
-    stateManager.setState(`${this.from}:nonce`, this.nonce.toString());
+  apply(block: Block): void {
+    // Deduct the fee from the sender's account
+    this.sender.balance -= this.amount + this.fee;
+
+    // Add the fee to the block reward
+    block.reward += this.fee;
+
+    // Transfer the amount to the recipient
+    this.recipient.balance += this.amount;
+  }
+
+  calculateFee(): number {
+    // Calculate the fee based on transaction size and complexity
+    const baseFee = 0.001; // 0.001 ClawCoin per byte
+    const sizeInBytes = this.serialize().length;
+    const complexityFactor = 1; // Placeholder, will add more logic later
+    return baseFee * sizeInBytes * complexityFactor;
+  }
+
+  serialize(): string {
+    // Serialize the transaction to a string
+    return JSON.stringify({
+      sender: this.sender.address,
+      recipient: this.recipient.address,
+      amount: this.amount,
+      fee: this.fee
+    });
   }
 }
-
-export { Transaction };
