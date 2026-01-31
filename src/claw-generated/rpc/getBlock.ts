@@ -8,16 +8,16 @@ class GetBlockRpcMethod {
     this.checkpointManager = checkpointManager;
   }
 
-  async getBlock(blockHash: string): Promise<Block | null> {
-    // Fetch the block from the blockchain
-    const block = await this.fetchBlock(blockHash);
+  async getBlock(slot: number, includeTransactions: boolean = true): Promise<Block | null> {
+    // Fetch the block from the blockchain by slot
+    const block = await this.fetchBlockBySlot(slot);
     if (!block) {
       return null;
     }
 
     // Check if the block is before the latest checkpoint
     const latestCheckpoint = this.checkpointManager.getLatestCheckpoint();
-    if (latestCheckpoint && block.height <= latestCheckpoint.blockHeight) {
+    if (latestCheckpoint && block.height <= latestCheckpoint.blockHeight && !includeTransactions) {
       // Return the block without the transaction details
       return {
         hash: block.hash,
@@ -31,8 +31,8 @@ class GetBlockRpcMethod {
     return block;
   }
 
-  private async fetchBlock(blockHash: string): Promise<Block | null> {
-    // Fetch the block from the blockchain storage
+  private async fetchBlockBySlot(slot: number): Promise<Block | null> {
+    // Fetch the block from the blockchain storage by slot
     // ...
   }
 }
