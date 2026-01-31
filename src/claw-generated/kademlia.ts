@@ -1,65 +1,66 @@
-import { NodeId, Node, Message, RoutingTable } from './types';
+import crypto from 'crypto';
 
-class KademliaNode implements Node {
-  id: NodeId;
-  routingTable: RoutingTable;
-  bootstrapNodes: Node[];
+class KademliaNode {
+  id: string;
+  address: string;
+  port: number;
 
-  constructor(id: NodeId, bootstrapNodes: Node[]) {
+  constructor(id: string, address: string, port: number) {
     this.id = id;
-    this.routingTable = new RoutingTable(this.id);
-    this.bootstrapNodes = bootstrapNodes;
-  }
-
-  handleMessage(message: Message): void {
-    // Handle incoming messages and update routing table
-    console.log(`Received message from ${message.sender}: ${message.type}`);
-    this.routingTable.addNode({
-      id: message.sender,
-      handleMessage: (msg) => this.handleMessage(msg),
-      findNode: (target) => this.findNode(target),
-      store: (key, value) => this.store(key, value),
-      retrieve: (key) => this.retrieve(key)
-    });
-  }
-
-  findNode(target: NodeId): Node[] {
-    // Implement Kademlia node lookup
-    return this.routingTable.getClosestNodes(target, 3);
-  }
-
-  store(key: string, value: any): void {
-    // Implement Kademlia data storage
-    console.log(`Storing key ${key} with value ${value}`);
-  }
-
-  retrieve(key: string): any {
-    // Implement Kademlia data retrieval
-    console.log(`Retrieving key ${key}`);
-    return null;
-  }
-
-  joinNetwork(): void {
-    // Join the network using bootstrap nodes
-    for (const node of this.bootstrapNodes) {
-      node.handleMessage({
-        sender: this.id,
-        type: 'JOIN_REQUEST',
-        payload: {}
-      });
-    }
-  }
-
-  leaveNetwork(): void {
-    // Leave the network by notifying other nodes
-    for (const node of this.routingTable.getNodes()) {
-      node.handleMessage({
-        sender: this.id,
-        type: 'LEAVE_NETWORK',
-        payload: {}
-      });
-    }
+    this.address = address;
+    this.port = port;
   }
 }
 
-export { KademliaNode };
+class KademliaRoutingTable {
+  private nodes: Map<string, KademliaNode>;
+
+  constructor() {
+    this.nodes = new Map();
+  }
+
+  addNode(node: KademliaNode) {
+    this.nodes.set(node.id, node);
+  }
+
+  removeNode(nodeId: string) {
+    this.nodes.delete(nodeId);
+  }
+
+  findClosest(targetId: string): KademliaNode[] {
+    // Implement Kademlia's distance-based routing to find closest nodes
+    const distances = new Map<string, number>();
+    for (const node of this.nodes.values()) {
+      const distance = this.distance(targetId, node.id);
+      distances.set(node.id, distance);
+    }
+
+    // Sort nodes by distance and return the closest ones
+    const sortedNodes = Array.from(distances.entries())
+      .sort((a, b) => a[1] - b[1])
+      .map(([nodeId]) => this.nodes.get(nodeId)!);
+    return sortedNodes.slice(0, 3);
+  }
+
+  private distance(id1: string, id2: string): number {
+    // Calculate the XOR distance between two node IDs
+    const buf1 = Buffer.from(id1, 'hex');
+    const buf2 = Buffer.from(id2, 'hex');
+    const xor = new Uint8Array(buf1.length);
+    for (let i = 0; i < buf1.length; i++) {
+      xor[i] = buf1[i] ^ buf2[i];
+    }
+    return this.intFromBytes(xor);
+  }
+
+  private intFromBytes(bytes: Uint8Array): number {
+    // Convert a byte array to a number
+    let value = 0;
+    for (const b of bytes) {
+      value = (value << 8) + b;
+    }
+    return value;
+  }
+}
+
+export { KademliaNode, KademliaRoutingTable };
