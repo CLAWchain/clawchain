@@ -1,5 +1,5 @@
 import { Provider } from '@ethersproject/providers';
-import { Transaction } from '../core/transaction';
+import { Transaction } from '../transaction/transaction';
 
 export async function handleGetTransaction(
   transactionSignature: string,

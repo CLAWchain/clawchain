@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { getBlockHeight } from '../blockchain/chain';
+import { handleGetTransaction } from './getTransaction';
 
 class JsonRpcServer {
   async handleRequest(req: Request, res: Response) {
@@ -22,6 +23,8 @@ class JsonRpcServer {
     switch (method) {
       case 'getBlockHeight':
         return await this.getBlockHeight();
+      case 'getTransaction':
+        return await this.getTransaction(params);
       default:
         throw new Error(`Method ${method} not found`);
     }
@@ -29,6 +32,12 @@ class JsonRpcServer {
 
   private async getBlockHeight() {
     return await getBlockHeight();
+  }
+
+  private async getTransaction(params: any) {
+    const { transactionSignature } = params;
+    const provider = this; // Replace with the appropriate provider
+    return await handleGetTransaction(transactionSignature, provider);
   }
 
   private sendResponse(res: Response, id: any, result: any) {
