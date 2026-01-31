@@ -7,7 +7,7 @@ export interface Transaction {
   to: Account;
   amount: number;
   nonce: number;
-  signature: string;
+  signatures: string[];
 }
 
 export class TransactionManager {
@@ -17,7 +17,7 @@ export class TransactionManager {
       to,
       amount,
       nonce,
-      signature: ''
+      signatures: []
     };
   }
 
@@ -36,12 +36,42 @@ export class TransactionManager {
       .update(hash)
       .sign(privateKey, 'hex');
 
-    // Update the transaction with the signature
-    transaction.signature = signature;
+    // Add the signature to the transaction
+    transaction.signatures.push(signature);
     return transaction;
   }
 
   static verifyTransaction(transaction: Transaction, account: Account): boolean {
     return TransactionValidator.validateTransaction(transaction, account);
+  }
+
+  static verifyMultiSignatures(transaction: Transaction, publicKeys: string[], signatures: string[]): boolean {
+    // Verify that the number of signatures matches the number of public keys
+    if (signatures.length !== publicKeys.length) {
+      return false;
+    }
+
+    // Hash the transaction data
+    const transactionData = JSON.stringify({
+      from: transaction.from.address,
+      to: transaction.to.address,
+      amount: transaction.amount,
+      nonce: transaction.nonce
+    });
+    const hash = crypto.createHash('sha256').update(transactionData).digest('hex');
+
+    // Verify each signature against the corresponding public key
+    for (let i = 0; i < signatures.length; i++) {
+      const publicKey = publicKeys[i];
+      const signature = signatures[i];
+
+      const verifier = crypto.createVerify('SHA256');
+      verifier.update(hash);
+      if (!verifier.verify(publicKey, signature, 'hex')) {
+        return false;
+      }
+    }
+
+    return true;
   }
 }
