@@ -1,7 +1,9 @@
-import { Transaction } from '../types/transaction';
+import { Transaction } from '../chain/transaction';
 
-export async function getTransaction(signature: string): Promise<Transaction | null> {
-  // TODO: Implement logic to query transaction by signature
-  // Return the full transaction with metadata or null if not found
-  return null;
+export async function getTransaction(signature: string): Promise&lt;Transaction | null&gt; {
+  // Fetch the transaction from the chain by signature
+  const transaction = await Transaction.getBySignature(signature);
+
+  // Return the full transaction data or null if not found
+  return transaction || null;
 }

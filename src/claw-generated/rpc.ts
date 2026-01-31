@@ -1,36 +1,9 @@
-import { RPCMethod, RPCRequest, RPCResponse } from './types';
-import { getAccountBalance } from '../db/state';
+import { rpcMethods } from './rpcMethods';
 
-const rpcMethods: Record<string, RPCMethod> = {
-  getBalance: async (params: { pubkey: string }): Promise<{ balance: number }> => {
-    const { pubkey } = params;
-    const balance = await getAccountBalance(pubkey);
-    return { balance };
-  },
-};
-
-export async function handleRPCRequest(request: RPCRequest): Promise<RPCResponse> {
-  const { method, params } = request;
+export const rpcHandler = async (method: string, params: any[]): Promise&lt;any&gt; =&gt; {
   const handler = rpcMethods[method];
   if (!handler) {
-    return {
-      error: {
-        code: -32601,
-        message: 'Method not found',
-      },
-    };
+    throw new Error(`RPC method '${method}' not found`);
   }
-
-  try {
-    const result = await handler(params);
-    return { result };
-  } catch (err) {
-    console.error('Error handling RPC request:', err);
-    return {
-      error: {
-        code: -32603,
-        message: 'Internal error',
-      },
-    };
-  }
-}
+  return await handler(...params);
+};
