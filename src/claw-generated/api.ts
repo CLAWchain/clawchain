@@ -1,15 +1,14 @@
-const express = require('express');
-const { BlockChain } = require('./chain');
+import axios from 'axios';
 
-const app = express();
-const blockchain = new BlockChain();
+interface NetworkStats {
+  tps: number;
+  blockTime: number;
+  difficulty: number;
+  hashrate: number;
+  activeAddresses: number;
+}
 
-app.get('/block/:hash', (req, res) => {
-  const { hash } = req.params;
-  const { finalized, confirmations } = blockchain.getBlockStatus(hash);
-  res.json({ finalized, confirmations });
-});
-
-app.listen(3000, () => {
-  console.log('API server started on port 3000');
-});
+export const fetchNetworkStats = async (): Promise<NetworkStats> => {
+  const response = await axios.get('/api/network-stats');
+  return response.data;
+};
