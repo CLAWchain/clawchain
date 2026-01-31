@@ -1,17 +1,20 @@
-import { Blockchain } from './blockchain';
+export const getBalance = async (address: string): Promise<string> => {
+  // Call ClawChain API to get the balance for the given address
+  const response = await fetch(`/api/balance/${address}`);
+  const data = await response.json();
+  return data.balance;
+};
 
-export class API {
-  private blockchain: Blockchain;
+export const getTransactions = async (address: string): Promise<any[]> => {
+  // Call ClawChain API to get the transaction history for the given address
+  const response = await fetch(`/api/transactions/${address}`);
+  const data = await response.json();
+  return data.transactions;
+};
 
-  constructor(blockchain: Blockchain) {
-    this.blockchain = blockchain;
-  }
-
-  getFinalityStatus() {
-    return {
-      finalityThreshold: this.blockchain.getFinalityThreshold(),
-      finalizedBlocks: this.blockchain.getChain().length,
-      pendingBlocks: this.blockchain.getPendingBlocks().length
-    };
-  }
-}
+export const getTokenBalances = async (address: string): Promise<any[]> => {
+  // Call ClawChain API to get the token balances for the given address
+  const response = await fetch(`/api/tokens/${address}`);
+  const data = await response.json();
+  return data.tokenBalances;
+};
