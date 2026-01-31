@@ -1,48 +1,78 @@
 import WebSocket from 'ws';
-import WebSocketServer from './WebSocketServer';
-import webSocketServer from './WebSocketSubscriptions';
+import { WebSocketServer } from './WebSocketServer';
+import { WebSocketSubscriptions } from './WebSocketSubscriptions';
+import { Block } from './Block';
+import { Transaction } from './Transaction';
 
 describe('WebSocketServer', () => {
   let wss: WebSocketServer;
+  let wsSubscriptions: WebSocketSubscriptions;
 
   beforeEach(() => {
-    wss = new WebSocketServer();
+    wss = new WebSocketServer(8080);
+    wsSubscriptions = new WebSocketSubscriptions(wss);
   });
 
-  test('should handle WebSocket connection and message', (done) => {
+  test('should handle new client connections', () => {
     const ws = new WebSocket('ws://localhost:8080');
     ws.on('open', () => {
-      ws.send(JSON.stringify({ jsonrpc: '2.0', method: 'newHeads', params: {} }));
-    });
-    ws.on('message', (data) => {
-      const response = JSON.parse(data.toString());
-      expect(response).toHaveProperty('jsonrpc', '2.0');
-      expect(response).toHaveProperty('method', 'newHeads');
-      expect(response).toHaveProperty('params');
-      done();
+      expect(wss.clients.size).toBe(1);
+      ws.close();
     });
   });
 
-  test('should broadcast updates to subscribed clients', (done) => {
-    const ws1 = new WebSocket('ws://localhost:8080');
-    const ws2 = new WebSocket('ws://localhost:8080');
-
-    let messagesReceived = 0;
-    const onMessage = () => {
-      messagesReceived++;
-      if (messagesReceived === 2) {
-        done();
-      }
-    };
-
-    ws1.on('open', () => {
-      ws1.on('message', onMessage);
-      ws1.send(JSON.stringify({ jsonrpc: '2.0', method: 'newHeads', params: {} }));
+  test('should handle client subscriptions', () => {
+    const ws = new WebSocket('ws://localhost:8080');
+    ws.on('open', () => {
+      ws.send(JSON.stringify({ type: 'subscribe', topic: 'newHeads' }));
+      expect(wss.subscriptions.length).toBe(1);
+      expect(wss.subscriptions[0].topic).toBe('newHeads');
+      ws.close();
     });
+  });
 
-    ws2.on('open', () => {
-      ws2.on('message', onMessage);
-      ws2.send(JSON.stringify({ jsonrpc: '2.0', method: 'newHeads', params: {} }));
+  test('should publish new block updates', () => {
+    const ws = new WebSocket('ws://localhost:8080');
+    ws.on('open', () => {
+      ws.send(JSON.stringify({ type: 'subscribe', topic: 'newHeads' }));
+      const block = new Block({ number: 1, hash: '0x1234' });
+      wss.publishNewBlock(block);
+      ws.on('message', (data) => {
+        const message = JSON.parse(data.toString());
+        expect(message.topic).toBe('newHeads');
+        expect(message.data).toEqual(block);
+        ws.close();
+      });
+    });
+  });
+
+  test('should publish new transaction updates', () => {
+    const ws = new WebSocket('ws://localhost:8080');
+    ws.on('open', () => {
+      ws.send(JSON.stringify({ type: 'subscribe', topic: 'pendingTransactions' }));
+      const tx = new Transaction({ hash: '0x5678' });
+      wss.publishTransaction(tx);
+      ws.on('message', (data) => {
+        const message = JSON.parse(data.toString());
+        expect(message.topic).toBe('pendingTransactions');
+        expect(message.data).toEqual(tx);
+        ws.close();
+      });
+    });
+  });
+
+  test('should publish new log updates', () => {
+    const ws = new WebSocket('ws://localhost:8080');
+    ws.on('open', () => {
+      ws.send(JSON.stringify({ type: 'subscribe', topic: 'logs' }));
+      const log = { address: '0x0123', data: '0x1234' };
+      wss.publishLogUpdate(log);
+      ws.on('message', (data) => {
+        const message = JSON.parse(data.toString());
+        expect(message.topic).toBe('logs');
+        expect(message.data).toEqual(log);
+        ws.close();
+      });
     });
   });
 });
