@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node src/claw-generated/api/routes.ts",
     "test": "jest"
   },
   "keywords": [],

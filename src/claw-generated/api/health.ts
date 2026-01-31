@@ -1,23 +1,17 @@
-import { Request, Response } from 'express';
+import express, { Request, Response } from 'express';
 
-export const handleGetHealth = (req: Request, res: Response) => {
-  // Check overall node health
-  const nodeHealth = {
-    status: 'healthy',
-    uptime: '10 minutes',
-    version: '1.0.0'
-  };
+const healthRouter = express.Router();
 
-  res.status(200).json(nodeHealth);
-};
+// Health check endpoint
+healthRouter.get('/health', (req: Request, res: Response) => {
+  res.status(200).json({ status: 'healthy' });
+});
 
-export const handleGetReady = (req: Request, res: Response) => {
-  // Check if node is fully synced and ready to accept requests
-  const isReady = true;
+// Readiness check endpoint
+healthRouter.get('/ready', (req: Request, res: Response) => {
+  // Implement your readiness logic here
+  // For example, check if the node is fully synced and ready to process transactions
+  res.status(200).json({ status: 'ready' });
+});
 
-  if (isReady) {
-    res.status(200).json({ ready: true });
-  } else {
-    res.status(503).json({ ready: false, message: 'Node is still syncing' });
-  }
-};
+export default healthRouter;
