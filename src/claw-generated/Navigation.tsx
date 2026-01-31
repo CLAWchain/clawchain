@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import ThemeToggle from './ThemeToggle';
 
-const Navigation: React.FC = () => {
+const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => {
@@ -9,27 +10,29 @@ const Navigation: React.FC = () => {
   };
 
   return (
-    <nav className="navigation">
-      <div className="nav-container">
-        <Link to="/" className="nav-brand">
+    <header className="navigation">
+      <div className="navbar">
+        <Link to="/" className="logo">
           ClawChain
         </Link>
-        <div className={`nav-menu ${isMenuOpen ? 'open' : ''}`}>
-          <Link to="/block-explorer" className="nav-link">
-            Block Explorer
-          </Link>
-          <Link to="/contract-verification" className="nav-link">
-            Contract Verification
-          </Link>
-          <Link to="/governance" className="nav-link">
-            Governance
-          </Link>
-        </div>
-        <button className="nav-toggle" onClick={toggleMenu}>
-          <span className="nav-toggle-icon"></span>
+        <button className="menu-toggle" onClick={toggleMenu}>
+          <i className={`fas fa-${isMenuOpen ? 'times' : 'bars'}`}></i>
         </button>
       </div>
-    </nav>
+      <nav className={`menu ${isMenuOpen ? 'open' : ''}`}>
+        <ul>
+          <li><Link to="/block-explorer">Block Explorer</Link></li>
+          <li><Link to="/transaction-explorer">Transaction Explorer</Link></li>
+          <li><Link to="/wallet">Wallet</Link></li>
+          <li><Link to="/cip-submit">CIP Submit</Link></li>
+          <li><Link to="/live-debate">Live Debate</Link></li>
+          <li><Link to="/playground">Playground</Link></li>
+        </ul>
+        <div className="theme-toggle">
+          <ThemeToggle />
+        </div>
+      </nav>
+    </header>
   );
 };
 
