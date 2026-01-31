@@ -1,18 +1,12 @@
 // src/claw-generated/crypto/ed25519.ts
 
-import * as ed25519 from 'noble-ed25519';
+import * as ed25519 from 'ed25519-hd-key';
 
-export function verifyEd25519Signature(
-  data: Buffer,
-  publicKey: Uint8Array,
-  signature: Uint8Array
-): boolean {
-  return ed25519.verify(signature, data, publicKey);
+export function createEd25519Signature(privateKey: Buffer, data: Buffer): Buffer {
+  const signature = ed25519.sign(data, privateKey);
+  return Buffer.from(signature);
 }
 
-export function signEd25519(
-  data: Buffer,
-  privateKey: Uint8Array
-): Uint8Array {
-  return ed25519.sign(data, privateKey);
+export function verifyEd25519Signature(publicKey: Buffer, signature: Buffer, data: Buffer): boolean {
+  return ed25519.verify(data, signature, publicKey);
 }
