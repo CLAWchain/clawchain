@@ -1,32 +1,40 @@
-import React from 'react';
-import ContractVerifier from './ContractVerifier';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+import Navigation from './Navigation';
+import AddressPage from './AddressPage';
+import BlockExplorerPage from './BlockExplorerPage';
+import ContractVerificationPage from './ContractVerificationPage';
+import TokenTrackerPage from './TokenTrackerPage';
+import TransactionExplorerPage from './TransactionExplorerPage';
+import NetworkStatsPage from './NetworkStatsPage';
+import ThemeToggle from './ThemeToggle';
+import './theme.css';
 
 const App: React.FC = () => {
-  const handleVerify = async (contractCode: string): Promise<VerificationResult> => {
-    // Call backend API to verify the contract code
-    const response = await fetch('/api/verify', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ contractCode }),
-    });
-
-    const result: VerificationResult = await response.json();
-    return result;
-  };
+  useEffect(() => {
+    // Apply the initial theme when the app mounts
+    const storedTheme = localStorage.getItem('theme');
+    if (storedTheme) {
+      document.documentElement.classList.add(`theme-${storedTheme}`);
+    }
+  }, []);
 
   return (
-    <div>
-      <h1>ClawChain</h1>
-      <ContractVerifier onVerify={handleVerify} />
-    </div>
+    <Router>
+      <div className="app">
+        <ThemeToggle />
+        <Navigation />
+        <Switch>
+          <Route path="/address/:address" component={AddressPage} />
+          <Route path="/blocks" component={BlockExplorerPage} />
+          <Route path="/contracts" component={ContractVerificationPage} />
+          <Route path="/tokens" component={TokenTrackerPage} />
+          <Route path="/transactions" component={TransactionExplorerPage} />
+          <Route path="/network-stats" component={NetworkStatsPage} />
+        </Switch>
+      </div>
+    </Router>
   );
 };
-
-interface VerificationResult {
-  status: 'pending' | 'passed' | 'failed';
-  message: string;
-}
 
 export default App;

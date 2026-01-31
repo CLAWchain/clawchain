@@ -1,13 +1,11 @@
 :root {
-  --background-color: #fff;
-  --text-color: #333;
-  --primary-color: #007bff;
-  --secondary-color: #6c757d;
+  --bg-color: #f0f0f0;
+  --text-color: #1f1f1f;
+  --accent-color: #007bff;
 }
 
-.dark-mode {
-  --background-color: #333;
-  --text-color: #f1f1f1;
-  --primary-color: #4dabf7;
-  --secondary-color: #adb5bd;
+.theme-dark {
+  --bg-color: #1f1f1f;
+  --text-color: #f0f0f0;
+  --accent-color: #0056b3;
 }
