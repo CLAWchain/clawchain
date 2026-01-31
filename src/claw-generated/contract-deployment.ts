@@ -1,44 +1,25 @@
-import { Transaction } from './transaction';
-import { VirtualMachine } from './vm';
-import { State } from './state';
-import { Account } from './state/account';
+// src/claw-generated/contract-deployment.ts
 import { keccak256 } from 'js-sha3';
 
-export class ContractDeployment {
-  private vm: VirtualMachine;
-  private state: State;
+export async function generateContractAddress(
+  deployer: string,
+  bytecode: string
+): Promise<string> {
+  const nonce = await fetchNonce(deployer); // TODO: Implement fetchNonce
+  const input = `${deployer}${nonce.toString(16).padStart(64, '0')}${bytecode.slice(2)}`;
+  return '0x' + keccak256(input).slice(64 - 40);
+}
 
-  constructor(vm: VirtualMachine, state: State) {
-    this.vm = vm;
-    this.state = state;
-  }
+async function fetchNonce(address: string): Promise<number> {
+  // TODO: Implement nonce fetching from account state
+  return 0;
+}
 
-  deployContract(transaction: Transaction): string {
-    // Extract contract bytecode and constructor parameters from the transaction
-    const { bytecode, constructorParams } = transaction.getContractDeploymentData();
-
-    // Get the deployer's account
-    const deployerAddress = transaction.getSenderAddress();
-    const deployerAccount = this.state.getAccount(deployerAddress);
-
-    // Generate the contract address
-    const contractAddress = this.generateContractAddress(deployerAddress, deployerAccount.nonce);
-
-    // Deploy the contract using the VM
-    this.vm.deployContract(bytecode, constructorParams, contractAddress);
-
-    // Update the deployer's nonce
-    deployerAccount.nonce++;
-    this.state.updateAccount(deployerAddress, deployerAccount);
-
-    // Store the contract state in the global state trie
-    this.state.storeContract(contractAddress, this.vm.getContractState());
-
-    return contractAddress.toString('hex');
-  }
-
-  private generateContractAddress(creatorAddress: Buffer, nonce: number): Buffer {
-    const input = Buffer.concat([creatorAddress, Buffer.from(nonce.toString())]);
-    return Buffer.from(keccak256(input), 'hex');
-  }
+export async function deployContract(
+  deployer: string,
+  bytecode: string,
+  ...args: any[]
+): Promise<string> {
+  // TODO: Implement contract deployment transaction
+  return generateContractAddress(deployer, bytecode);
 }
