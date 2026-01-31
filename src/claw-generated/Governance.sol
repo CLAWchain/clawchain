@@ -1,83 +1,78 @@
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./CRCTOKEN.sol";
+import "./StakingStateManager.ts";
+import "./ProtocolUpgrader.sol";
 
 contract Governance {
+    CRCTOKEN public token;
+    StakingStateManager public staking;
+    ProtocolUpgrader public upgrader;
+
     struct Proposal {
         uint256 id;
+        address proposer;
         string title;
         string description;
         uint256 startBlock;
         uint256 endBlock;
         uint256 quorum;
-        uint256 approvalThreshold;
-        mapping(address =&gt; bool) voters;
-        mapping(address =&gt; uint256) votingPower;
+        mapping(address =&gt; bool) voted;
+        mapping(address =&gt; uint256) voteWeight;
         uint256 forVotes;
         uint256 againstVotes;
         bool executed;
     }
 
-    IERC20 public token;
     mapping(uint256 =&gt; Proposal) public proposals;
-    uint256 public proposalCount;
+    uint256 public nextProposalId = 1;
 
-    constructor(address _token) {
-        token = IERC20(_token);
+    constructor(CRCTOKEN _token, StakingStateManager _staking, ProtocolUpgrader _upgrader) {
+        token = _token;
+        staking = _staking;
+        upgrader = _upgrader;
     }
 
-    modifier onlyTokenHolder(uint256 minBalance) {
-        require(token.balanceOf(msg.sender) &gt;= minBalance, "Insufficient token balance");
-        _;
-    }
-
-    function submitProposal(
-        string memory title,
-        string memory description,
-        uint256 startBlock,
-        uint256 endBlock,
-        uint256 quorum,
-        uint256 approvalThreshold
-    ) public onlyTokenHolder(100) {
-        // Implementation...
-    }
-
-    function vote(uint256 proposalId, bool support) public {
+    function proposeChange(string memory title, string memory description, uint256 duration, uint256 quorum) public {
+        require(token.balanceOf(msg.sender) &gt;= 10000 * 10**18, "Minimum 10,000 CRC tokens required to propose");
+        uint256 proposalId = nextProposalId++;
         Proposal storage proposal = proposals[proposalId];
-        require(block.number &gt;= proposal.startBlock && block.number &lt;= proposal.endBlock, "Voting is not open");
-        require(!proposal.voters[msg.sender], "Already voted");
-
-        uint256 voterBalance = token.balanceOf(msg.sender);
-        proposal.votingPower[msg.sender] = voterBalance;
-
-        if (support) {
-            proposal.forVotes += voterBalance;
-        } else {
-            proposal.againstVotes += voterBalance;
-        }
-
-        proposal.voters[msg.sender] = true;
-
-        emit Voted(proposalId, msg.sender, support, voterBalance);
+        proposal.id = proposalId;
+        proposal.proposer = msg.sender;
+        proposal.title = title;
+        proposal.description = description;
+        proposal.startBlock = block.number;
+        proposal.endBlock = block.number + duration;
+        proposal.quorum = quorum;
+        emit ProposalCreated(proposalId, msg.sender, title, description, proposal.startBlock, proposal.endBlock, quorum);
     }
 
-    // Other functions...
+    function castVote(uint256 proposalId, bool support) public {
+        Proposal storage proposal = proposals[proposalId];
+        require(block.number &gt;= proposal.startBlock && block.number &lt;= proposal.endBlock, "Voting period has ended");
+        require(!proposal.voted[msg.sender], "You have already voted on this proposal");
+        uint256 voteWeight = staking.getStakedBalance(msg.sender);
+        proposal.voted[msg.sender] = true;
+        proposal.voteWeight[msg.sender] = voteWeight;
+        if (support) {
+            proposal.forVotes += voteWeight;
+        } else {
+            proposal.againstVotes += voteWeight;
+        }
+        emit VoteCast(proposalId, msg.sender, support, voteWeight);
+    }
 
-    event ProposalSubmitted(
-        uint256 indexed proposalId,
-        string title,
-        string description,
-        uint256 startBlock,
-        uint256 endBlock,
-        uint256 quorum,
-        uint256 approvalThreshold
-    );
+    function executeProposal(uint256 proposalId) public {
+        Proposal storage proposal = proposals[proposalId];
+        require(block.number &gt; proposal.endBlock, "Voting period has not ended");
+        require(proposal.forVotes &gt;= proposal.quorum, "Quorum not met");
+        require(!proposal.executed, "Proposal has already been executed");
+        proposal.executed = true;
+        upgrader.applyProtocolUpgrade(proposal.title, proposal.description);
+        emit ProposalExecuted(proposalId);
+    }
 
-    event Voted(
-        uint256 indexed proposalId,
-        address indexed voter,
-        bool support,
-        uint256 votingPower
-    );
+    event ProposalCreated(uint256 indexed proposalId, address indexed proposer, string title, string description, uint256 startBlock, uint256 endBlock, uint256 quorum);
+    event VoteCast(uint256 indexed proposalId, address indexed voter, bool support, uint256 voteWeight);
+    event ProposalExecuted(uint256 indexed proposalId);
 }
