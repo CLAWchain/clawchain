@@ -1,53 +1,53 @@
 # ClawChain Node Operator Guide
 
 ## Hardware Requirements
-- Minimum:
-  - CPU: 4 cores
-  - RAM: 8GB
-  - Storage: 500GB SSD
-- Recommended:
-  - CPU: 8 cores
-  - RAM: 16GB
-  - Storage: 1TB SSD
-
-## Installation
-1. Download the latest ClawChain node software from the [releases page](https://github.com/clawchain/clawchain/releases).
-2. Extract the downloaded archive.
-3. Run the `install.sh` script to set up the node.
+- CPU: Minimum 2 cores, recommended 4 cores or more
+- RAM: Minimum 8GB, recommended 16GB or more
+- Storage: Minimum 100GB SSD, recommended 500GB or more
+- Stable internet connection with at least 10Mbps download and 5Mbps upload
 
 ## Configuration
-The node configuration is stored in the `config.toml` file. Here are the key settings:
 
-```toml
-# Network settings
-network_id = 42
-bootstrap_nodes = ["enode://..."]
+### 1. Install Prerequisites
+- Node.js (version 14 or higher)
+- npm (version 6 or higher)
+- Git
 
-# Database settings  
-db_path = "/var/lib/clawchain"
-
-# RPC settings
-rpc_enabled = true
-rpc_listen_addr = "127.0.0.1:8545"
+### 2. Clone the ClawChain Repository
+```
+git clone https://github.com/clawchain/clawchain.git
+cd clawchain
 ```
 
-## Running the Node
-To start the node, run the following command:
-
+### 3. Install Dependencies
 ```
-./clawchain-node --config config.toml
+npm install
 ```
 
-The node will connect to the network, synchronize the blockchain, and start processing transactions.
+### 4. Configure Node Settings
+Edit the `config.js` file in the root directory and set the following:
+- `rpcPort`: The port for the RPC server (default: 8545)
+- `p2pPort`: The port for the P2P network (default: 30303)
+- `genesisFile`: The path to the genesis block configuration file
+- `dataDir`: The directory to store node data
+
+### 5. Start the Node
+```
+npm start
+```
+
+This will start the ClawChain node and connect it to the network. The node will begin syncing the blockchain and participating in consensus.
 
 ## Monitoring and Maintenance
-- Check node status using the `clawchain-cli status` command.
-- Monitor node logs for any errors or warnings.
-- Regularly update the node software to the latest version.
-- Ensure sufficient disk space is available for the growing blockchain data.
+- Check the node logs for any errors or warnings
+- Monitor the node's CPU, memory, and disk usage
+- Keep the node software up-to-date by pulling the latest changes from the repository
+- Ensure the node has a stable internet connection and sufficient hardware resources
 
-## Backup and Recovery
-- Backup the `db_path` directory regularly to ensure data is protected.
-- To restore a node, stop the running node and copy the backup data to the `db_path` directory.
+## Advanced Configuration
+- Configure node to run as a service (e.g., systemd, PM2)
+- Enable remote access and monitoring (e.g., SSH, Grafana)
+- Join the validator set (if supported) to participate in consensus
+- Customize node settings for specific use cases or requirements
 
-Please refer to the [ClawChain documentation](https://docs.clawchain.org) for more detailed information.
+For more information, please refer to the ClawChain documentation or reach out to the community.
