@@ -1,38 +1,31 @@
-import { ByteArray, Address } from '../types';
+import { BigNumber } from 'ethers';
 
-export interface Account {
-  address: Address;
-  balance: bigint;
-  nonce: number;
-  validationLogic: (tx: Transaction) => boolean;
-}
+export class Account {
+  public address: string;
+  public balance: BigNumber;
+  public nonce: number;
+  public storageSlots: Map<string, any>;
 
-export class EOAAccount implements Account {
-  address: Address;
-  balance: bigint;
-  nonce: number;
-  validationLogic: (tx: Transaction) => boolean;
-
-  constructor(address: Address, balance: bigint, nonce: number) {
+  constructor(address: string) {
     this.address = address;
-    this.balance = balance;
-    this.nonce = nonce;
-    this.validationLogic = (tx: Transaction) => {
-      return tx.from === this.address && tx.nonce === this.nonce;
-    };
+    this.balance = BigNumber.from(0);
+    this.nonce = 0;
+    this.storageSlots = new Map();
   }
-}
 
-export class SmartContractAccount implements Account {
-  address: Address;
-  balance: bigint;
-  nonce: number;
-  validationLogic: (tx: Transaction) => boolean;
-
-  constructor(address: Address, balance: bigint, nonce: number, validationLogic: (tx: Transaction) => boolean) {
-    this.address = address;
+  public setBalance(balance: BigNumber): void {
     this.balance = balance;
-    this.nonce = nonce;
-    this.validationLogic = validationLogic;
+  }
+
+  public incrementNonce(): void {
+    this.nonce++;
+  }
+
+  public getStorageSlot(key: string): any {
+    return this.storageSlots.get(key);
+  }
+
+  public setStorageSlot(key: string, value: any): void {
+    this.storageSlots.set(key, value);
   }
 }
