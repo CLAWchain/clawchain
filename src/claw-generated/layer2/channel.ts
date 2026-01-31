@@ -1,38 +1,51 @@
 import { BigNumber } from 'ethers';
 
-/**
- * Represents a state channel between two parties.
- */
-export class Channel {
-  private participants: [string, string];
-  private depositedFunds: BigNumber;
-  private currentState: any;
+interface ChannelState {
+  channelId: string;
+  participant1: string;
+  participant2: string;
+  balance1: BigNumber;
+  balance2: BigNumber;
+  sequenceNumber: number;
+}
+
+class StateChannel {
+  private state: ChannelState;
 
   constructor(
+    channelId: string,
     participant1: string,
     participant2: string,
-    initialDeposit: BigNumber
+    initialBalance1: BigNumber,
+    initialBalance2: BigNumber
   ) {
-    this.participants = [participant1, participant2];
-    this.depositedFunds = initialDeposit;
-    this.currentState = {
-      // Initial state of the channel
+    this.state = {
+      channelId,
+      participant1,
+      participant2,
+      balance1: initialBalance1,
+      balance2: initialBalance2,
+      sequenceNumber: 0,
     };
   }
 
-  /**
-   * Update the state of the channel with a new state.
-   * @param newState - The new state to apply to the channel.
-   */
-  updateState(newState: any): void {
-    this.currentState = newState;
+  updateState(
+    newBalance1: BigNumber,
+    newBalance2: BigNumber,
+    newSequenceNumber: number
+  ): ChannelState {
+    this.state = {
+      ...this.state,
+      balance1: newBalance1,
+      balance2: newBalance2,
+      sequenceNumber: newSequenceNumber,
+    };
+    return this.state;
   }
 
-  /**
-   * Close the channel and distribute the funds to the participants.
-   * @param finalState - The final state of the channel.
-   */
-  closeChannel(finalState: any): void {
-    // Distribute the deposited funds based on the final state
+  getState(): ChannelState {
+    return this.state;
   }
 }
+
+export { StateChannel, ChannelState };
