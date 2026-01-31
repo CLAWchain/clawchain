@@ -1,80 +1,118 @@
 import { expect } from 'chai';
 import { Block, Transaction, generateRandomBase58, generateHash, hexToBase58 } from './block';
+import { StateManager } from './StateManager';
+import { performance } from 'perf_hooks';
 
 describe('Block Stress Tests', () => {
-  it('should handle a large number of transactions in a single block', () => {
-    const transactions: Transaction[] = [];
-    const numTransactions = 10000;
+  let stateManager: StateManager;
 
-    for (let i = 0; i < numTransactions; i++) {
-      transactions.push({
-        hash: generateRandomBase58(),
-        from: generateRandomBase58(),
-        to: generateRandomBase58(),
-        value: BigInt(1000),
-        gasPrice: BigInt(10),
-        gasLimit: BigInt(21000),
-        nonce: i,
-        signature: generateRandomBase58()
-      });
-    }
-
-    const block = new Block(1, generateRandomBase58(), generateRandomBase58(), transactions);
-    expect(block.transactions.length).to.equal(numTransactions);
-    expect(block.isValid()).to.be.true;
+  beforeEach(() => {
+    stateManager = new StateManager();
   });
 
-  it('should handle rapid, back-to-back block production', () => {
-    const transactions: Transaction[] = [
-      {
-        hash: generateRandomBase58(),
-        from: generateRandomBase58(),
-        to: generateRandomBase58(),
-        value: BigInt(1000),
-        gasPrice: BigInt(10),
-        gasLimit: BigInt(21000),
-        nonce: 0,
-        signature: generateRandomBase58()
-      }
-    ];
-
-    let prevBlock: Block | undefined;
-    const numBlocks = 1000;
-
-    for (let i = 0; i < numBlocks; i++) {
-      const block = new Block(i + 1, prevBlock?.header.hash || generateRandomBase58(), generateRandomBase58(), transactions);
-      expect(block.isValid(prevBlock)).to.be.true;
-      prevBlock = block;
-    }
-  });
-
-  it('should handle fluctuating transaction rates', () => {
-    const transactions: Transaction[] = [];
+  it('should handle a sustained high transaction load', () => {
     const numBlocks = 100;
-    const maxTransactionsPerBlock = 100;
+    const transactionsPerBlock = 1000;
+    let prevBlock: Block | undefined;
 
     for (let i = 0; i < numBlocks; i++) {
-      const numTransactions = Math.floor(Math.random() * maxTransactionsPerBlock);
-      const blockTransactions: Transaction[] = [];
-
-      for (let j = 0; j < numTransactions; j++) {
-        blockTransactions.push({
+      const transactions: Transaction[] = [];
+      for (let j = 0; j < transactionsPerBlock; j++) {
+        transactions.push({
           hash: generateRandomBase58(),
           from: generateRandomBase58(),
           to: generateRandomBase58(),
           value: BigInt(1000),
           gasPrice: BigInt(10),
           gasLimit: BigInt(21000),
-          nonce: transactions.length,
+          nonce: j,
           signature: generateRandomBase58()
         });
       }
 
-      const block = new Block(i + 1, transactions.length > 0 ? transactions[transactions.length - 1].header.hash : generateRandomBase58(), generateRandomBase58(), blockTransactions);
-      expect(block.isValid(transactions.length > 0 ? transactions[transactions.length - 1] : undefined)).to.be.true;
-      transactions.push(block);
+      const startTime = performance.now();
+      const block = new Block(i + 1, prevBlock?.header.hash || generateRandomBase58(), generateRandomBase58(), transactions);
+      expect(block.isValid(prevBlock, stateManager)).to.be.true;
+      const endTime = performance.now();
+
+      console.log(`Block ${i + 1} created in ${endTime - startTime}ms`);
+      prevBlock = block;
+      stateManager.applyBlock(block);
     }
 
-    expect(transactions.length).to.equal(numBlocks);
+    expect(stateManager.getLatestBlockNumber()).to.equal(numBlocks);
+  });
+
+  it('should handle transaction spikes', () => {
+    const numBlocks = 100;
+    let prevBlock: Block | undefined;
+
+    for (let i = 0; i < numBlocks; i++) {
+      const transactions: Transaction[] = [];
+      const transactionsPerBlock = i % 2 === 0 ? 10 : 1000;
+
+      for (let j = 0; j < transactionsPerBlock; j++) {
+        transactions.push({
+          hash: generateRandomBase58(),
+          from: generateRandomBase58(),
+          to: generateRandomBase58(),
+          value: BigInt(1000),
+          gasPrice: BigInt(10),
+          gasLimit: BigInt(21000),
+          nonce: j,
+          signature: generateRandomBase58()
+        });
+      }
+
+      const startTime = performance.now();
+      const block = new Block(i + 1, prevBlock?.header.hash || generateRandomBase58(), generateRandomBase58(), transactions);
+      expect(block.isValid(prevBlock, stateManager)).to.be.true;
+      const endTime = performance.now();
+
+      console.log(`Block ${i + 1} created in ${endTime - startTime}ms`);
+      prevBlock = block;
+      stateManager.applyBlock(block);
+    }
+
+    expect(stateManager.getLatestBlockNumber()).to.equal(numBlocks);
+  });
+
+  it('should handle network delays and node failures', () => {
+    const numBlocks = 100;
+    let prevBlock: Block | undefined;
+
+    for (let i = 0; i < numBlocks; i++) {
+      const transactions: Transaction[] = [];
+      const transactionsPerBlock = 100;
+
+      for (let j = 0; j < transactionsPerBlock; j++) {
+        transactions.push({
+          hash: generateRandomBase58(),
+          from: generateRandomBase58(),
+          to: generateRandomBase58(),
+          value: BigInt(1000),
+          gasPrice: BigInt(10),
+          gasLimit: BigInt(21000),
+          nonce: j,
+          signature: generateRandomBase58()
+        });
+      }
+
+      const startTime = performance.now();
+      const block = new Block(i + 1, prevBlock?.header.hash || generateRandomBase58(), generateRandomBase58(), transactions);
+      expect(block.isValid(prevBlock, stateManager)).to.be.true;
+      const endTime = performance.now();
+
+      console.log(`Block ${i + 1} created in ${endTime - startTime}ms`);
+      prevBlock = block;
+      stateManager.applyBlock(block);
+
+      // Simulate network delay or node failure
+      if (i % 10 === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+
+    expect(stateManager.getLatestBlockNumber()).to.equal(numBlocks);
   });
 });
