@@ -1,56 +1,34 @@
 import React, { useState } from 'react';
-import { Button, Input, Textarea, Card, Spinner } from '@claw/ui-kit';
-
-interface ContractVerifierProps {
-  onVerify: (contractCode: string) => Promise<VerificationResult>;
-}
+import axios from 'axios';
 
 interface VerificationResult {
-  status: 'pending' | 'passed' | 'failed';
-  message: string;
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
 }
 
-const ContractVerifier: React.FC<ContractVerifierProps> = ({ onVerify }) => {
-  const [contractCode, setContractCode] = useState('');
+const ContractVerifier: React.FC = () => {
   const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
-  const [isVerifying, setIsVerifying] = useState(false);
 
-  const handleVerify = async () => {
-    setIsVerifying(true);
+  const verifyContract = async (contractCode: string): Promise<VerificationResult> => {
     try {
-      const result = await onVerify(contractCode);
-      setVerificationResult(result);
+      const response = await axios.post('/api/contract-verification', { contractCode });
+      return response.data;
     } catch (error) {
-      setVerificationResult({
-        status: 'failed',
-        message: 'Error verifying contract',
-      });
-    } finally {
-      setIsVerifying(false);
+      console.error('Contract verification failed:', error);
+      return {
+        valid: false,
+        errors: ['Contract verification failed. Please try again.'],
+        warnings: [],
+      };
     }
   };
 
-  return (
-    <Card>
-      <h2>Contract Verifier</h2>
-      <p>Submit your smart contract source code for verification on ClawChain.</p>
-      <Textarea
-        label="Contract Code"
-        value={contractCode}
-        onChange={(e) => setContractCode(e.target.value)}
-        rows={10}
-      />
-      <Button onClick={handleVerify} disabled={isVerifying}>
-        {isVerifying ? <Spinner /> : 'Verify Contract'}
-      </Button>
-      {verificationResult && (
-        <div>
-          <h3>Verification Result: {verificationResult.status}</h3>
-          <p>{verificationResult.message}</p>
-        </div>
-      )}
-    </Card>
-  );
+  return {
+    verifyContract,
+    verificationResult,
+  };
 };
 
 export default ContractVerifier;
+export { VerificationResult };

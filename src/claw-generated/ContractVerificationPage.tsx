@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button, Divider, Input, Result, Typography, Upload } from 'antd';
-import { useContractVerification } from './api/contract-verification';
+import { useContractVerifier } from './ContractVerifier';
 import { UploadOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
@@ -13,17 +13,19 @@ const ContractVerificationPage: React.FC = () => {
     warnings: string[];
   } | null>(null);
 
-  const { verifyContract } = useContractVerification();
+  const { verifyContract } = useContractVerifier();
 
-  const handleFileUpload = (info: any) => {
+  const handleFileUpload = async (info: any) => {
     if (info.file.status === 'done') {
-      setContractSource(info.file.response);
+      const contractCode = await info.file.text();
+      setContractSource(contractCode);
+      await handleVerify(contractCode);
     }
   };
 
-  const handleVerify = async () => {
+  const handleVerify = async (code: string) => {
     try {
-      const result = await verifyContract(contractSource);
+      const result = await verifyContract(code);
       setVerificationResult(result);
     } catch (error) {
       console.error('Contract verification failed:', error);
@@ -51,9 +53,6 @@ const ContractVerificationPage: React.FC = () => {
       >
         <Button icon={<UploadOutlined />}>Upload Contract Source</Button>
       </Upload>
-      <Button type="primary" onClick={handleVerify}>
-        Verify Contract
-      </Button>
       {verificationResult && (
         <div>
           <Divider />
