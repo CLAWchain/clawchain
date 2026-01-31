@@ -1,4 +1,5 @@
 import { Account } from '../account/account';
+import { TransactionValidator } from './transaction-validation';
 
 export interface Transaction {
   from: Account;
@@ -25,8 +26,7 @@ export class TransactionManager {
     return transaction;
   }
 
-  static verifyTransaction(transaction: Transaction): boolean {
-    // TODO: Implement transaction verification logic
-    return transaction.signature === 'SIGNED';
+  static verifyTransaction(transaction: Transaction, account: Account): boolean {
+    return TransactionValidator.validateTransaction(transaction, account);
   }
 }
