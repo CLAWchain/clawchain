@@ -1,6 +1,7 @@
 import { Buffer } from 'buffer';
 import { keccak256 } from 'js-sha3';
 import { ec as EC } from 'elliptic';
+import { randomBytes } from 'crypto';
 
 const ec = new EC('secp256k1');
 
@@ -33,18 +34,17 @@ export class ECDSASignatureScheme implements SignatureScheme {
 
 export class EdDSASignatureScheme implements SignatureScheme {
   generateKeyPair(): { publicKey: Buffer; privateKey: Buffer } {
-    // TODO: Implement EdDSA key pair generation
-    return { publicKey: Buffer.from([]), privateKey: Buffer.from([]) };
+    const privateKey = randomBytes(32);
+    const publicKey = Buffer.from(ed25519.getPublicKey(privateKey));
+    return { publicKey, privateKey };
   }
 
   sign(message: Buffer, privateKey: Buffer): Buffer {
-    // TODO: Implement EdDSA signing
-    return Buffer.from([]);
+    return Buffer.from(ed25519.sign(message, privateKey));
   }
 
   verify(message: Buffer, signature: Buffer, publicKey: Buffer): boolean {
-    // TODO: Implement EdDSA signature verification
-    return false;
+    return ed25519.verify(message, signature, publicKey);
   }
 }
 
