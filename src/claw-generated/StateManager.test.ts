@@ -1,50 +1,38 @@
-import { StateManager, AccountState } from './StateManager';
-import { Transaction } from './Block';
+import { Block } from './blockchain/Block';
+import { StateManager } from './StateManager';
 
 describe('StateManager', () => {
   let stateManager: StateManager;
 
   beforeEach(() => {
     stateManager = new StateManager();
-    stateManager.initialize();
   });
 
-  describe('balance updates', () => {
-    it('should update balances correctly when applying a transaction', async () => {
-      const sender = '0x1234567890abcdef';
-      const recipient = '0x0987654321fedcba';
-      const senderInitialBalance = 1000n;
-      const recipientInitialBalance = 100n;
-      const txValue = 50n;
-      const txGasPrice = 10n;
-      const txGasLimit = 21000n;
-
-      // Set up initial account states
-      stateManager.accounts.set(sender, { address: sender, balance: senderInitialBalance, nonce: 0 });
-      stateManager.accounts.set(recipient, { address: recipient, balance: recipientInitialBalance, nonce: 0 });
-
-      // Create a transaction
-      const tx: Transaction = {
-        from: sender,
-        to: recipient,
-        value: txValue,
-        gasPrice: txGasPrice,
-        gasLimit: txGasLimit,
-        nonce: 0,
-        hash: 'tx_hash'
-      };
-
-      // Apply the transaction
-      await stateManager.applyTransaction(tx, 1);
-
-      // Verify balances
-      const senderAccount = stateManager.getAccount(sender);
-      const recipientAccount = stateManager.getAccount(recipient);
-
-      expect(senderAccount?.balance).toEqual(senderInitialBalance - txValue - (txGasPrice * txGasLimit));
-      expect(recipientAccount?.balance).toEqual(recipientInitialBalance + txValue);
+  test('should track state diffs correctly', () => {
+    const block1 = new Block({
+      number: 1,
+      transactions: [
+        { from: 'account1', to: 'account2', amount: 100 },
+        { from: 'account2', to: 'account3', amount: 50 },
+      ],
     });
-  });
 
-  // Add more test cases here
+    const block2 = new Block({
+      number: 2,
+      transactions: [
+        { from: 'account1', to: 'account3', amount: 75 },
+        { from: 'account3', to: 'account4', amount: 25 },
+      ],
+    });
+
+    stateManager.applyBlockToState(block1);
+    stateManager.applyBlockToState(block2);
+
+    const stateDiff = stateManager.getStateDiff(1, 2);
+    expect(stateDiff.size).toBe(4);
+    expect(stateDiff.get('account1')).toBe(75);
+    expect(stateDiff.get('account2')).toBeNull();
+    expect(stateDiff.get('account3')).toBe(75);
+    expect(stateDiff.get('account4')).toBe(25);
+  });
 });
