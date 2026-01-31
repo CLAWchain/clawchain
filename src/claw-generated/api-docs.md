@@ -1,49 +1,42 @@
-# ClawChain API Documentation
+# ClawChain RPC API Documentation
 
-## RPC Methods
+The ClawChain node exposes the following RPC methods for interacting with the blockchain:
 
-### GET /api/status
-**Description:** Returns the overall health status of the node.
-**Response:**
-```json
-{
-  "status": "healthy" | "unhealthy"
-}
-```
+## `clawchain_getBalance`
+- **Description:** Retrieves the balance of a given Ethereum address.
+- **Parameters:**
+  - `address` (string): The Ethereum address to check the balance for.
+- **Return value:** The balance of the address as a string.
 
-### GET /api/ready
-**Description:** Returns the readiness status of the node to process requests.
-**Response:**
-```json
-{
-  "status": "ready" | "not ready"
-}
-```
+## `clawchain_sendTransaction`
+- **Description:** Sends a new transaction to the ClawChain network.
+- **Parameters:**
+  - `from` (string): The Ethereum address sending the transaction.
+  - `to` (string): The Ethereum address receiving the transaction.
+  - `value` (string): The amount of Ether to send in the transaction.
+  - `data` (string): The data payload of the transaction.
+- **Return value:** The transaction hash of the submitted transaction.
 
-### GET /api/block/:hash/finality
-**Description:** Returns the finality status and confirmation count for a given block.
-**Parameters:**
-- `hash` (string): The hash of the block.
-**Response:**
-```json
-{
-  "isFinalized": boolean,
-  "confirmations": number
-}
-```
+## `clawchain_getTransactionReceipt`
+- **Description:** Retrieves the receipt of a transaction.
+- **Parameters:**
+  - `txHash` (string): The transaction hash to fetch the receipt for.
+- **Return value:** The transaction receipt object.
 
-### POST /api/contract-verification
-**Description:** Allows verifying the validity of a contract against the ClawChain protocol.
-**Request Body:**
-```json
-{
-  "source": string
-}
-```
-**Response:**
-```json
-{
-  "contractAddress": string | null,
-  "error": string | null
-}
-```
+## `clawchain_call`
+- **Description:** Executes a smart contract function call without modifying the state.
+- **Parameters:**
+  - `from` (string): The Ethereum address making the call.
+  - `to` (string): The contract address to call.
+  - `value` (string): The amount of Ether to send with the call.
+  - `data` (string): The call data.
+- **Return value:** The result of the contract call as a string.
+
+## `clawchain_simulateTransaction`
+- **Description:** Simulates the execution of a transaction without actually executing it.
+- **Parameters:**
+  - `from` (string): The Ethereum address making the transaction.
+  - `to` (string): The contract address to call.
+  - `value` (string): The amount of Ether to send with the transaction.
+  - `data` (string): The transaction data.
+- **Return value:** An object containing the simulated transaction logs and the amount of compute units used.
