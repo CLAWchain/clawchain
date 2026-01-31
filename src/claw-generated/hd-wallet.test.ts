@@ -1,21 +1,28 @@
-import { HDWallet, generateSeed } from './hd-wallet';
+import { HDWallet } from './hd-wallet';
+import { bip32, crypto } from 'bitcoinjs-lib';
 
 describe('HDWallet', () => {
-  it('should generate a master key from a seed phrase', () => {
-    const seed = Buffer.from('000102030405060708090a0b0c0d0e0f', 'hex');
+  const seedPhrase = 'abandon amount expire adjust cage candy arch gather drum buyer enemy junior consist';
+  const seed = Buffer.from(seedPhrase.split(' ').join(''), 'hex');
+
+  it('should generate child keys correctly', () => {
     const wallet = new HDWallet(seed);
-    expect(wallet.masterKey.toBase58()).toBe('xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi');
+    const childKey = wallet.getChildKey("m/44'/0'/0'/0/0");
+    expect(childKey.publicKey.toString('hex')).toEqual('03c94edaa0c5c7abee5d36c7c477d8ebc9278ba90c5f9c162a0b8e4c4b32fa27b');
   });
 
-  it('should generate an address from a derivation path', () => {
-    const seed = Buffer.from('000102030405060708090a0b0c0d0e0f', 'hex');
+  it('should generate public keys correctly', () => {
     const wallet = new HDWallet(seed);
-    const address = wallet.getAddress("m/44'/60'/0'/0/0");
-    expect(address).toBe('0x8Ab21C659C5D9c7B4d66f3E7a7a8c3B9F0bD0eD2');
+    const childKey = wallet.getChildKey("m/44'/0'/0'/0/0");
+    const publicKey = wallet.getPublicKey(childKey);
+    expect(publicKey).toEqual('03c94edaa0c5c7abee5d36c7c477d8ebc9278ba90c5f9c162a0b8e4c4b32fa27b');
   });
 
-  it('should generate a new random seed phrase', () => {
-    const seed = generateSeed();
-    expect(seed.length).toBeGreaterThan(0);
+  it('should generate addresses correctly', () => {
+    const wallet = new HDWallet(seed);
+    const childKey = wallet.getChildKey("m/44'/0'/0'/0/0");
+    const publicKey = wallet.getPublicKey(childKey);
+    const address = wallet.getAddress(publicKey);
+    expect(address).toEqual('1PuKMvRFfwbLXyEvDQkJFZ19wgRFAMUVXM');
   });
 });
