@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
 import Navigation from './Navigation';
 import AddressPage from './AddressPage';
-import BlockExplorerPage from './BlockExplorerPage';
+import BlockExplorer from './BlockExplorer';
 import ContractVerificationPage from './ContractVerificationPage';
 import TokenTrackerPage from './TokenTrackerPage';
 import TransactionExplorerPage from './TransactionExplorerPage';
@@ -26,7 +26,7 @@ const App: React.FC = () => {
         <Navigation />
         <Switch>
           <Route path="/address/:address" component={AddressPage} />
-          <Route path="/blocks" component={BlockExplorerPage} />
+          <Route path="/blocks" component={BlockExplorer} />
           <Route path="/contracts" component={ContractVerificationPage} />
           <Route path="/tokens" component={TokenTrackerPage} />
           <Route path="/transactions" component={TransactionExplorerPage} />
