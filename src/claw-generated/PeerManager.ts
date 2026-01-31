@@ -1,37 +1,34 @@
-import { PeerInfo, PeerManager } from './types';
+import { EventEmitter } from 'events';
+import { Transaction } from './Transaction';
+import { TransactionGossipManager } from './network/TransactionGossipManager';
 
-export class PeerManagerImpl implements PeerManager {
-  private peers: Map<string, PeerInfo> = new Map();
-  private readonly REPUTATION_THRESHOLD = 0.5;
+export class PeerManager extends EventEmitter {
+  private transactionGossipManager: TransactionGossipManager;
 
-  addPeer(peer: PeerInfo): void {
-    this.peers.set(peer.id, peer);
+  constructor() {
+    super();
+    this.transactionGossipManager = new TransactionGossipManager(this);
   }
 
-  removePeer(peerId: string): void {
-    this.peers.delete(peerId);
-  }
-
-  getPeerById(peerId: string): PeerInfo | undefined {
-    return this.peers.get(peerId);
-  }
-
-  getAllPeers(): PeerInfo[] {
-    return Array.from(this.peers.values());
-  }
-
-  updatePeerReputation(peerId: string, delta: number): void {
-    const peer = this.getPeerById(peerId);
-    if (peer) {
-      peer.reputation += delta;
-      if (peer.reputation < this.REPUTATION_THRESHOLD) {
-        this.banPeer(peerId);
-      }
+  async broadcastTransaction(tx: Transaction): Promise<void> {
+    // Broadcast the transaction to all connected peers
+    for (const peer of this.connectedPeers) {
+      await peer.sendTransaction(tx);
     }
   }
 
-  banPeer(peerId: string): void {
-    this.removePeer(peerId);
-    // Implement logic to disconnect and prevent reconnection of banned peers
+  async processIncomingTransaction(tx: Transaction): Promise<void> {
+    await this.transactionGossipManager.processIncomingTransaction(tx);
+  }
+
+  get connectedPeers(): Peer[] {
+    // Return the list of currently connected peers
+    return [...this.peers];
+  }
+}
+
+class Peer {
+  async sendTransaction(tx: Transaction): Promise<void> {
+    // Send the transaction to this peer
   }
 }
