@@ -1,14 +1,17 @@
-import { Block, BlockHeader } from '../blockchain/block';
-import { PeerManager } from '../networking/peer_manager';
-import { DatabaseService } from '../storage/database';
+import { Block, BlockHeader } from './blockchain/block';
+import { PeerManager } from './networking/peer_manager';
+import { DatabaseService } from './storage/database';
+import { CheckpointManager } from './checkpoint_manager';
 
 export class BlockSyncManager {
   private peerManager: PeerManager;
   private database: DatabaseService;
+  private checkpointManager: CheckpointManager;
 
-  constructor(peerManager: PeerManager, database: DatabaseService) {
+  constructor(peerManager: PeerManager, database: DatabaseService, checkpointManager: CheckpointManager) {
     this.peerManager = peerManager;
     this.database = database;
+    this.checkpointManager = checkpointManager;
   }
 
   async syncBlocks() {
@@ -30,11 +33,31 @@ export class BlockSyncManager {
   private async downloadMissingBlocks(fromHeight: number, toHeight: number) {
     const promises = [];
 
+    // Check for checkpoints first
+    for (let height = fromHeight; height <= toHeight; height += this.checkpointManager.checkpointInterval) {
+      const checkpoint = await this.checkpointManager.getCheckpointByHeight(height);
+      if (checkpoint) {
+        // Skip verification for blocks before the checkpoint
+        await this.database.storeBlocks(await this.downloadBlocksFromCheckpoint(height, checkpoint));
+        fromHeight = height + this.checkpointManager.checkpointInterval;
+      }
+    }
+
+    // Download any remaining blocks
     for (let height = fromHeight; height <= toHeight; height++) {
       promises.push(this.downloadBlockAtHeight(height));
     }
 
     await Promise.all(promises);
+  }
+
+  private async downloadBlocksFromCheckpoint(fromHeight: number, checkpoint: BlockHeader): Promise<Block[]> {
+    const blocks = [];
+    for (let height = fromHeight; height <= fromHeight + this.checkpointManager.checkpointInterval; height++) {
+      const block = await this.downloadBlockAtHeight(height);
+      blocks.push(block);
+    }
+    return blocks;
   }
 
   private async downloadBlockAtHeight(height: number): Promise<Block> {
@@ -61,6 +84,9 @@ export class BlockSyncManager {
 
     // 4. Persist the block to the local database
     await this.database.storeBlock(validBlock);
+
+    // 5. Create a checkpoint if necessary
+    await this.checkpointManager.createCheckpoint(validBlock);
 
     return validBlock;
   }
