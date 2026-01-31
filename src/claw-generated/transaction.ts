@@ -1,5 +1,6 @@
 import { MultisigWallet } from './multisig_wallet';
 import { Wallet } from './wallet';
+import { TransactionOrdering } from './transaction_ordering';
 
 export class Transaction {
   public from: string;
@@ -35,5 +36,17 @@ export class Transaction {
       // Verify the single signature using the from address
       return true;
     }
+  }
+
+  async processTransaction(): Promise<void> {
+    // Add the transaction to the ordering pool
+    const transactionOrdering = new TransactionOrdering();
+    transactionOrdering.addTransaction(this);
+
+    // Process the transactions using the fair ordering logic
+    const orderedTransactions = transactionOrdering.processTransactions();
+
+    // Proceed with the transaction processing
+    // ...
   }
 }
