@@ -1,23 +1,24 @@
-export interface GenesisConfig {
-  chainId: string;
-  initialAllocation: { [address: string]: number };
-  blockParams: {
-    difficulty: number;
-    gasLimit: number;
-  };
-}
+import { GenesisAllocation, GenesisConfig } from './types';
 
-export function loadGenesisConfig(): GenesisConfig {
-  // TODO: Load genesis config from file
-  return {
-    chainId: 'claw-chain-1',
-    initialAllocation: {
-      '0x1234567890123456789012345678901234567890': 1000000,
-      '0x0987654321098765432109876543210987654321': 500000
-    },
-    blockParams: {
-      difficulty: 1000000,
-      gasLimit: 8000000
-    }
-  };
-}
+export const CHAIN_ID = 'clawchain-1';
+
+export const GENESIS_ALLOCATIONS: GenesisAllocation[] = [
+  {
+    address: '0x123456789abcdef0123456789abcdef01234567',
+    amount: 1000000,
+  },
+  {
+    address: '0x0987654321fedcba0987654321fedcba0987654',
+    amount: 500000,
+  },
+];
+
+export const GENESIS_CONFIG: GenesisConfig = {
+  chainId: CHAIN_ID,
+  allocations: GENESIS_ALLOCATIONS,
+  protocolParams: {
+    blockTime: 10, // seconds
+    blockSize: 1000000, // bytes
+    minTxFee: 0.001, // native token
+  },
+};
