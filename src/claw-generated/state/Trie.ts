@@ -1,4 +1,6 @@
 import { TrieCache } from './TrieCache';
+import { TrieNode, encodeTrieNode, decodeTrieNode } from './TrieNode';
+import { hash } from '../crypto';
 
 class Trie {
   private cache: TrieCache;
@@ -28,11 +30,25 @@ class Trie {
   }
 
   set(key: Buffer, value: any): void {
-    // Implement trie node updates with caching
-    const node = this.getOrCreateNode(key);
-    node.value = value;
+    let node = this.getOrCreateNode(key);
+    if (node.value !== value) {
+      node.value = value;
+      this.markNodeDirty(key, node);
+    }
+  }
+
+  getOrCreateNode(key: Buffer): TrieNode {
+    let node = this.getNode(key);
+    if (!node) {
+      node = createEmptyNode();
+      this.cache.set(key, node);
+    }
+    return node;
+  }
+
+  markNodeDirty(key: Buffer, node: TrieNode): void {
     this.cache.set(key, node);
-    this.markNodeDirty(key);
+    // TODO: Implement updating node hashes and marking parent nodes as dirty
   }
 
   commit(): void {
@@ -41,7 +57,19 @@ class Trie {
     this.cache.clear();
   }
 
-  // Other trie methods...
+  getDirtyNodes(): [Buffer, Buffer][] {
+    // TODO: Implement getting all dirty nodes from the cache
+    return [];
+  }
+}
+
+function createEmptyNode(): TrieNode {
+  return {
+    value: null,
+    children: {},
+    isLeaf: true,
+    hash: Buffer.alloc(32, 0),
+  };
 }
 
 export { Trie };
