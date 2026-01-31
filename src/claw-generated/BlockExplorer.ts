@@ -12,20 +12,19 @@ interface Block {
   height: number;
   hash: string;
   timestamp: number;
-  transactions: Transaction[];
+  transactions: number;
 }
 
 export class BlockExplorer {
   async getBlocks(): Promise<Block[]> {
     try {
       const response = await axios.get('/api/blocks');
-      const blocks = response.data;
-
-      // Fetch transaction details for each block
-      for (const block of blocks) {
-        const transactionResponse = await axios.get(`/api/blocks/${block.height}/transactions`);
-        block.transactions = transactionResponse.data;
-      }
+      const blocks = response.data.map((block: any): Block => ({
+        height: block.height,
+        hash: block.hash,
+        timestamp: block.timestamp,
+        transactions: block.transactions.length,
+      }));
 
       return blocks;
     } catch (error) {
