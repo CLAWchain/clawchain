@@ -1,5 +1,7 @@
-mod rpc_server;
-mod rpc_methods;
+mod getAccountInfo;
+mod getTransactionCount;
+mod getBalance;
 
-pub use rpc_server::*;
-pub use rpc_methods::*;
+pub use getAccountInfo::*;
+pub use getTransactionCount::*;
+pub use getBalance::*;
