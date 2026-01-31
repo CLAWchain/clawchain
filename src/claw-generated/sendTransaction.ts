@@ -1,28 +1,19 @@
-import { IncomingMessage, ServerResponse } from 'http';
-import { parseJSON, validateAndBroadcastTransaction } from './utils';
+import { Transaction } from '../transaction';
+import { TransactionPool } from '../transactionPool';
+import { TxSignature } from '../types';
 
-export const handleSendTransaction = async (req: IncomingMessage, res: ServerResponse) => {
-  let body = '';
-  req.on('data', (chunk) => {
-    body += chunk.toString();
-  });
-  req.on('end', async () => {
-    const jsonRpcRequest = parseJSON(body);
-    if (!jsonRpcRequest || !jsonRpcRequest.params || !jsonRpcRequest.params.length) {
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Invalid request' }));
-      return;
-    }
+export async function sendTransaction(rawTx: string): Promise<{ txId: string }> {
+  // 1. Decode the base64-encoded transaction
+  const tx = Transaction.fromBase64(rawTx);
 
-    const [signedTransaction] = jsonRpcRequest.params;
-    try {
-      await validateAndBroadcastTransaction(signedTransaction);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ result: 'Transaction accepted' }));
-    } catch (err) {
-      console.error('Error handling sendTransaction:', err);
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Failed to process transaction' }));
-    }
-  });
-};
+  // 2. Verify the transaction signature
+  if (!tx.verifySignature()) {
+    throw new Error('Invalid transaction signature');
+  }
+
+  // 3. Add the transaction to the pool
+  await TransactionPool.addTransaction(tx);
+
+  // 4. Return the transaction ID
+  return { txId: tx.hash() };
+}
