@@ -1,17 +1,26 @@
 import React from 'react';
-import ContractVerifier from './ContractVerifier';
+import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+import Navigation from './Navigation';
+import NetworkStatsPage from './NetworkStatsPage';
+import TransactionExplorerPage from './TransactionExplorerPage';
+import ContractVerificationPage from './ContractVerificationPage';
+import GovernancePage from './GovernancePage';
+import ThemeToggle from './ThemeToggle';
 
 const App: React.FC = () => {
-  const handleVerify = async (sourceCode: string): Promise<boolean> => {
-    // Call the contract verification service here
-    return true;
-  };
-
   return (
-    <div>
-      <h1>ClawChain</h1>
-      <ContractVerifier onVerify={handleVerify} />
-    </div>
+    <Router>
+      <div className="app">
+        <Navigation />
+        <ThemeToggle />
+        <Switch>
+          <Route path="/network-stats" component={NetworkStatsPage} />
+          <Route path="/transactions" component={TransactionExplorerPage} />
+          <Route path="/contract-verification" component={ContractVerificationPage} />
+          <Route path="/governance" component={GovernancePage} />
+        </Switch>
+      </div>
+    </Router>
   );
 };
 
