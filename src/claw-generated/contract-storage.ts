@@ -1,33 +1,47 @@
+import { LevelDB } from './database';
+
 export class ContractStorage {
-  private storage: Map<string, any> = new Map();
+  private db: LevelDB;
 
-  get(key: string): any {
-    return this.storage.get(key);
+  constructor() {
+    this.db = new LevelDB('contract-storage');
   }
 
-  set(key: string, value: any): void {
-    this.storage.set(key, value);
+  async get(key: string): Promise<any> {
+    return await this.db.get(key);
   }
 
-  delete(key: string): void {
-    this.storage.delete(key);
+  async set(key: string, value: any): Promise<void> {
+    await this.db.put(key, value);
   }
 
-  getArray(key: string): any[] {
-    const value = this.storage.get(key);
+  async delete(key: string): Promise<void> {
+    await this.db.del(key);
+  }
+
+  async getArray(key: string): Promise<any[]> {
+    const value = await this.get(key);
     return Array.isArray(value) ? value : [];
   }
 
-  setArray(key: string, value: any[]): void {
-    this.storage.set(key, value);
+  async setArray(key: string, value: any[]): Promise<void> {
+    await this.set(key, value);
   }
 
-  getMapping(key: string): Map<string, any> {
-    const value = this.storage.get(key);
+  async getMapping(key: string): Promise<Map<string, any>> {
+    const value = await this.get(key);
     return value instanceof Map ? value : new Map();
   }
 
-  setMapping(key: string, value: Map<string, any>): void {
-    this.storage.set(key, value);
+  async setMapping(key: string, value: Map<string, any>): Promise<void> {
+    await this.set(key, value);
+  }
+
+  async query(indexName: string, value: any): Promise<string[]> {
+    return await this.db.query(indexName, value);
+  }
+
+  async addIndex(indexName: string, key: string, value: any): Promise<void> {
+    await this.db.addIndex(indexName, key, value);
   }
 }
