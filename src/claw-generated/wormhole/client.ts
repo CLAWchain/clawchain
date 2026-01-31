@@ -1,35 +1,58 @@
-// src/claw-generated/wormhole/client.ts
-import { Connection, PublicKey } from '@solana/web3.js';
-import { Provider, Program, web3 } from '@project-serum/anchor';
-import { WormholeProgram } from './wormhole-program';
+import WebSocket from 'ws';
 
 export class WormholeClient {
-  private provider: Provider;
-  private program: Program<WormholeProgram>;
+  private ws: WebSocket;
+  private rpcEndpoint: string;
+  private messageCallbacks: ((message: any) => void)[] = [];
 
-  constructor() {
-    this.provider = Provider.local();
-    this.program = new Program<WormholeProgram>(WormholeProgram, this.provider);
+  constructor(rpcEndpoint: string) {
+    this.rpcEndpoint = rpcEndpoint;
   }
 
   async connect() {
-    await this.provider.connection.connect();
-  }
+    this.ws = new WebSocket(this.rpcEndpoint);
 
-  async disconnect() {
-    await this.provider.connection.disconnect();
-  }
+    return new Promise<void>((resolve, reject) => {
+      this.ws.on('open', () => {
+        console.log('Connected to Wormhole RPC endpoint');
+        resolve();
+      });
 
-  async sendMessage(message: Buffer, targetChain: number, targetAddress: PublicKey) {
-    await this.program.rpc.sendMessage(message, targetChain, targetAddress, {
-      accounts: {
-        // Wormhole accounts
-      },
+      this.ws.on('error', (err) => {
+        console.error('Error connecting to Wormhole RPC:', err);
+        reject(err);
+      });
     });
   }
 
-  async receiveMessage(messageId: Buffer): Promise<Buffer> {
-    const message = await this.program.account.message.fetch(new PublicKey(messageId));
-    return message.payload;
+  async disconnect() {
+    return new Promise<void>((resolve) => {
+      this.ws.close(() => {
+        console.log('Disconnected from Wormhole RPC endpoint');
+        resolve();
+      });
+    });
+  }
+
+  onMessage(callback: (message: any) => void) {
+    this.messageCallbacks.push(callback);
+
+    this.ws.on('message', (data) => {
+      const message = JSON.parse(data.toString());
+      this.messageCallbacks.forEach((cb) => cb(message));
+    });
+  }
+
+  async sendMessage(message: any): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.ws.send(JSON.stringify(message), (err) => {
+        if (err) {
+          console.error('Error sending message to Wormhole RPC:', err);
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
   }
 }

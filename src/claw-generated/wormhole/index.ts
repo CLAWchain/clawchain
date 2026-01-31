@@ -1,23 +1,23 @@
-// src/claw-generated/wormhole/index.ts
 import { WormholeClient } from './client';
 import { WormholeMessageHandler } from './message-handler';
 
-export class WormholeModule {
+export class WormholeIntegration {
   private client: WormholeClient;
   private messageHandler: WormholeMessageHandler;
 
-  constructor() {
-    this.client = new WormholeClient();
+  constructor(rpcEndpoint: string) {
+    this.client = new WormholeClient(rpcEndpoint);
     this.messageHandler = new WormholeMessageHandler(this.client);
   }
 
   async start() {
     await this.client.connect();
-    this.messageHandler.start();
+    this.client.onMessage(this.messageHandler.handleMessage.bind(this.messageHandler));
   }
 
   async stop() {
-    this.messageHandler.stop();
     await this.client.disconnect();
   }
 }
+
+export { WormholeClient, WormholeMessageHandler };
