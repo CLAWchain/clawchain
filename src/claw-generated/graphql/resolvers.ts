@@ -1,49 +1,67 @@
-import { Block, Transaction, Account, Log } from '../types';
-import { getBlock, getTransaction, getAccountInfo, sendTransaction } from '../api/rpc';
+import { Block, Event, Transaction, TransactionReceipt } from './typeDefs';
+import { getBlock, getTransaction, getEvents } from '../rpc';
 
 export const resolvers = {
   Query: {
-    getBlock: async (_: any, { height }: { height: number }): Promise<Block> => {
-      const block = await getBlock(height);
-      return block;
-    },
-    getTransaction: async (_: any, { hash }: { hash: string }): Promise<Transaction> => {
-      const tx = await getTransaction(hash);
-      return tx;
-    },
-    getAccount: async (_: any, { address }: { address: string }): Promise<Account> => {
-      const accountInfo = await getAccountInfo(address);
+    getBlock: async (_: any, { blockNumber }: { blockNumber: number }): Promise<Block> => {
+      const block = await getBlock(blockNumber);
       return {
-        address,
-        balance: accountInfo.balance.toString(),
-        transactions: accountInfo.transactions,
+        number: block.number,
+        hash: block.hash,
+        parentHash: block.parentHash,
+        timestamp: block.timestamp,
+        transactions: block.transactions.map((tx) => ({
+          hash: tx.hash,
+          from: tx.from,
+          to: tx.to,
+          value: tx.value.toString(),
+          gas: tx.gas,
+          gasPrice: tx.gasPrice.toString(),
+          nonce: tx.nonce,
+          input: tx.input,
+          receipt: {
+            transactionHash: tx.hash,
+            blockNumber: block.number,
+            blockHash: block.hash,
+            contractAddress: tx.contractAddress,
+            events: [],
+          },
+        })),
       };
     },
-    getBlocks: async (_: any, { limit, offset }: { limit?: number; offset?: number }): Promise<Block[]> => {
-      // Implement pagination for blocks
-      throw new Error('Not implemented');
+    getTransaction: async (_: any, { transactionHash }: { transactionHash: string }): Promise<Transaction> => {
+      const tx = await getTransaction(transactionHash);
+      return {
+        hash: tx.hash,
+        from: tx.from,
+        to: tx.to,
+        value: tx.value.toString(),
+        gas: tx.gas,
+        gasPrice: tx.gasPrice.toString(),
+        nonce: tx.nonce,
+        input: tx.input,
+        receipt: {
+          transactionHash: tx.hash,
+          blockNumber: tx.blockNumber,
+          blockHash: tx.blockHash,
+          contractAddress: tx.contractAddress,
+          events: [],
+        },
+      };
     },
-    getTransactions: async (_: any, { limit, offset }: { limit?: number; offset?: number }): Promise<Transaction[]> => {
-      // Implement pagination for transactions
-      throw new Error('Not implemented');
-    },
-  },
-  Mutation: {
-    sendTransaction: async (
+    getEvents: async (
       _: any,
-      { from, to, value, data }: { from: string; to: string; value: string; data?: string }
-    ): Promise<Transaction> => {
-      const tx = await sendTransaction(from, to, value, data);
-      return tx;
-    },
-  },
-  Transaction: {
-    block: async (tx: Transaction): Promise<Block> => {
-      return await getBlock(tx.block.height);
-    },
-    logs: async (tx: Transaction): Promise<Log[]> => {
-      // Implement log retrieval
-      throw new Error('Not implemented');
+      { contractAddress, eventName, fromBlock, toBlock }: { contractAddress?: string; eventName?: string; fromBlock?: number; toBlock?: number }
+    ): Promise<Event[]> => {
+      const events = await getEvents(contractAddress, eventName, fromBlock, toBlock);
+      return events.map((event) => ({
+        address: event.address,
+        name: event.name,
+        parameters: event.parameters.map((param) => ({
+          name: param.name,
+          value: param.value,
+        })),
+      }));
     },
   },
 };
