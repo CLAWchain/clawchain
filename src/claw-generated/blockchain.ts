@@ -56,10 +56,8 @@ export class Blockchain {
   }
 
   mineBlock(): Block {
-    // Check if the block size exceeds the limit
-    if (this.pendingTransactions.length > this.maxBlockSize) {
-      throw new Error('Block size exceeds the limit');
-    }
+    // Validate the block size before creating a new block
+    this.validateBlockSize();
 
     const block = new Block(this.pendingTransactions, this.state.getStateRoot());
     this.state.commitState();
@@ -72,6 +70,12 @@ export class Blockchain {
 
     this.pendingTransactions = [];
     return block;
+  }
+
+  private validateBlockSize(): void {
+    if (this.pendingTransactions.length > this.maxBlockSize) {
+      throw new Error(`Block size (${this.pendingTransactions.length}) exceeds the limit (${this.maxBlockSize})`);
+    }
   }
 
   private adjustBlockSizeLimit(): void {
