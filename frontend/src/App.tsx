@@ -127,6 +127,8 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:4000' : '';
+
   // Fetch network data
   useEffect(() => {
     const fetchNetworkData = async () => {
@@ -158,8 +160,6 @@ export default function App() {
     const interval = setInterval(fetchNetworkData, 5000);
     return () => clearInterval(interval);
   }, [API_BASE]);
-
-  const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:4000' : '';
 
   // Sync route to tab
   useEffect(() => {
