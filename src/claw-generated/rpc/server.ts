@@ -1,36 +1,49 @@
-import { JsonRpcServer } from '../JsonRpcServer';
-import { WebSocketServer } from '../WebSocketServer';
-import { WebSocketSubscriptions } from '../WebSocketSubscriptions';
-import { Block } from '../Block';
-import { Transaction } from '../Transaction';
+import { JsonRpcRequest, JsonRpcResponse, JsonRpcError } from './types';
 
-class RpcServer extends JsonRpcServer {
-  private wss: WebSocketServer;
-  private wsSubscriptions: WebSocketSubscriptions;
+class JsonRpcServer {
+  private readonly handlers: Record<string, (params: any) => Promise<any>> = {};
 
-  constructor(port: number) {
-    super(port);
-    this.wss = new WebSocketServer(8080);
-    this.wsSubscriptions = new WebSocketSubscriptions(this.wss);
-    this.wsSubscriptions.subscribeNewHeads();
-    this.wsSubscriptions.subscribePendingTransactions();
-    this.wsSubscriptions.subscribeLogs('0x0123456789012345678901234567890123456789');
+  registerHandler(method: string, handler: (params: any) => Promise<any>) {
+    this.handlers[method] = handler;
   }
 
-  async handleNewBlock(block: Block) {
-    await super.handleNewBlock(block);
-    this.wss.emit('newBlock', block);
+  async handleRequest(request: JsonRpcRequest): Promise<JsonRpcResponse | JsonRpcResponse[]> {
+    if (Array.isArray(request)) {
+      // Handle batch requests
+      const responses = await Promise.all(request.map(async (req) => await this.handleSingleRequest(req)));
+      return responses;
+    } else {
+      // Handle single request
+      return await this.handleSingleRequest(request);
+    }
   }
 
-  async handleNewTransaction(tx: Transaction) {
-    await super.handleNewTransaction(tx);
-    this.wss.emit('newTransaction', tx);
-  }
+  private async handleSingleRequest(request: JsonRpcRequest): Promise<JsonRpcResponse> {
+    const { id, method, params } = request;
 
-  async handleNewLog(log: any) {
-    await super.handleNewLog(log);
-    this.wss.emit('newLog', log);
+    if (!this.handlers[method]) {
+      return {
+        id,
+        error: {
+          code: JsonRpcError.MethodNotFound,
+          message: `Method "${method}" not found.`
+        }
+      };
+    }
+
+    try {
+      const result = await this.handlers[method](params);
+      return { id, result };
+    } catch (error) {
+      return {
+        id,
+        error: {
+          code: JsonRpcError.InternalError,
+          message: error.message
+        }
+      };
+    }
   }
 }
 
-export { RpcServer };
+export default JsonRpcServer;
