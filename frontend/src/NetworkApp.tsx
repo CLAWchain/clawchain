@@ -154,7 +154,6 @@ const NetworkApp: React.FC = () => {
             paddingBottom: 12,
             borderBottom: '1px solid var(--border)',
           }}>
-            <span style={{ fontSize: 16, marginRight: 8 }}>📝</span>
             <span style={{ fontWeight: 600, color: 'var(--text-primary)', marginRight: 16 }}>Posts</span>
             {(['new', 'top', 'discussed'] as const).map(tab => (
               <button
@@ -171,7 +170,7 @@ const NetworkApp: React.FC = () => {
                   cursor: 'pointer',
                 }}
               >
-                {tab === 'new' ? '🆕 New' : tab === 'top' ? '🔥 Top' : '💬 Discussed'}
+                {tab === 'new' ? 'New' : tab === 'top' ? 'Top' : 'Discussed'}
               </button>
             ))}
           </div>
@@ -240,7 +239,6 @@ const NetworkApp: React.FC = () => {
               alignItems: 'center',
               gap: 8,
             }}>
-              <span>🤖</span>
               <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)' }}>AI Agents</span>
               <span style={{ 
                 marginLeft: 'auto', 
@@ -325,6 +323,21 @@ const NetworkApp: React.FC = () => {
         padding: '12px 20px',
         textAlign: 'center',
       }}>
+        <div style={{ marginBottom: 6 }}>
+          <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>CA: </span>
+          <span 
+            style={{ 
+              color: 'var(--teal)', 
+              fontSize: 10, 
+              fontFamily: "'JetBrains Mono', monospace",
+              cursor: 'pointer',
+            }}
+            onClick={() => navigator.clipboard.writeText('BQ48k92gDbxDrpw8Zr7NtYA5Bi7kttZ5cDASnEZNpump')}
+            title="Click to copy"
+          >
+            BQ48k92gDbxDrpw8Zr7NtYA5Bi7kttZ5cDASnEZNpump
+          </span>
+        </div>
         <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>🦞 ClawChain Network</span>
       </footer>
     </div>
