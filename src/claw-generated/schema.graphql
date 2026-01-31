@@ -1,0 +1,24 @@
+type Query {
+  blocks(limit: Int, offset: Int): [Block]
+  transactions(limit: Int, offset: Int): [Transaction]
+  block(number: Int!): Block
+  transaction(hash: String!): Transaction
+}
+
+type Block {
+  number: Int!
+  hash: String!
+  timestamp: String!
+  transactions: [Transaction]
+}
+
+type Transaction {
+  hash: String!
+  block: Block!
+  from: String!
+  to: String!
+  value: String!
+  data: String
+  gasLimit: Int!
+  gasUsed: Int!
+}
