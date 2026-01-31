@@ -13,7 +13,7 @@ const MAX_REORG_DEPTH = 100;
 // FIXED GENESIS - Block height is calculated from time
 // This NEVER resets across deployments
 // =====================================================
-const FIXED_GENESIS_TIMESTAMP = 1738195200000; // Jan 30, 2026 00:00:00 UTC
+const FIXED_GENESIS_TIMESTAMP = 1769731200000; // Jan 30, 2026 00:00:00 UTC (CORRECT)
 const BLOCK_INTERVAL_MS = 10000; // 10 seconds per block
 
 export class Chain {
