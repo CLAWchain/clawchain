@@ -1,5 +1,10 @@
-export interface PeerInfo {
-  id: string;
-  address: string;
-  port: number;
+export interface TransactionReceipt {
+  status: TransactionStatus;
+  logs: string[];
+  computeUnits: number;
+}
+
+export enum TransactionStatus {
+  Success,
+  Failure
 }
