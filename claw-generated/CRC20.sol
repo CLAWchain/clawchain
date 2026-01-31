@@ -9,6 +9,8 @@ contract CRC20 {
     // Events
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Mint(address indexed to, uint256 value);
+    event Burn(address indexed from, uint256 value);
 
     // Token Metadata
     string public name;
@@ -73,5 +75,28 @@ contract CRC20 {
         allowance[from][msg.sender] -= value;
         emit Transfer(from, to, value);
         return true;
+    }
+
+    /**
+     * @dev Mint new tokens and add them to the total supply.
+     * @param to The address to receive the minted tokens.
+     * @param value The amount of tokens to mint.
+     */
+    function mint(address to, uint256 value) public virtual {
+        totalSupply += value;
+        balanceOf[to] += value;
+        emit Mint(to, value);
+    }
+
+    /**
+     * @dev Burn tokens, reducing the total supply.
+     * @param from The address to burn tokens from.
+     * @param value The amount of tokens to burn.
+     */
+    function burn(address from, uint256 value) public virtual {
+        require(balanceOf[from] &gt;= value, "Insufficient balance");
+        balanceOf[from] -= value;
+        totalSupply -= value;
+        emit Burn(from, value);
     }
 }
