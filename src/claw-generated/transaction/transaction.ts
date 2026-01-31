@@ -32,6 +32,10 @@ export class TransactionManager {
     };
   }
 
+  static validateTransactionNonce(transaction: Transaction, account: Account): boolean {
+    return transaction.nonce === account.nonce;
+  }
+
   private static hashTransaction(transaction: Transaction): Buffer {
     return Buffer.from(
       JSON.stringify({
