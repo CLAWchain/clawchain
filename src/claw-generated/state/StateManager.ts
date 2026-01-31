@@ -1,29 +1,32 @@
 import { ReadWriteLock } from './ReadWriteLock';
+import { StateDiffManager } from './StateDiffManager';
 
 class StateManager {
   private readonly locks: Map<string, ReadWriteLock>;
+  private readonly stateDiffManager: StateDiffManager;
 
-  constructor() {
+  constructor(stateDiffManager: StateDiffManager) {
     this.locks = new Map();
+    this.stateDiffManager = stateDiffManager;
   }
 
   async getState(key: string): Promise<any> {
     const lock = this.getLock(key);
     await lock.readLock();
     try {
-      // Fetch state from storage and return
       return await this.fetchState(key);
     } finally {
       lock.readUnlock();
     }
   }
 
-  async setState(key: string, value: any): Promise<void> {
+  async setState(key: string, value: any, blockNumber: number): Promise<void> {
     const lock = this.getLock(key);
     await lock.writeLock();
     try {
-      // Update state in storage
+      const oldValue = await this.fetchState(key);
       await this.updateState(key, value);
+      await this.stateDiffManager.trackDiff(blockNumber, [key]);
     } finally {
       lock.writeUnlock();
     }

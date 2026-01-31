@@ -1,47 +1,29 @@
-import { Trie } from './Trie';
-import { TrieNode } from './TrieNode';
-import { StateSnapshot } from './StateSnapshot';
+import { StateManager } from './StateManager';
 
 class StateDiffManager {
-  private trie: Trie;
-  private stateDiffs: Map<number, Map<Buffer, TrieNode>>;
+  private readonly stateManager: StateManager;
 
-  constructor(trie: Trie) {
-    this.trie = trie;
-    this.stateDiffs = new Map();
+  constructor(stateManager: StateManager) {
+    this.stateManager = stateManager;
   }
 
-  trackStateChanges(blockNumber: number, changedNodes: Map<Buffer, TrieNode>): void {
-    this.stateDiffs.set(blockNumber, changedNodes);
-  }
-
-  applyStateDiff(blockNumber: number): void {
-    const changedNodes = this.stateDiffs.get(blockNumber);
-    if (changedNodes) {
-      for (const [key, node] of changedNodes) {
-        this.trie.set(key, node.value);
-      }
-      this.trie.commit();
+  async trackDiff(blockNumber: number, changedKeys: string[]) {
+    for (const key of changedKeys) {
+      const oldValue = await this.stateManager.getState(key);
+      const newValue = await this.stateManager.getState(`${key}:${blockNumber}`);
+      await this.storeDiff(blockNumber, key, oldValue, newValue);
     }
   }
 
-  getStateDiffForRange(fromBlock: number, toBlock: number): Map<number, Map<Buffer, TrieNode>> {
-    const diffs = new Map();
-    for (let i = fromBlock; i <= toBlock; i++) {
-      const diff = this.stateDiffs.get(i);
-      if (diff) {
-        diffs.set(i, diff);
-      }
-    }
-    return diffs;
+  private async storeDiff(blockNumber: number, key: string, oldValue: any, newValue: any) {
+    // Store the state diff in a dedicated storage or database
+    await this.diffStorage.set(`${blockNumber}:${key}`, { oldValue, newValue });
   }
 
-  pruneOldStateDiffs(currentBlockNumber: number, maxRecentBlocks: number): void {
-    const oldestBlockToKeep = currentBlockNumber - maxRecentBlocks;
-    for (const [blockNumber] of this.stateDiffs) {
-      if (blockNumber < oldestBlockToKeep) {
-        this.stateDiffs.delete(blockNumber);
-      }
+  async applyDiff(blockNumber: number, changedKeys: string[]) {
+    for (const key of changedKeys) {
+      const { oldValue, newValue } = await this.diffStorage.get(`${blockNumber}:${key}`);
+      await this.stateManager.setState(key, newValue);
     }
   }
 }
