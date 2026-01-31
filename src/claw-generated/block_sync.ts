@@ -1,97 +1,64 @@
-import { Block, BlockHeader } from './blockchain/block';
-import { PeerManager } from './network/PeerManager';
-import { DatabaseService } from './storage/database';
-import { CheckpointManager } from './checkpoint_manager';
+import { Block } from '../blockchain/block';
+import { Peer } from '../network/peer';
+import { LocalChain } from '../blockchain/local_chain';
 
-export class BlockSyncManager {
-  private peerManager: PeerManager;
-  private database: DatabaseService;
-  private checkpointManager: CheckpointManager;
+export class BlockSync {
+  private peers: Peer[];
+  private missingBlocks: Block[];
+  private localChain: LocalChain;
 
-  constructor(peerManager: PeerManager, database: DatabaseService, checkpointManager: CheckpointManager) {
-    this.peerManager = peerManager;
-    this.database = database;
-    this.checkpointManager = checkpointManager;
+  constructor(peers: Peer[], localChain: LocalChain) {
+    this.peers = peers;
+    this.missingBlocks = [];
+    this.localChain = localChain;
   }
 
-  async syncBlocks() {
-    // 1. Query all connected peers for their latest block heights
-    const peerHeights = await this.peerManager.getLatestBlockHeights();
-
-    // 2. Determine the highest block height across all peers
-    const maxHeight = Math.max(...Object.values(peerHeights));
-
-    // 3. Check the local database for the current block height
-    const localHeight = await this.database.getLatestBlockHeight();
-
-    // 4. If the local height is less than the max height, download the missing blocks
-    if (localHeight < maxHeight) {
-      await this.downloadMissingBlocks(localHeight + 1, maxHeight);
-    }
+  async sync() {
+    await this.detectMissingBlocks();
+    await this.downloadMissingBlocks();
+    await this.verifyAndIntegrateBlocks();
   }
 
-  private async downloadMissingBlocks(fromHeight: number, toHeight: number) {
-    const promises = [];
+  private async detectMissingBlocks() {
+    const localHeight = this.localChain.getLatestBlock().height;
 
-    // Check for checkpoints first
-    for (let height = fromHeight; height <= toHeight; height += this.checkpointManager.checkpointInterval) {
-      const checkpoint = await this.checkpointManager.getCheckpointByHeight(height);
-      if (checkpoint) {
-        // Skip verification for blocks before the checkpoint
-        await this.database.storeBlocks(await this.downloadBlocksFromCheckpoint(height, checkpoint));
-        fromHeight = height + this.checkpointManager.checkpointInterval;
+    for (const peer of this.peers) {
+      const peerHeight = await peer.getLatestBlockHeight();
+      if (peerHeight > localHeight) {
+        const missingBlockRange = Array.from({ length: peerHeight - localHeight }, (_, i) => i + localHeight + 1);
+        this.missingBlocks.push(...(await peer.getBlocks(missingBlockRange)));
       }
     }
-
-    // Download any remaining blocks
-    for (let height = fromHeight; height <= toHeight; height++) {
-      promises.push(this.downloadBlockAtHeight(height));
-    }
-
-    await Promise.all(promises);
   }
 
-  private async downloadBlocksFromCheckpoint(fromHeight: number, checkpoint: BlockHeader): Promise<Block[]> {
-    const blocks = [];
-    for (let height = fromHeight; height <= fromHeight + this.checkpointManager.checkpointInterval; height++) {
-      const block = await this.downloadBlockAtHeight(height);
-      blocks.push(block);
-    }
-    return blocks;
-  }
+  private async downloadMissingBlocks() {
+    const downloadQueue = new Set(this.missingBlocks.map(b => b.height));
+    const downloadedBlocks = new Map<number, Block>();
 
-  private async downloadBlockAtHeight(height: number): Promise<Block> {
-    // 1. Request the block from multiple peers in parallel
-    const blockPromises = this.peerManager.connectedPeers.map(async (peer) => {
-      try {
-        return await peer.getBlockByHeight(height);
-      } catch (error) {
-        console.error(`Error downloading block at height ${height} from peer ${peer.id}: ${error}`);
-        return null;
+    while (downloadQueue.size > 0) {
+      const downloadTasks = [];
+      for (const peer of this.peers) {
+        const missingHeight = Array.from(downloadQueue).find(h => h <= peer.getLatestBlockHeight());
+        if (missingHeight) {
+          downloadTasks.push(peer.getBlock(missingHeight).then(b => {
+            downloadQueue.delete(b.height);
+            downloadedBlocks.set(b.height, b);
+          }));
+        }
       }
-    });
-
-    // 2. Wait for the first successful download
-    const blocks = await Promise.all(blockPromises);
-    const validBlock = blocks.find((block) => block !== null);
-
-    if (!validBlock) {
-      throw new Error(`Failed to download block at height ${height}`);
+      await Promise.all(downloadTasks);
     }
 
-    // 3. Verify the downloaded block
-    await this.verifyBlock(validBlock);
-
-    // 4. Persist the block to the local database
-    await this.database.storeBlock(validBlock);
-
-    // 5. Create a checkpoint if necessary
-    await this.checkpointManager.createCheckpoint(validBlock);
-
-    return validBlock;
+    this.missingBlocks = Array.from(downloadedBlocks.values());
   }
 
-  private async verifyBlock(block: Block): Promise<void> {
-    // TODO: Implement block verification logic
+  private async verifyAndIntegrateBlocks() {
+    for (const block of this.missingBlocks) {
+      if (await this.localChain.verifyBlock(block)) {
+        await this.localChain.addBlock(block);
+      } else {
+        console.error(`Failed to verify block ${block.height}`);
+      }
+    }
   }
 }
