@@ -1,9 +1,21 @@
-import { getSignaturesForAddress } from './get_signatures_for_address';
-import { ClawChainState } from '../state';
+import { RPCHandler } from './rpc_handler';
+import { TransactionStorage } from './transaction_storage';
 
-export function createRpcServer(state: ClawChainState) {
-  return {
-    // Existing RPC methods...
-    getSignaturesForAddress: (params: any) => getSignaturesForAddress(params, state)
-  };
+export class RPCServer {
+  private rpcHandler: RPCHandler;
+
+  constructor() {
+    const transactionStorage = new TransactionStorage();
+    this.rpcHandler = new RPCHandler(transactionStorage);
+  }
+
+  async handleRequest(method: string, params: any): Promise<any> {
+    switch (method) {
+      case 'getSignaturesForAddress':
+        const { address, limit, offset } = params;
+        return await this.rpcHandler.getSignaturesForAddress(address, limit, offset);
+      default:
+        throw new Error(`Unknown RPC method: ${method}`);
+    }
+  }
 }
