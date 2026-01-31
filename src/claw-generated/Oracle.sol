@@ -1,49 +1,28 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "./DataProvider.sol";
+
 contract Oracle {
-    // Data structures for oracle submissions
-    struct OracleSubmission {
-        bytes32 commitment;
-        uint256 revealBlock;
+    DataProvider public dataProvider;
+    mapping(bytes32 => bytes32) public commitments;
+    mapping(bytes32 => bytes32) public results;
+
+    constructor(address _dataProvider) {
+        dataProvider = DataProvider(_dataProvider);
     }
 
-    mapping(address => mapping(bytes32 => OracleSubmission)) public submissions;
-
-    // Events
-    event OracleCommitted(address indexed sender, bytes32 indexed dataHash, uint256 revealBlock);
-    event OracleRevealed(address indexed sender, bytes32 indexed dataHash, bytes data);
-
-    // Functions
-    function commitData(bytes32 dataHash, uint256 revealBlock) public {
-        // Check if there's an existing submission
-        OracleSubmission storage submission = submissions[msg.sender][dataHash];
-        require(submission.commitment == 0, "Data already committed");
-
-        // Store the commitment and reveal block
-        submission.commitment = dataHash;
-        submission.revealBlock = revealBlock;
-
-        emit OracleCommitted(msg.sender, dataHash, revealBlock);
+    function requestData(bytes32 _queryId, bytes calldata _data) public {
+        bytes32 commitment = keccak256(abi.encodePacked(_queryId, _data));
+        commitments[_queryId] = commitment;
     }
 
-    function revealData(bytes memory data) public {
-        bytes32 dataHash = keccak256(data);
-
-        // Check if there's a valid commitment
-        OracleSubmission storage submission = submissions[msg.sender][dataHash];
-        require(submission.commitment != 0, "No valid commitment");
-        require(block.number >= submission.revealBlock, "Data not ready to be revealed");
-
-        // Clear the submission and emit the reveal event
-        delete submissions[msg.sender][dataHash];
-        emit OracleRevealed(msg.sender, dataHash, data);
+    function fulfillData(bytes32 _queryId, bytes calldata _data) public {
+        require(commitments[_queryId] == keccak256(abi.encodePacked(_queryId, _data)), "Invalid commitment");
+        results[_queryId] = dataProvider.processData(_data);
     }
 
-    function getOracleData(bytes32 dataHash) public view returns (bytes memory) {
-        // Retrieve the verified oracle data
-        OracleSubmission storage submission = submissions[msg.sender][dataHash];
-        require(submission.commitment != 0, "No valid data");
-        return data;
+    function getResult(bytes32 _queryId) public view returns (bytes32) {
+        return results[_queryId];
     }
 }
