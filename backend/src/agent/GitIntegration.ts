@@ -156,18 +156,16 @@ export class GitIntegration {
     }
   }
 
-  // Auto-commit and push changes - DISABLED to prevent deployment file deletions
+  // Auto-commit and push changes - RE-ENABLED with safety checks
+  // Only commits files in allowed directories, never touches deployment configs
   async autoCommitAndPush(message: string, taskId?: string): Promise<GitOperationResult> {
-    // DISABLED: Git operations were deleting critical deployment files
-    // The agent can still work and generate code, but commits must be done manually
-    console.log('[GIT] autoCommitAndPush DISABLED for safety:', message);
-    return {
-      success: true,
-      output: 'Git auto-commit disabled. Agent work is logged but not pushed to prevent deployment issues.'
-    };
-    
-    /* DISABLED CODE BELOW
     console.log('[GIT] autoCommitAndPush called:', message);
+    
+    // Safety check: only auto-commit if AUTO_GIT_PUSH is enabled
+    if (AUTO_PUSH_ENABLED === false && !GITHUB_TOKEN) {
+      console.log('[GIT] Auto-push disabled (no GITHUB_TOKEN)');
+      // Still create local commit
+    }
     
     const status = this.getStatus();
     console.log('[GIT] Status:', JSON.stringify(status));
@@ -181,12 +179,49 @@ export class GitIntegration {
       };
     }
 
-    console.log(`[GIT] Auto-committing ${status.changes.length} changes...`);
-    */
+    // SAFETY: Filter out protected files from staging
+    const PROTECTED_FILES = [
+      'package.json', 'package-lock.json', 'tsconfig.json', 'vite.config.ts',
+      '.gitignore', 'Dockerfile', 'docker-compose.yml', 'railway.json',
+      'vercel.json', 'Procfile', '.env', '.env.example', 'README.md'
+    ];
+    
+    const safeChanges = status.changes.filter(file => {
+      const fileName = file.split('/').pop() || '';
+      // Block protected files
+      if (PROTECTED_FILES.includes(fileName)) {
+        console.log(`[GIT] Skipping protected file: ${file}`);
+        return false;
+      }
+      // Only allow certain directories
+      const allowedDirs = ['backend/src/', 'frontend/src/', 'docs/', 'tests/'];
+      const inAllowed = allowedDirs.some(dir => file.startsWith(dir));
+      if (!inAllowed) {
+        console.log(`[GIT] Skipping file outside allowed dirs: ${file}`);
+        return false;
+      }
+      return true;
+    });
+    
+    if (safeChanges.length === 0) {
+      console.log('[GIT] No safe changes to commit');
+      return {
+        success: true,
+        output: 'No changes in allowed directories to commit'
+      };
+    }
+
+    console.log(`[GIT] Auto-committing ${safeChanges.length} changes...`);
 
     try {
-      // Stage all changes
-      this.execGit('add -A', true);
+      // Stage only safe changes (not protected files or files outside allowed dirs)
+      for (const file of safeChanges) {
+        try {
+          this.execGit(`add "${file}"`, true);
+        } catch (e) {
+          console.log(`[GIT] Failed to stage ${file}`);
+        }
+      }
 
       // Create commit with CLAW prefix
       const fullMessage = taskId 

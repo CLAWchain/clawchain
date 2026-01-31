@@ -2,6 +2,9 @@ import { Router } from 'express';
 import { db } from '../database/db';
 import crypto from 'crypto';
 import { stateManager } from '../blockchain/StateManager';
+import { Transaction, generateHash } from '../blockchain/Block';
+import { signTransaction, generateKeypair, bytesToBase58, sha256Base58 } from '../blockchain/Crypto';
+import { eventBus } from '../events/EventBus';
 
 const walletRouter = Router();
 
@@ -10,19 +13,37 @@ const memoryWallets: Map<string, any> = new Map();
 const memoryTransactions: Map<string, any[]> = new Map();
 const memoryStakes: Map<string, any> = new Map();
 
-// Generate Solana-style base58 address
+// Pending transactions pool (imported externally or tracked here)
+let txPoolRef: any = null;
+export function setTxPool(pool: any) {
+  txPoolRef = pool;
+}
+
+// Generate Solana-style base58 address using proper Ed25519 keypair
 const generateAddress = (prefix: string = 'molt_') => {
-  const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-  let result = prefix;
-  for (let i = 0; i < 40; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  // Use real Ed25519 keypair for proper blockchain addresses
+  try {
+    const { publicKey } = generateKeypair();
+    return publicKey;
+  } catch {
+    // Fallback to simple random generation
+    const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+    let result = prefix;
+    for (let i = 0; i < 40; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
   }
-  return result;
 };
 
-// Generate private key
+// Generate Ed25519 private key
 const generatePrivateKey = () => {
-  return crypto.randomBytes(32).toString('hex');
+  try {
+    const { privateKey } = generateKeypair();
+    return privateKey;
+  } catch {
+    return crypto.randomBytes(32).toString('hex');
+  }
 };
 
 // Faucet cooldown: 24 hours
@@ -212,10 +233,16 @@ walletRouter.post('/create', async (req, res) => {
   }
 });
 
-// Get wallet by address
+// Get wallet by address - returns both wallet metadata and blockchain state
 walletRouter.get('/address/:address', async (req, res) => {
   try {
-    const wallet = await getWallet(req.params.address);
+    const address = req.params.address;
+    const wallet = await getWallet(address);
+    
+    // Get blockchain state (balance, nonce) from StateManager
+    const blockchainBalance = stateManager.getBalance(address);
+    const blockchainNonce = stateManager.getNonce(address);
+    const displayBalance = Number(blockchainBalance / (10n ** 18n));
     
     if (wallet) {
       const transactions = await getTransactions(wallet.id);
@@ -224,7 +251,12 @@ walletRouter.get('/address/:address', async (req, res) => {
         wallet: {
           id: wallet.id,
           address: wallet.address,
-          balance: wallet.balance || 0,
+          // Primary balance from blockchain state
+          balance: displayBalance,
+          blockchainBalance: stateManager.formatBalance(blockchainBalance),
+          blockchainBalanceRaw: blockchainBalance.toString(),
+          nonce: blockchainNonce,
+          // Metadata from wallet table
           created_at: wallet.created_at,
           last_faucet_claim: wallet.last_faucet_claim || 0,
           total_received: wallet.total_received || 0,
@@ -234,7 +266,24 @@ walletRouter.get('/address/:address', async (req, res) => {
         }
       });
     } else {
-      res.status(404).json({ success: false, error: 'Wallet not found' });
+      // Wallet doesn't exist in our DB but might have blockchain balance
+      res.json({
+        success: true,
+        wallet: {
+          id: null,
+          address,
+          balance: displayBalance,
+          blockchainBalance: stateManager.formatBalance(blockchainBalance),
+          blockchainBalanceRaw: blockchainBalance.toString(),
+          nonce: blockchainNonce,
+          created_at: null,
+          last_faucet_claim: 0,
+          total_received: 0,
+          total_sent: 0,
+          tx_count: 0,
+          transactions: []
+        }
+      });
     }
   } catch (error) {
     console.error('[WALLET] Fetch error:', error);
@@ -242,12 +291,36 @@ walletRouter.get('/address/:address', async (req, res) => {
   }
 });
 
+// Get pure blockchain state for an address
+walletRouter.get('/blockchain/:address', async (req, res) => {
+  try {
+    const address = req.params.address;
+    const balance = stateManager.getBalance(address);
+    const nonce = stateManager.getNonce(address);
+    const account = stateManager.getAccount(address);
+    
+    res.json({
+      success: true,
+      address,
+      balance: stateManager.formatBalance(balance),
+      balanceRaw: balance.toString(),
+      nonce,
+      hasAccount: !!account,
+      stateRoot: stateManager.getStateRoot()
+    });
+  } catch (error) {
+    console.error('[WALLET] Blockchain fetch error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch blockchain state' });
+  }
+});
+
 // Import wallet (check if exists, or create it)
 walletRouter.post('/import', async (req, res) => {
   try {
     const { address } = req.body;
-    if (!address || !address.startsWith('molt_')) {
-      return res.status(400).json({ success: false, error: 'Invalid address format. Must start with molt_' });
+    // Allow any base58-like address format (not just molt_ prefix)
+    if (!address || address.length < 20) {
+      return res.status(400).json({ success: false, error: 'Invalid address format. Must be at least 20 characters.' });
     }
 
     let wallet = await getWallet(address);
@@ -275,12 +348,20 @@ walletRouter.post('/import', async (req, res) => {
 
     const transactions = await getTransactions(wallet.id);
     
+    // Get blockchain state
+    const blockchainBalance = stateManager.getBalance(address);
+    const blockchainNonce = stateManager.getNonce(address);
+    const displayBalance = Number(blockchainBalance / (10n ** 18n));
+    
     res.json({
       success: true,
       wallet: {
         id: wallet.id,
         address: wallet.address,
-        balance: wallet.balance || 0,
+        balance: displayBalance,
+        blockchainBalance: stateManager.formatBalance(blockchainBalance),
+        blockchainBalanceRaw: blockchainBalance.toString(),
+        nonce: blockchainNonce,
         created_at: wallet.created_at,
         last_faucet_claim: wallet.last_faucet_claim || 0,
         total_received: wallet.total_received || 0,
@@ -292,6 +373,39 @@ walletRouter.post('/import', async (req, res) => {
   } catch (error) {
     console.error('[WALLET] Import error:', error);
     res.status(500).json({ success: false, error: 'Failed to import wallet' });
+  }
+});
+
+// Get blockchain supply stats
+walletRouter.get('/supply', async (req, res) => {
+  try {
+    const totalSupply = stateManager.getTotalSupply();
+    const circulatingSupply = stateManager.getCirculatingSupply();
+    
+    res.json({
+      success: true,
+      totalSupply: stateManager.formatBalance(totalSupply),
+      totalSupplyRaw: totalSupply.toString(),
+      circulatingSupply: stateManager.formatBalance(circulatingSupply),
+      circulatingSupplyRaw: circulatingSupply.toString(),
+      stateRoot: stateManager.getStateRoot()
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to get supply stats' });
+  }
+});
+
+// Get all accounts (for explorer)
+walletRouter.get('/accounts', async (req, res) => {
+  try {
+    const accounts = stateManager.getAccountsSummary();
+    res.json({
+      success: true,
+      accounts,
+      count: accounts.length
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to get accounts' });
   }
 });
 
@@ -419,10 +533,10 @@ walletRouter.get('/faucet/status/:address', async (req, res) => {
   }
 });
 
-// Send tokens
+// Send tokens - creates real blockchain transactions
 walletRouter.post('/send', async (req, res) => {
   try {
-    const { fromAddress, toAddress, amount } = req.body;
+    const { fromAddress, toAddress, amount, privateKey } = req.body;
 
     if (!fromAddress || !toAddress || !amount) {
       return res.status(400).json({ success: false, error: 'Missing required fields' });
@@ -436,17 +550,27 @@ walletRouter.post('/send', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Cannot send to yourself' });
     }
 
-    // Get sender
-    const sender = await getWallet(fromAddress);
+    // Get sender wallet metadata (for nonce tracking)
+    let sender = await getWallet(fromAddress);
     if (!sender) {
       return res.status(404).json({ success: false, error: 'Sender wallet not found' });
     }
 
-    if ((sender.balance || 0) < amount) {
-      return res.status(400).json({ success: false, error: 'Insufficient balance' });
+    // Check blockchain balance via StateManager
+    const senderBalance = stateManager.getBalance(fromAddress);
+    const amountWithDecimals = BigInt(Math.floor(amount * 1e18));
+    const gasPrice = 1n; // 1 lamport
+    const gasLimit = 21000n; // Basic transfer
+    const totalCost = amountWithDecimals + (gasPrice * gasLimit);
+
+    if (senderBalance < totalCost) {
+      return res.status(400).json({ 
+        success: false, 
+        error: `Insufficient blockchain balance: has ${stateManager.formatBalance(senderBalance)}, needs ${stateManager.formatBalance(totalCost)}` 
+      });
     }
 
-    // Get or create recipient
+    // Get or create recipient wallet metadata
     let recipient = await getWallet(toAddress);
     if (!recipient) {
       const recipientId = `wallet_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -464,22 +588,73 @@ walletRouter.post('/send', async (req, res) => {
       await saveWallet(recipient);
     }
 
-    const txHash = generateAddress('tx_');
     const now = Date.now();
+    
+    // Get current nonce from StateManager
+    const nonce = stateManager.getNonce(fromAddress);
 
-    // Update sender
-    sender.balance = (sender.balance || 0) - amount;
+    // Create blockchain transaction
+    const txData: Omit<Transaction, 'hash' | 'signature'> = {
+      from: fromAddress,
+      to: toAddress,
+      value: amountWithDecimals,
+      gasPrice,
+      gasLimit,
+      nonce,
+      data: ''
+    };
+
+    let txHash: string;
+    let signature: string;
+
+    // Sign transaction if private key provided, otherwise create unsigned tx
+    if (privateKey) {
+      try {
+        const signed = signTransaction(txData, privateKey);
+        txHash = signed.hash;
+        signature = signed.signature;
+      } catch (signError) {
+        console.error('[WALLET] Signing failed:', signError);
+        return res.status(400).json({ success: false, error: 'Failed to sign transaction. Invalid private key?' });
+      }
+    } else {
+      // For web wallet without private key, create a simulated signature
+      // In production, this would require the client to sign
+      signature = sha256Base58(`${fromAddress}:${toAddress}:${amount}:${now}`);
+      txHash = sha256Base58(JSON.stringify({ ...txData, value: txData.value.toString(), gasPrice: txData.gasPrice.toString(), gasLimit: txData.gasLimit.toString(), signature }));
+    }
+
+    const transaction: Transaction = {
+      ...txData,
+      hash: txHash,
+      signature
+    };
+
+    // Add to transaction pool if available (will be included in next block)
+    if (txPoolRef) {
+      const poolResult = await txPoolRef.addTransaction(transaction);
+      if (!poolResult.valid) {
+        return res.status(400).json({ success: false, error: poolResult.error || 'Transaction rejected by pool' });
+      }
+    } else {
+      // Direct state update for immediate effect (when pool not available)
+      // This simulates instant confirmation
+      const applied = await stateManager.applyTransaction(transaction, 0);
+      if (!applied) {
+        return res.status(400).json({ success: false, error: 'Transaction failed: insufficient balance or invalid nonce' });
+      }
+    }
+
+    // Update wallet metadata
     sender.total_sent = (sender.total_sent || 0) + amount;
     sender.tx_count = (sender.tx_count || 0) + 1;
     await saveWallet(sender);
 
-    // Update recipient
-    recipient.balance = (recipient.balance || 0) + amount;
     recipient.total_received = (recipient.total_received || 0) + amount;
     recipient.tx_count = (recipient.tx_count || 0) + 1;
     await saveWallet(recipient);
 
-    // Record transactions
+    // Record transactions for wallet history
     await addTransaction({
       id: `${now}_send_${Math.random().toString(36).slice(2, 6)}`,
       wallet_id: sender.id,
@@ -489,7 +664,7 @@ walletRouter.post('/send', async (req, res) => {
       to_address: toAddress,
       hash: txHash,
       timestamp: now,
-      status: 'confirmed'
+      status: txPoolRef ? 'pending' : 'confirmed'
     });
 
     await addTransaction({
@@ -501,10 +676,21 @@ walletRouter.post('/send', async (req, res) => {
       to_address: toAddress,
       hash: txHash,
       timestamp: now,
-      status: 'confirmed'
+      status: txPoolRef ? 'pending' : 'confirmed'
     });
 
-    console.log(`[WALLET] Transfer: ${amount} CLAW from ${fromAddress.slice(0, 20)}... to ${toAddress.slice(0, 20)}...`);
+    // Emit transaction event
+    eventBus.emit('wallet_transfer', {
+      from: fromAddress,
+      to: toAddress,
+      amount: amount.toString(),
+      txHash,
+      timestamp: now
+    });
+
+    // Get updated blockchain balance
+    const newBalance = stateManager.getBalance(fromAddress);
+    console.log(`[WALLET] Transfer: ${amount} CLAW from ${fromAddress.slice(0, 20)}... to ${toAddress.slice(0, 20)}... (tx: ${txHash.slice(0, 16)}...)`);
 
     res.json({
       success: true,
@@ -512,8 +698,10 @@ walletRouter.post('/send', async (req, res) => {
       amount,
       from: fromAddress,
       to: toAddress,
-      newBalance: sender.balance,
-      message: `Successfully sent ${amount} CLAW!`
+      newBalance: Number(newBalance / (10n ** 18n)),
+      blockchainBalance: stateManager.formatBalance(newBalance),
+      status: txPoolRef ? 'pending' : 'confirmed',
+      message: `Successfully ${txPoolRef ? 'submitted' : 'sent'} ${amount} CLAW!`
     });
   } catch (error) {
     console.error('[WALLET] Send error:', error);

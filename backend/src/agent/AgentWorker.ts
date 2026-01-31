@@ -8,6 +8,7 @@ import { agentBrain, Decision } from './AgentBrain';
 import { agentExecutor, AGENT_TOOLS } from './AgentExecutor';
 import { taskSources } from './TaskSources';
 import { gitIntegration } from './GitIntegration';
+import { ciMonitor } from './CIMonitor';
 
 dotenv.config();
 
@@ -88,6 +89,14 @@ class AgentWorker {
       await agentMemory.initialize();
       await agentGoals.initialize();
       await chainObserver.start();
+      
+      // Start CI monitoring for real-time task generation
+      // Check every 10 minutes for test/build failures
+      const CI_CHECK_INTERVAL = 10 * 60 * 1000; // 10 minutes
+      if (process.env.ENABLE_CI_MONITOR !== 'false') {
+        ciMonitor.start(CI_CHECK_INTERVAL);
+        console.log('[AGENT] CI monitor started');
+      }
       
       this.state.brainActive = true;
       console.log('[AGENT] Brain systems online');
@@ -914,6 +923,7 @@ Ready for council review.`,
     }
     
     chainObserver.stop();
+    ciMonitor.stop();
     
     this.broadcast('status', { status: 'stopped' });
   }

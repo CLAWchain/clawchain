@@ -274,9 +274,10 @@ async function main() {
   console.log('[AGENTS] User agents system ready');
 
   // ========== WALLET & FAUCET SYSTEM ==========
-  const { walletRouter } = await import('./wallet');
+  const { walletRouter, setTxPool } = await import('./wallet');
+  setTxPool(txPool);  // Connect wallet to transaction pool for real blockchain transactions
   app.use('/api/wallet', walletRouter);
-  console.log('[WALLET] Wallet & faucet system ready');
+  console.log('[WALLET] Wallet & faucet system ready (connected to blockchain)');
 
   // ========== ADMIN DASHBOARD ==========
   const { adminRouter } = await import('./admin');

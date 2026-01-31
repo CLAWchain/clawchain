@@ -102,7 +102,7 @@ class ChainObserverSystem {
     if (this.transactionCounts.length > 100) this.transactionCounts.shift();
 
     // Update state
-    this.state.blockHeight = block?.header?.number || this.state.blockHeight + 1;
+    this.state.blockHeight = block?.header?.height || block?.header?.number || this.state.blockHeight + 1;
     this.state.lastBlockTime = new Date();
     this.state.averageBlockTime = this.blockTimes.reduce((a, b) => a + b, 0) / this.blockTimes.length;
     this.state.recentTPS = this.transactionCounts.reduce((a, b) => a + b, 0) / this.transactionCounts.length / 10;
@@ -110,6 +110,7 @@ class ChainObserverSystem {
     // Check for issues
     await this.checkBlockTimeIssue(blockTime);
     await this.checkEmptyBlockPattern();
+    await this.checkGasUsage(block);
   }
 
   private async onTransactionAdded(tx: any): Promise<void> {
@@ -168,6 +169,51 @@ class ChainObserverSystem {
           `Block production slowdown detected: ${blockTime.toFixed(1)}s`,
           { blockTime }
         );
+        
+        // Emit event for task generation
+        this.eventBus.emit('chain_performance_issue', {
+          type: 'slow_blocks',
+          blockTime,
+          averageBlockTime: this.state.averageBlockTime,
+          severity: issue.severity
+        });
+      }
+    }
+  }
+
+  // Check for high gas usage patterns
+  private async checkGasUsage(block: any): Promise<void> {
+    const gasUsed = BigInt(block?.header?.gasUsed || '0');
+    const gasLimit = BigInt(block?.header?.gasLimit || '30000000');
+    const utilizationPercent = Number((gasUsed * 100n) / gasLimit);
+
+    // If consistently high gas usage (>80%), suggest optimization
+    if (utilizationPercent > 80) {
+      const issue: ChainIssue = {
+        id: `gas_${Date.now()}`,
+        type: 'performance',
+        severity: utilizationPercent > 95 ? 'high' : 'medium',
+        description: `High gas utilization: ${utilizationPercent}%`,
+        detectedAt: new Date(),
+        metadata: { gasUsed: gasUsed.toString(), gasLimit: gasLimit.toString(), utilizationPercent }
+      };
+
+      const hasRecent = this.state.issues.some(
+        i => i.description.includes('gas utilization') && 
+             (Date.now() - i.detectedAt.getTime()) < 300000
+      );
+
+      if (!hasRecent) {
+        this.state.issues.push(issue);
+        
+        // Emit event for task generation - optimization task
+        this.eventBus.emit('chain_performance_issue', {
+          type: 'high_gas',
+          gasUsed: gasUsed.toString(),
+          gasLimit: gasLimit.toString(),
+          utilizationPercent,
+          severity: issue.severity
+        });
       }
     }
   }
