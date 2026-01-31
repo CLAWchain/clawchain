@@ -4,80 +4,96 @@ pragma solidity ^0.8.0;
 /**
  * @title CRC-20 Token Standard
  * @dev Implementation of the basic standard for fungible tokens on ClawChain.
- * Based on the ERC-20 standard, with a few minor changes to fit the ClawChain ecosystem.
+ * Based on the ERC-20 standard.
  */
 contract CRC20 {
-    // Events
+    mapping(address => uint256) private _balances;
+    mapping(address => mapping(address => uint256)) private _allowances;
+
+    uint256 private _totalSupply;
+    string private _name;
+    string private _symbol;
+    uint8 private _decimals;
+
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
 
-    // Token Metadata
-    string public name;
-    string public symbol;
-    uint8 public decimals;
-
-    // Token State
-    mapping(address =&gt; uint256) public balanceOf;
-    mapping(address =&gt; mapping(address =&gt; uint256)) public allowance;
-    uint256 public totalSupply;
-
-    /**
-     * @dev Constructor to initialize the token metadata.
-     * @param _name The name of the token.
-     * @param _symbol The symbol of the token.
-     * @param _decimals The number of decimal places the token supports.
-     */
-    constructor(string memory _name, string memory _symbol, uint8 _decimals) {
-        name = _name;
-        symbol = _symbol;
-        decimals = _decimals;
+    constructor(string memory name_, string memory symbol_, uint8 decimals_) {
+        _name = name_;
+        _symbol = symbol_;
+        _decimals = decimals_;
     }
 
-    /**
-     * @dev Transfers tokens from the caller's account to the specified address.
-     * @param recipient The address to transfer tokens to.
-     * @param amount The amount of tokens to transfer.
-     * @return bool True if the transfer was successful.
-     */
+    function name() public view returns (string memory) {
+        return _name;
+    }
+
+    function symbol() public view returns (string memory) {
+        return _symbol;
+    }
+
+    function decimals() public view returns (uint8) {
+        return _decimals;
+    }
+
+    function totalSupply() public view returns (uint256) {
+        return _totalSupply;
+    }
+
+    function balanceOf(address account) public view returns (uint256) {
+        return _balances[account];
+    }
+
     function transfer(address recipient, uint256 amount) public virtual returns (bool) {
-        require(recipient != address(0), "CRC20: cannot transfer to the zero address");
-        require(amount &lt;= balanceOf[msg.sender], "CRC20: insufficient balance");
-
-        balanceOf[msg.sender] -= amount;
-        balanceOf[recipient] += amount;
-        emit Transfer(msg.sender, recipient, amount);
+        _transfer(_msgSender(), recipient, amount);
         return true;
     }
 
-    /**
-     * @dev Allows the spender to withdraw from the caller's account multiple times, up to the value amount.
-     * @param spender The address to approve for spending.
-     * @param amount The amount of tokens to be approved for spending.
-     * @return bool True if the approval was successful.
-     */
     function approve(address spender, uint256 amount) public virtual returns (bool) {
-        require(spender != address(0), "CRC20: cannot approve the zero address");
-        allowance[msg.sender][spender] = amount;
-        emit Approval(msg.sender, spender, amount);
+        _approve(_msgSender(), spender, amount);
         return true;
     }
 
-    /**
-     * @dev Transfers tokens from the specified address to the recipient, provided the caller has sufficient allowance.
-     * @param sender The address to transfer tokens from.
-     * @param recipient The address to transfer tokens to.
-     * @param amount The amount of tokens to transfer.
-     * @return bool True if the transfer was successful.
-     */
-    function transferFrom(address sender, address recipient, uint256 amount) public virtual returns (bool) {
-        require(recipient != address(0), "CRC20: cannot transfer to the zero address");
-        require(amount &lt;= balanceOf[sender], "CRC20: insufficient balance");
-        require(amount &lt;= allowance[sender][msg.sender], "CRC20: insufficient allowance");
+    function allowance(address owner, address spender) public view virtual returns (uint256) {
+        return _allowances[owner][spender];
+    }
 
-        balanceOf[sender] -= amount;
-        balanceOf[recipient] += amount;
-        allowance[sender][msg.sender] -= amount;
-        emit Transfer(sender, recipient, amount);
+    function transferFrom(address sender, address recipient, uint256 amount) public virtual returns (bool) {
+        _transfer(sender, recipient, amount);
+        _approve(sender, _msgSender(), _allowances[sender][_msgSender()] - amount);
         return true;
+    }
+
+    function _transfer(address sender, address recipient, uint256 amount) internal virtual {
+        require(sender != address(0), "CRC20: transfer from the zero address");
+        require(recipient != address(0), "CRC20: transfer to the zero address");
+
+        _balances[sender] -= amount;
+        _balances[recipient] += amount;
+        emit Transfer(sender, recipient, amount);
+    }
+
+    function _approve(address owner, address spender, uint256 amount) internal virtual {
+        require(owner != address(0), "CRC20: approve from the zero address");
+        require(spender != address(0), "CRC20: approve to the zero address");
+
+        _allowances[owner][spender] = amount;
+        emit Approval(owner, spender, amount);
+    }
+
+    function _mint(address account, uint256 amount) internal virtual {
+        require(account != address(0), "CRC20: mint to the zero address");
+
+        _totalSupply += amount;
+        _balances[account] += amount;
+        emit Transfer(address(0), account, amount);
+    }
+
+    function _burn(address account, uint256 amount) internal virtual {
+        require(account != address(0), "CRC20: burn from the zero address");
+
+        _balances[account] -= amount;
+        _totalSupply -= amount;
+        emit Transfer(account, address(0), amount);
     }
 }
