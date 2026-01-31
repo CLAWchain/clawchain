@@ -2,40 +2,48 @@
 
 ## RPC Methods
 
-### `get_transaction`
-**Description:** Retrieves a transaction by its signature.
-
-**Parameters:**
-- `signature: string` - The signature of the transaction to retrieve.
-
-**Returns:**
-- `transaction: Transaction | null` - The transaction object, or `null` if not found.
-
-**Example:**
-```typescript
-const signature = "0x123abc...";
-const transaction = await rpc.getTransaction(signature);
-if (transaction) {
-  console.log(transaction.to, transaction.value);
-} else {
-  console.log("Transaction not found");
+### GET /api/status
+**Description:** Returns the overall health status of the node.
+**Response:**
+```json
+{
+  "status": "healthy" | "unhealthy"
 }
 ```
 
-### `get_signatures_for_address`
-**Description:** Retrieves a list of transaction signatures for a given address.
+### GET /api/ready
+**Description:** Returns the readiness status of the node to process requests.
+**Response:**
+```json
+{
+  "status": "ready" | "not ready"
+}
+```
 
+### GET /api/block/:hash/finality
+**Description:** Returns the finality status and confirmation count for a given block.
 **Parameters:**
-- `address: string` - The address to retrieve signatures for.
-- `limit?: number` - The maximum number of signatures to return (default: 10).
-- `offset?: number` - The offset to start returning signatures from (default: 0).
+- `hash` (string): The hash of the block.
+**Response:**
+```json
+{
+  "isFinalized": boolean,
+  "confirmations": number
+}
+```
 
-**Returns:**
-- `signatures: string[]` - An array of transaction signatures.
-
-**Example:**
-```typescript
-const address = "0x456def...";
-const signatures = await rpc.getSignaturesForAddress(address, 20, 0);
-console.log(signatures);
+### POST /api/contract-verification
+**Description:** Allows verifying the validity of a contract against the ClawChain protocol.
+**Request Body:**
+```json
+{
+  "source": string
+}
+```
+**Response:**
+```json
+{
+  "contractAddress": string | null,
+  "error": string | null
+}
 ```
