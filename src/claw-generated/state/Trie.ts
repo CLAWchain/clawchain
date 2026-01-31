@@ -34,6 +34,8 @@ class Trie {
     if (node.value !== value) {
       node.value = value;
       this.markNodeDirty(key, node);
+      this.updateNodeHash(node);
+      this.updateParentHashes(key);
     }
   }
 
@@ -48,18 +50,34 @@ class Trie {
 
   markNodeDirty(key: Buffer, node: TrieNode): void {
     this.cache.set(key, node);
-    // TODO: Implement updating node hashes and marking parent nodes as dirty
+  }
+
+  updateNodeHash(node: TrieNode): void {
+    node.hash = hash(encodeTrieNode(node));
+  }
+
+  updateParentHashes(key: Buffer): void {
+    let currentKey = key;
+    let currentNode = this.getNode(currentKey);
+    while (currentNode) {
+      this.updateNodeHash(currentNode);
+      this.markNodeDirty(currentKey, currentNode);
+      currentKey = currentKey.slice(0, -1);
+      currentNode = this.getNode(currentKey);
+    }
   }
 
   commit(): void {
-    // Implement batch database writes
     this.db.batch(this.getDirtyNodes());
     this.cache.clear();
   }
 
   getDirtyNodes(): [Buffer, Buffer][] {
-    // TODO: Implement getting all dirty nodes from the cache
-    return [];
+    const dirtyNodes = [];
+    this.cache.forEach((key, node) => {
+      dirtyNodes.push([key, encodeTrieNode(node)]);
+    });
+    return dirtyNodes;
   }
 }
 
