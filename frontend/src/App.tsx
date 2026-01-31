@@ -1309,6 +1309,21 @@ export default function App() {
         textAlign: 'center',
         flexShrink: 0,
       }}>
+        <div style={{ marginBottom: 8 }}>
+          <span style={{ color: 'var(--text-muted)', fontSize: isMobile ? 10 : 11 }}>CA: </span>
+          <span 
+            style={{ 
+              color: 'var(--teal)', 
+              fontSize: isMobile ? 10 : 11, 
+              fontFamily: "'JetBrains Mono', monospace",
+              cursor: 'pointer',
+            }}
+            onClick={() => navigator.clipboard.writeText('coming soon')}
+            title="Click to copy"
+          >
+            coming soon
+          </span>
+        </div>
         <span style={{ color: 'var(--text-muted)', fontSize: isMobile ? 11 : 13 }}>Powered by Claw.bot</span>
       </footer>
     </div>
