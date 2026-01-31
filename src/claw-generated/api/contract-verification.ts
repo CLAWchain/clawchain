@@ -1,8 +1,14 @@
 import { Request, Response } from 'express';
 import { Verifier } from '../VerifierContract';
+import validator from 'validator';
 
 export const handleContractVerification = async (req: Request, res: Response) => {
-  const { source } = req.body;
+  let { source } = req.body;
+
+  // Validate the source code input
+  if (!source || typeof source !== 'string' || source.length > 1000000) {
+    return res.status(400).json({ error: 'Invalid contract source code' });
+  }
 
   try {
     // Compile the contract source code
