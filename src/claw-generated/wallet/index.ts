@@ -1,21 +1,21 @@
-// src/claw-generated/wallet/index.ts
+import { HardwareWalletProvider } from './HardwareWalletProvider';
+import { LedgerProvider } from './LedgerProvider';
+import { TrezorProvider } from './TrezorProvider';
 
-import { secp256k1, ed25519 } from './signing';
+export class WalletManager {
+  private providers: HardwareWalletProvider[] = [
+    new LedgerProvider(),
+    new TrezorProvider(),
+  ];
 
-export class Wallet {
-  private privateKey: Buffer;
-
-  constructor(privateKey: Buffer) {
-    this.privateKey = privateKey;
-  }
-
-  signTransactionWithSecp256k1(txData: Buffer): Buffer {
-    return secp256k1.sign(this.privateKey, txData);
-  }
-
-  signTransactionWithEd25519(txData: Buffer): Buffer {
-    return ed25519.sign(this.privateKey, txData);
+  async signTransaction(txData: any): Promise<string> {
+    for (const provider of this.providers) {
+      try {
+        return await provider.signTransaction(txData);
+      } catch (err) {
+        console.error(`Error signing with ${provider.name}: ${err.message}`);
+      }
+    }
+    throw new Error('Failed to sign transaction with any hardware wallet provider');
   }
 }
-
-export { secp256k1, ed25519 } from './signing';
