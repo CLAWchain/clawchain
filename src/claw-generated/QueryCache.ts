@@ -1,40 +1,26 @@
-import { Database } from './Database';
+import { LRUCache } from 'lru-cache';
 
 class QueryCache {
-  private cache: Map<string, any>;
-  private maxSize: number;
-  private database: Database;
+  private cache: LRUCache<string, any>;
 
-  constructor(database: Database, maxSize: number = 1000) {
-    this.cache = new Map();
-    this.maxSize = maxSize;
-    this.database = database;
+  constructor(maxSize: number) {
+    this.cache = new LRUCache({
+      max: maxSize,
+      ttl: 60 * 60 * 1000, // 1 hour
+    });
   }
 
-  async get(sql: string, params: any[]): Promise<any> {
-    const cacheKey = this.getCacheKey(sql, params);
-    if (this.cache.has(cacheKey)) {
-      return this.cache.get(cacheKey);
-    }
-
-    const result = await this.database.query(sql, params);
-    this.cache.set(cacheKey, result);
-
-    if (this.cache.size > this.maxSize) {
-      this.evictLeastRecentlyUsed();
-    }
-
-    return result;
+  async get(key: string): Promise<any> {
+    return this.cache.get(key);
   }
 
-  private getCacheKey(sql: string, params: any[]): string {
-    return `${sql}:${JSON.stringify(params)}`;
+  set(key: string, value: any): void {
+    this.cache.set(key, value);
   }
 
-  private evictLeastRecentlyUsed() {
-    const keys = Array.from(this.cache.keys());
-    this.cache.delete(keys[0]);
+  has(key: string): boolean {
+    return this.cache.has(key);
   }
 }
 
-export { QueryCache };
+export default QueryCache;
