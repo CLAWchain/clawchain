@@ -1,11 +1,17 @@
 import { Block, Transaction } from './types';
+import { Config } from '../config';
 
 export class TransactionFeeCalculator {
+  private config: Config;
+
+  constructor(config: Config) {
+    this.config = config;
+  }
+
   calculateFee(tx: Transaction): number {
-    // Calculate fee based on transaction size and complexity
-    const baseFee = 0.001;
-    const sizeMultiplier = tx.size / 1000; // $0.001 per kB
-    const complexityMultiplier = tx.inputCount + tx.outputCount + (tx.contractExecution ? 1 : 0);
+    const baseFee = this.config.transactionBaseFee;
+    const sizeMultiplier = tx.size / 1000 * this.config.transactionSizeMultiplier; // $0.001 per kB
+    const complexityMultiplier = (tx.inputCount + tx.outputCount + (tx.contractExecution ? 1 : 0)) * this.config.transactionComplexityMultiplier;
     return baseFee * (1 + sizeMultiplier + complexityMultiplier);
   }
 
