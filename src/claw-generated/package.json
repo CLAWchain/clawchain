@@ -1,5 +1,5 @@
 {
   "scripts": {
-    "test": "jest src/claw-generated/vm.test.ts"
+    "test:rpc": "jest ../claw-generated/rpc"
   }
 }

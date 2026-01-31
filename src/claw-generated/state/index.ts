@@ -1,12 +1,18 @@
-import { StateNode } from './StateNode';
-import { StateTree } from './StateTree';
+import { Account } from '../types';
 
-export class StateManager {
-  private stateTree: StateTree;
+const accounts: Record<string, Account> = {};
 
-  constructor() {
-    this.stateTree = new StateTree();
+export const getAccountBalance = async (pubkey: string): Promise<number> => {
+  if (accounts[pubkey]) {
+    return accounts[pubkey].balance;
   }
+  return 0;
+};
 
-  // Implement state management methods here
-}
+export const updateAccountBalance = (pubkey: string, balance: number) => {
+  if (!accounts[pubkey]) {
+    accounts[pubkey] = { pubkey, balance };
+  } else {
+    accounts[pubkey].balance = balance;
+  }
+};

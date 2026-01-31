@@ -1,20 +1,19 @@
-// src/claw-generated/rpc/index.ts
+import { Request, Response } from 'express';
+import { getAccountBalance } from '../state';
 
-import { parseJsonRpcRequest, formatJsonRpcResponse } from './utils';
-import { dispatchRpcMethod } from './dispatcher';
-
-export async function handleJsonRpcRequest(rawRequest: string): Promise<string> {
-  try {
-    const request = parseJsonRpcRequest(rawRequest);
-    const response = await dispatchRpcMethod(request);
-    return formatJsonRpcResponse(response);
-  } catch (err) {
-    return formatJsonRpcResponse({
-      error: {
-        code: -32603,
-        message: 'Internal error',
-        data: err.message
-      }
-    });
+export const rpcRouter = (req: Request, res: Response) => {
+  const { method, params } = req.body;
+  switch (method) {
+    case 'getBalance':
+      handleGetBalance(req, res);
+      break;
+    default:
+      res.status(404).json({ error: 'Method not found' });
   }
-}
+};
+
+const handleGetBalance = async (req: Request, res: Response) => {
+  const { pubkey } = req.body.params;
+  const balance = await getAccountBalance(pubkey);
+  res.json({ balance });
+};
