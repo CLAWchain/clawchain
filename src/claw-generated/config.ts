@@ -1,3 +1,1 @@
-export const CONFIG = {
-  CHECKPOINT_INTERVAL: 10000
-};
+export const CHECKPOINT_INTERVAL = 10000;
