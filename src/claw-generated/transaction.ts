@@ -1,28 +1,34 @@
-import { FeeCalculator } from './fee-calculator';
+import { Block, Transaction, TransactionReceipt } from '../types';
 
-export class Transaction {
-  public id: string;
-  public from: string;
-  public to: string;
-  public amount: number;
-  public fee: number;
-  public timestamp: number;
-  public signature: string;
+export class TransactionProcessor {
+  async processTransaction(tx: Transaction, block: Block): Promise<TransactionReceipt> {
+    // Validate the transaction
+    this.validateTransaction(tx);
 
-  constructor(
-    id: string,
-    from: string,
-    to: string,
-    amount: number,
-    timestamp: number,
-    signature: string
-  ) {
-    this.id = id;
-    this.from = from;
-    this.to = to;
-    this.amount = amount;
-    this.fee = FeeCalculator.calculateFee(this);
-    this.timestamp = timestamp;
-    this.signature = signature;
+    // Execute the transaction and get the result
+    const result = await this.executeTransaction(tx, block);
+
+    // Generate the transaction receipt
+    const receipt = this.generateReceipt(tx, result);
+
+    return receipt;
+  }
+
+  private validateTransaction(tx: Transaction): void {
+    // Implement transaction validation logic
+  }
+
+  private async executeTransaction(tx: Transaction, block: Block): Promise<any> {
+    // Implement transaction execution logic
+    return { status: 'success', gasUsed: 1000, logs: [], bloom: '0x0' };
+  }
+
+  private generateReceipt(tx: Transaction, result: any): TransactionReceipt {
+    return {
+      status: result.status,
+      gasUsed: result.gasUsed,
+      logs: result.logs,
+      bloom: result.bloom
+    };
   }
 }
