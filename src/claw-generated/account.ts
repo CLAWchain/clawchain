@@ -35,12 +35,19 @@ export class Account extends AbstractAccount {
   }
 
   async validateTransaction(tx: Transaction): Promise<boolean> {
-    // Validate the transaction against the account's rules
+    // Check that the transaction nonce is greater than the account nonce
+    if (tx.nonce <= this.nonce) {
+      return false;
+    }
+
+    // Validate the transaction against the account's other rules
     return true;
   }
 
   async executeTransaction(tx: Transaction): Promise<any> {
     // Execute the transaction and update the account state
+    this.nonce = tx.nonce;
+    // Update other account state as needed
     return {};
   }
 }
