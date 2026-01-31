@@ -1,11 +1,4 @@
-export enum Instruction {
-  PUSH,
-  POP,
-  ADD,
-  SUB,
-  MUL,
-  DIV,
-  JUMP,
-  JUMPI,
-  STOP
+export enum Opcode {
+  CALL = 0x10,
+  // Other opcodes...
 }

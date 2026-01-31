@@ -1,42 +1,55 @@
-import { Opcode } from './opcode';
+import { Opcode } from './instructions';
+import { Address, ByteArray } from '../types';
 
-export class VM {
-  private gasLimit: number;
-  private gasUsed: number = 0;
-
-  constructor(gasLimit: number) {
-    this.gasLimit = gasLimit;
+export class VirtualMachine {
+  execute(bytecode: Uint8Array): void {
+    // ... (previous code)
   }
 
-  execute(code: Uint8Array): void {
-    let pc = 0;
-    while (pc < code.length) {
-      const opcode = code[pc];
-      const opcodeInfo = Opcode[opcode];
-      if (!opcodeInfo) {
-        throw new Error(`Unknown opcode: ${opcode}`);
-      }
+  private handleCall(
+    contractAddress: Address,
+    gasAmount: BigInt,
+    inputData: ByteArray
+  ): void {
+    // Fetch the called contract's bytecode
+    const calledContractBytecode = this.fetchContractBytecode(contractAddress);
 
-      this.gasUsed += opcodeInfo.gas;
-      if (this.gasUsed > this.gasLimit) {
-        throw new Error('Out of gas');
-      }
+    // Execute the called contract's bytecode
+    const returnData = this.executeContract(calledContractBytecode, gasAmount, inputData);
 
-      // Execute the opcode
-      switch (opcodeInfo.id) {
-        case Opcode.ADD.id:
-          // Implement ADD opcode logic
-          break;
-        case Opcode.PUSH.id:
-          // Implement PUSH opcode logic
-          break;
-        case Opcode.CALL.id:
-          // Implement CALL opcode logic
-          break;
-        // Add more opcode handling
-      }
+    // Handle the return value
+    this.processReturnData(returnData);
+  }
 
-      pc++;
-    }
+  private fetchContractBytecode(address: Address): Uint8Array {
+    // Implement logic to fetch the contract bytecode from storage
+    return new Uint8Array([0x60, 0x60, 0x60, 0x60]); // Placeholder bytecode
+  }
+
+  private executeContract(
+    bytecode: Uint8Array,
+    gasAmount: BigInt,
+    inputData: ByteArray
+  ): ByteArray {
+    // Implement logic to execute the called contract's bytecode
+    console.log('Executing called contract');
+    return new Uint8Array([0x01, 0x02, 0x03]); // Placeholder return data
+  }
+
+  private processReturnData(returnData: ByteArray): void {
+    // Implement logic to handle the return data from the called contract
+    console.log('Processing return data:', returnData);
+  }
+
+  private readAddress(bytecode: Uint8Array, offset: number): Address {
+    // Implement address reading logic
+  }
+
+  private readUint256(bytecode: Uint8Array, offset: number): BigInt {
+    // Implement Uint256 reading logic
+  }
+
+  private readByteArray(bytecode: Uint8Array, offset: number): ByteArray {
+    // Implement byte array reading logic
   }
 }
