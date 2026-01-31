@@ -1,83 +1,65 @@
-import { keccak256 } from 'js-sha3';
-
-interface TrieNode {
-  key: string;
-  value: string;
-  children: { [key: string]: TrieNode };
-}
+import { hash } from '../crypto';
 
 class MerklePatriciaTrie {
-  private root: TrieNode | null = null;
+  private root: Buffer;
 
-  insert(key: string, value: string): void {
-    this.root = this.insertRecursive(this.root, key, value);
+  constructor() {
+    this.root = Buffer.alloc(0);
   }
 
-  private insertRecursive(
-    node: TrieNode | null,
-    key: string,
-    value: string
-  ): TrieNode {
-    if (!node) {
-      return { key, value, children: {} };
+  get(key: Buffer): Buffer | null {
+    // Traverse the trie to find the value associated with the given key
+    // If the key is not found, return null
+    let node = this.root;
+    for (let i = 0; i < key.length; i++) {
+      // Implement trie traversal logic here
     }
+    return null;
+  }
 
-    const commonPrefix = this.findCommonPrefix(node.key, key);
-    if (commonPrefix === node.key.length) {
-      if (key.length === commonPrefix) {
-        // Key already exists, update value
-        node.value = value;
-        return node;
-      } else {
-        // Key is a prefix of the current node, create new node
-        const newNode: TrieNode = {
-          key: key.slice(commonPrefix),
-          value,
-          children: {
-            [key[commonPrefix]]: node
-          }
-        };
-        return newNode;
-      }
-    } else {
-      // Split the current node
-      const newNode: TrieNode = {
-        key: node.key.slice(commonPrefix),
-        value: node.value,
-        children: node.children
-      };
-      node.key = node.key.slice(0, commonPrefix);
-      node.value = '';
-      node.children = {
-        [node.key[commonPrefix]]: newNode,
-        [key[commonPrefix]]: this.insertRecursive(null, key.slice(commonPrefix), value)
-      };
-      return node;
+  set(key: Buffer, value: Buffer): void {
+    // Traverse the trie to find the appropriate location to store the key-value pair
+    // Create new nodes and update the trie structure as needed
+    let node = this.root;
+    for (let i = 0; i < key.length; i++) {
+      // Implement trie update logic here
     }
+    // Update the root hash
+    this.root = hash(node);
   }
 
-  private findCommonPrefix(a: string, b: string): number {
-    let i = 0;
-    while (i < a.length && i < b.length && a[i] === b[i]) {
-      i++;
+  delete(key: Buffer): void {
+    // Traverse the trie to find the node associated with the given key
+    // Remove the node and update the trie structure as needed
+    let node = this.root;
+    for (let i = 0; i < key.length; i++) {
+      // Implement trie deletion logic here
     }
-    return i;
+    // Update the root hash
+    this.root = hash(node);
   }
 
-  getRootHash(): string {
-    return this.root ? this.hash(this.root) : '';
+  getRootHash(): Buffer {
+    return this.root;
   }
 
-  private hash(node: TrieNode): string {
-    const nodeData = JSON.stringify({
-      key: node.key,
-      value: node.value,
-      children: Object.keys(node.children).reduce((acc, childKey) => {
-        acc[childKey] = this.hash(node.children[childKey]);
-        return acc;
-      }, {})
-    });
-    return keccak256(nodeData);
+  getProof(key: Buffer): Buffer[] {
+    // Generate a Merkle proof for the given key
+    let proof: Buffer[] = [];
+    let node = this.root;
+    for (let i = 0; i < key.length; i++) {
+      // Implement proof generation logic here
+    }
+    return proof;
+  }
+
+  verifyProof(key: Buffer, proof: Buffer[], rootHash: Buffer): boolean {
+    // Verify the Merkle proof against the provided root hash
+    let currentHash = hash(key);
+    for (let i = 0; i < proof.length; i++) {
+      // Implement proof verification logic here
+    }
+    return currentHash.equals(rootHash);
   }
 }
 
