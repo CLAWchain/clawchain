@@ -1,24 +1,36 @@
-import { Mnemonic } from './mnemonic';
+import { Transaction } from './transaction';
+import { Signer } from '../crypto/signer';
 
-export class Wallet {
-  private mnemonic: string;
-  private seed: Buffer;
+class Wallet {
+  private signers: Signer[];
+  private transactions: Transaction[];
 
-  constructor(mnemonic: string) {
-    this.mnemonic = mnemonic;
-    this.seed = Mnemonic.seedFromPhrase(mnemonic);
+  constructor(signers: Signer[]) {
+    this.signers = signers;
+    this.transactions = [];
   }
 
-  static generateWallet(wordCount: 12 | 24): Wallet {
-    const mnemonic = Mnemonic.generatePhrase(wordCount);
-    return new Wallet(mnemonic);
+  addTransaction(tx: Transaction) {
+    this.transactions.push(tx);
   }
 
-  getMnemonic(): string {
-    return this.mnemonic;
-  }
+  verifyTransaction(tx: Transaction): boolean {
+    // Verify that the required number of signers have signed the transaction
+    let signatureCount = 0;
+    for (const input of tx.inputs) {
+      if (input.wallet === this) {
+        for (const signer of input.signers) {
+          if (this.signers.includes(signer)) {
+            signatureCount++;
+          }
+        }
+      }
+    }
 
-  getSeed(): Buffer {
-    return this.seed;
+    // Require at least M-of-N signers to approve the transaction
+    const M = 2; // Require 2-of-N signatures
+    return signatureCount >= M;
   }
 }
+
+export { Wallet };
