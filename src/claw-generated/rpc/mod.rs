@@ -1,3 +1,5 @@
-mod balance;
+mod rpc_server;
+mod rpc_methods;
 
-pub use balance::get_balance;
+pub use rpc_server::*;
+pub use rpc_methods::*;

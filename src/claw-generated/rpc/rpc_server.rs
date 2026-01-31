@@ -1,25 +1,22 @@
-use crate::rpc::rpc_methods::{get_transaction_by_signature, get_signatures_for_address};
-use crate::rpc::utils::{parse_params, RpcRequest, RpcResponse};
-use serde_json::{json, Value};
+use jsonrpc_core::{IoHandler, Result};
+use crate::rpc::rpc_methods;
+use crate::transaction::Transaction;
 
-pub fn handle_rpc_request(request: RpcRequest) -> RpcResponse {
-    match request.method.as_str() {
-        "getTransaction" => {
-            let signature: TransactionSignature = parse_params(&request.params)?;
-            let transaction = get_transaction_by_signature(signature);
-            RpcResponse::Success(json!(transaction))
-        }
-        "getSignaturesForAddress" => {
-            let address: String = parse_params(&request.params)?;
-            let limit: Option<usize> = parse_params(&request.params)?;
-            let offset: Option<usize> = parse_params(&request.params)?;
-            let signatures = get_signatures_for_address(address, limit, offset);
-            RpcResponse::Success(json!(signatures))
-        }
-        _ => RpcResponse::Error {
-            code: -32601,
-            message: "Method not found".to_string(),
-            data: None,
-        },
+pub struct RPCServer {
+    pub handler: IoHandler,
+}
+
+impl RPCServer {
+    pub fn new() -> Self {
+        let mut handler = IoHandler::new();
+        handler.add_method("simulateTransaction", |params: jsonrpc_core::Params| {
+            let tx: Transaction = params.parse()?;
+            let (logs, compute_units) = rpc_methods::simulate_transaction(tx);
+            Ok(json!({
+                "logs": logs,
+                "computeUnits": compute_units
+            }))
+        });
+        RPCServer { handler }
     }
 }
