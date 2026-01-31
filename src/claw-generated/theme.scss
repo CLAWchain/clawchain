@@ -1,0 +1,18 @@
+:root {
+  --primary-color: #007bff;
+  --secondary-color: #6c757d;
+  --text-color: #333;
+  --background-color: #fff;
+  --border-color: #dee2e6;
+  --font-family: 'Roboto', sans-serif;
+  --font-size: 16px;
+  --line-height: 1.5;
+}
+
+.theme-dark {
+  --primary-color: #6610f2;
+  --secondary-color: #adb5bd;
+  --text-color: #f8f9fa;
+  --background-color: #343a40;
+  --border-color: #495057;
+}
