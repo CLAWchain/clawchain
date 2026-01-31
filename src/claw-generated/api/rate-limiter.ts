@@ -1,35 +1,14 @@
-import { Request, Response, NextFunction } from 'express';
+import rateLimit from 'express-rate-limit';
 
-// In-memory cache to track request counts
-const requestCounts: { [key: string]: number } = {};
+// Configure rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again after 15 minutes',
+  keyGenerator: (req) => {
+    // Track by both IP and API key
+    return `${req.ip}:${req.headers['x-api-key'] || 'no-api-key'}`;
+  },
+});
 
-// Sliding window size (in seconds)
-const WINDOW_SIZE = 60;
-
-// Max requests per window
-const MAX_REQUESTS_PER_WINDOW = 100;
-
-export const rateLimit = (req: Request, res: Response, next: NextFunction) => {
-  const key = `${req.ip}:${req.headers['x-api-key'] || 'no-key'}`;
-
-  // Get the current count for this key
-  const currentCount = requestCounts[key] || 0;
-
-  // Increment the count
-  requestCounts[key] = currentCount + 1;
-
-  // Check if the limit has been exceeded
-  if (currentCount >= MAX_REQUESTS_PER_WINDOW) {
-    res.status(429).json({
-      error: 'Too many requests. Please try again later.'
-    });
-    return;
-  }
-
-  // Schedule count reset after the window size
-  setTimeout(() => {
-    requestCounts[key] -= 1;
-  }, WINDOW_SIZE * 1000);
-
-  next();
-};
+export default limiter;
