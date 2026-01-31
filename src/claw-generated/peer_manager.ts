@@ -1,30 +1,35 @@
 import { PeerInfo } from './peer_info';
-import { PeerReputation } from './peer_reputation';
 
 export class PeerManager {
   private peers: Map<string, PeerInfo> = new Map();
+  private reputationThreshold = 50;
 
-  addPeer(peer: PeerInfo) {
-    this.peers.set(peer.id, peer);
-    peer.reputation.addPeer(peer);
+  addPeer(peerInfo: PeerInfo) {
+    this.peers.set(peerInfo.id, peerInfo);
+    peerInfo.reputationScore = 100; // Start with full reputation
   }
 
-  removePeer(peer: PeerInfo) {
-    this.peers.delete(peer.id);
-    peer.reputation.removePeer(peer);
+  removePeer(peerId: string) {
+    this.peers.delete(peerId);
   }
 
-  updatePeerReputation(peer: PeerInfo, score: number) {
-    peer.reputation.updateReputation(peer, score);
+  getPeer(peerId: string): PeerInfo | undefined {
+    return this.peers.get(peerId);
   }
 
-  getBestPeers(count: number): PeerInfo[] {
-    const peerArray = Array.from(this.peers.values());
-    peerArray.sort((a, b) => b.reputation.getPeerReputation(b) - a.reputation.getPeerReputation(a));
-    return peerArray.slice(0, count);
+  updatePeerReputation(peerId: string, delta: number) {
+    const peerInfo = this.getPeer(peerId);
+    if (peerInfo) {
+      peerInfo.reputationScore = Math.max(0, peerInfo.reputationScore + delta);
+      if (peerInfo.reputationScore < this.reputationThreshold) {
+        this.removePeer(peerId);
+        console.log(`Banned peer ${peerId} due to low reputation`);
+      }
+    }
   }
 
-  isBanned(peer: PeerInfo): boolean {
-    return peer.reputation.isBanned(peer);
+  getPeersByReputation(): PeerInfo[] {
+    return Array.from(this.peers.values())
+      .sort((a, b) => b.reputationScore - a.reputationScore);
   }
 }

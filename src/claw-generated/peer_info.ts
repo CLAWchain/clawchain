@@ -1,15 +1,11 @@
-import { PeerReputation } from './peer_reputation';
-
 export class PeerInfo {
   id: string;
   address: string;
-  port: number;
-  reputation: PeerReputation;
+  reputationScore: number;
 
-  constructor(id: string, address: string, port: number) {
+  constructor(id: string, address: string) {
     this.id = id;
     this.address = address;
-    this.port = port;
-    this.reputation = new PeerReputation();
+    this.reputationScore = 0;
   }
 }
