@@ -1,36 +1,35 @@
-import { Ed25519Signature, verifyEd25519Signature } from './ed25519';
+import { Account } from './account';
+import { NonceTracker } from './nonce-tracker';
 
 export class Transaction {
-  public readonly id: string;
-  public readonly from: string;
-  public readonly to: string;
-  public readonly amount: number;
-  public readonly timestamp: number;
-  public readonly signature: Ed25519Signature;
+  sender: Account;
+  recipient: Account;
+  amount: number;
+  nonce: number;
 
-  constructor(
-    id: string,
-    from: string,
-    to: string,
-    amount: number,
-    timestamp: number,
-    signature: Ed25519Signature
-  ) {
-    this.id = id;
-    this.from = from;
-    this.to = to;
+  constructor(sender: Account, recipient: Account, amount: number, nonce: number) {
+    this.sender = sender;
+    this.recipient = recipient;
     this.amount = amount;
-    this.timestamp = timestamp;
-    this.signature = signature;
+    this.nonce = nonce;
   }
 
-  public verifySignature(): boolean {
-    const message = new Uint8Array([
-      ...this.from.split('').map(c => c.charCodeAt(0)),
-      ...this.to.split('').map(c => c.charCodeAt(0)),
-      ...new Uint8Array(new DataView(new ArrayBuffer(8)).buffer).map(b => b),
-      ...new Uint8Array(new DataView(new ArrayBuffer(8)).buffer).map(b => b),
-    ]);
-    return verifyEd25519Signature(message, this.signature);
+  async validate(nonceTracker: NonceTracker): Promise<boolean> {
+    const expectedNonce = await nonceTracker.getNonce(this.sender);
+    return this.nonce === expectedNonce;
+  }
+
+  async process(nonceTracker: NonceTracker): Promise<void> {
+    // Validate the transaction
+    if (await this.validate(nonceTracker)) {
+      // Deduct funds from sender
+      this.sender.balance -= this.amount;
+      // Add funds to recipient
+      this.recipient.balance += this.amount;
+      // Increment the sender's nonce
+      await nonceTracker.incrementNonce(this.sender);
+    } else {
+      throw new Error('Invalid transaction nonce');
+    }
   }
 }
