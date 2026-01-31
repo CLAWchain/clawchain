@@ -7,19 +7,22 @@ export class Transaction {
   amount: number;
   nonce: number;
   signature: TransactionSignature;
+  contractBytecode?: string; // New property for contract deployment transactions
 
   constructor(
     from: Account,
     to: Account,
     amount: number,
     nonce: number,
-    signature: TransactionSignature
+    signature: TransactionSignature,
+    contractBytecode?: string // New parameter for contract deployment transactions
   ) {
     this.from = from;
     this.to = to;
     this.amount = amount;
     this.nonce = nonce;
     this.signature = signature;
+    this.contractBytecode = contractBytecode; // Assign the new parameter
   }
 
   validate(): boolean {
