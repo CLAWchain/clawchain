@@ -1,3 +1,3 @@
-export * from './PeerManager';
-export * from './PeerReputation';
-export * from './WormholeBridge';
+export class PeerDiscovery {
+  // Kademlia-based DHT implementation
+}
