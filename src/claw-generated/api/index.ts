@@ -1,17 +1,12 @@
 import express from 'express';
-import { handleGetStatus } from './status';
-import { handleGetTransactions } from './transactions';
-import { handleGetHealth, handleGetReady } from './health';
-import { rateLimit } from './rate-limiter';
+import { validateTransaction } from './transactions';
 
-const router = express.Router();
+const app = express();
 
-// Apply rate limiting to all endpoints
-router.use(rateLimit);
+app.use(express.json());
 
-router.get('/status', handleGetStatus);
-router.get('/transactions', handleGetTransactions);
-router.get('/health', handleGetHealth);
-router.get('/ready', handleGetReady);
+app.post('/transactions', validateTransaction);
 
-export default router;
+app.listen(3000, () => {
+  console.log('API server started on port 3000');
+});
