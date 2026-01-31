@@ -2,33 +2,38 @@ import WebSocket, { WebSocketServer } from 'ws';
 import { TransactionService } from '../TransactionService';
 import { BlockService } from '../BlockService';
 import { ChainService } from '../ChainService';
+import { WebSocketSubscriptions } from './WebSocketSubscriptions';
 
 export class ClawWebSocketServer {
   private wss: WebSocketServer;
-  private transactionService: TransactionService;
-  private blockService: BlockService;
-  private chainService: ChainService;
+  private subscriptions: WebSocketSubscriptions;
 
   constructor() {
-    this.transactionService = new TransactionService();
-    this.blockService = new BlockService();
-    this.chainService = new ChainService();
+    this.subscriptions = new WebSocketSubscriptions(
+      new BlockService(),
+      new TransactionService()
+    );
+
     this.wss = new WebSocketServer({ port: 8080 });
 
     this.wss.on('connection', (ws) => {
       console.log('WebSocket client connected');
 
-      // Subscribe the client to transaction, block, and newHeads updates
-      this.transactionService.on('newTransaction', (tx) => {
-        ws.send(JSON.stringify({ type: 'transaction', data: tx }));
+      // Subscribe the client to newHeads, logs, and pendingTransactions
+      this.subscriptions.subscribeToNewHeads();
+      this.subscriptions.subscribeToLogs('0x1234567890abcdef');
+      this.subscriptions.subscribeToPendingTransactions();
+
+      this.subscriptions.on('newHeads', (head) => {
+        ws.send(JSON.stringify({ type: 'newHeads', data: head }));
       });
 
-      this.blockService.on('newBlock', (block) => {
-        ws.send(JSON.stringify({ type: 'block', data: block }));
+      this.subscriptions.on('logs', (tx) => {
+        ws.send(JSON.stringify({ type: 'logs', data: tx }));
       });
 
-      this.chainService.on('newHead', (head) => {
-        ws.send(JSON.stringify({ type: 'newHead', data: head }));
+      this.subscriptions.on('pendingTransactions', (tx) => {
+        ws.send(JSON.stringify({ type: 'pendingTransactions', data: tx }));
       });
 
       ws.on('close', () => {
