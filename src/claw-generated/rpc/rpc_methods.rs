@@ -23,3 +23,8 @@ pub fn get_transaction_by_signature(signature: TransactionSignature) -> Option<T
     let transaction_pool = TransactionPool::new();
     transaction_pool.get_transaction(&signature).cloned()
 }
+
+pub fn get_account_info(pubkey: String) -> Option<AccountState> {
+    let account_state = AccountState::new();
+    account_state.get_account_info(&pubkey)
+}
