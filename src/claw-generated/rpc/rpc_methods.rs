@@ -18,3 +18,8 @@ pub fn get_signatures_for_address(
     let end = start + limit.unwrap_or(10);
     signatures[start..end].to_vec()
 }
+
+pub fn get_transaction_by_signature(signature: TransactionSignature) -> Option<Transaction> {
+    let transaction_pool = TransactionPool::new();
+    transaction_pool.get_transaction(&signature).cloned()
+}

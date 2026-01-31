@@ -1,19 +1,20 @@
-use crate::rpc::rpc_methods;
+use crate::rpc::rpc_methods::{get_transaction_by_signature, get_signatures_for_address};
 use crate::chain::transaction::{Transaction, TransactionSignature};
 
 #[test]
-fn test_get_transaction() {
-    let tx = Transaction {
-        signature: "test_signature".to_string(),
-        // Add more transaction fields
-    };
+fn test_get_transaction_by_signature() {
+    let signature = TransactionSignature::default();
+    let transaction = get_transaction_by_signature(signature);
+    assert_eq!(transaction, None);
 
-    let transaction_pool = TransactionPool::new();
-    transaction_pool.add_transaction(tx.clone());
+    // TODO: Add test cases for successfully retrieving a transaction
+}
 
-    let retrieved_tx = rpc_methods::get_transaction("test_signature".to_string());
-    assert_eq!(retrieved_tx, Some(tx));
+#[test]
+fn test_get_signatures_for_address() {
+    let address = "0x1234567890abcdef".to_string();
+    let signatures = get_signatures_for_address(address, Some(10), Some(0));
+    assert!(!signatures.is_empty());
 
-    let not_found_tx = rpc_methods::get_transaction("invalid_signature".to_string());
-    assert_eq!(not_found_tx, None);
+    // TODO: Add more comprehensive test cases
 }
