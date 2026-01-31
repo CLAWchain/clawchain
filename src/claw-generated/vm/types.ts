@@ -1,6 +1,8 @@
 export type Instruction = {
-  opcode: number;
-  operands: any[];
+  opcode: 'PUSH' | 'POP' | 'ADD' | 'SUB';
+  operand?: number;
 };
 
-export type OperationHandler = (vm: VirtualMachine, operands: any[]) => void;
+export type ExecutionContext = {
+  // Add any necessary context information here
+};

@@ -1,62 +1,111 @@
-import { Instruction, OperationHandler } from './types';
+import { Instruction, ExecutionContext } from './types';
 
 class VirtualMachine {
-  private stack: any[] = [];
-  private memory: Map<number, number> = new Map();
+  private stack: number[] = [];
+  private pc: number = 0;
+  private memory: number[] = [];
+  private callStack: ExecutionContext[] = [];
 
-  executeInstruction(instruction: Instruction): void {
-    const handler = this.getOperationHandler(instruction.opcode);
-    handler(this, instruction.operands);
-  }
-
-  private getOperationHandler(opcode: number): OperationHandler {
-    switch (opcode) {
-      case 0x01: // ADD
-        return this.add;
-      case 0x02: // SUB
-        return this.sub;
-      case 0x03: // MUL
-        return this.mul;
-      case 0x04: // DIV
-        return this.div;
-      case 0x05: // AND
-        return this.and;
-      case 0x06: // OR
-        return this.or;
-      case 0x07: // NOT
-        return this.not;
-      default:
-        throw new Error(`Unknown opcode: ${opcode}`);
+  execute(instructions: Instruction[]) {
+    while (this.pc < instructions.length) {
+      const instruction = instructions[this.pc];
+      this.executeInstruction(instruction);
+      this.pc++;
     }
   }
 
-  private add = (_, [a, b]: [number, number]): void => {
-    this.stack.push(a + b);
-  };
-
-  private sub = (_, [a, b]: [number, number]): void => {
-    this.stack.push(a - b);
-  };
-
-  private mul = (_, [a, b]: [number, number]): void => {
-    this.stack.push(a * b);
-  };
-
-  private div = (_, [a, b]: [number, number]): void => {
-    this.stack.push(a / b);
-  };
-
-  private and = (_, [a, b]: [number, number]): void => {
-    this.stack.push(a & b);
-  };
-
-  private or = (_, [a, b]: [number, number]): void => {
-    this.stack.push(a | b);
-  };
-
-  private not = (_, [a]: [number]): void => {
-    this.stack.push(~a);
-  };
+  private executeInstruction(instruction: Instruction) {
+    switch (instruction.opcode) {
+      case 'PUSH':
+        this.stack.push(instruction.operand!);
+        break;
+      case 'POP':
+        this.stack.pop();
+        break;
+      case 'ADD':
+        const a = this.stack.pop();
+        const b = this.stack.pop();
+        this.stack.push(a + b);
+        break;
+      case 'SUB':
+        const x = this.stack.pop();
+        const y = this.stack.pop();
+        this.stack.push(y - x);
+        break;
+      case 'MULT':
+        const c = this.stack.pop();
+        const d = this.stack.pop();
+        this.stack.push(c * d);
+        break;
+      case 'DIV':
+        const e = this.stack.pop();
+        const f = this.stack.pop();
+        if (e === 0) {
+          throw new Error('Division by zero');
+        }
+        this.stack.push(Math.floor(f / e));
+        break;
+      case 'AND':
+        const g = this.stack.pop();
+        const h = this.stack.pop();
+        this.stack.push(g & h);
+        break;
+      case 'OR':
+        const i = this.stack.pop();
+        const j = this.stack.pop();
+        this.stack.push(i | j);
+        break;
+      case 'XOR':
+        const k = this.stack.pop();
+        const l = this.stack.pop();
+        this.stack.push(k ^ l);
+        break;
+      case 'EQ':
+        const m = this.stack.pop();
+        const n = this.stack.pop();
+        this.stack.push(m === n ? 1 : 0);
+        break;
+      case 'LT':
+        const o = this.stack.pop();
+        const p = this.stack.pop();
+        this.stack.push(p < o ? 1 : 0);
+        break;
+      case 'GT':
+        const q = this.stack.pop();
+        const r = this.stack.pop();
+        this.stack.push(r > q ? 1 : 0);
+        break;
+      case 'JUMP':
+        this.pc = instruction.operand!;
+        break;
+      case 'JUMPI':
+        const condition = this.stack.pop();
+        if (condition !== 0) {
+          this.pc = instruction.operand!;
+        }
+        break;
+      case 'LOAD':
+        const address = this.stack.pop();
+        this.stack.push(this.memory[address]);
+        break;
+      case 'STORE':
+        const value = this.stack.pop();
+        const storeAddress = this.stack.pop();
+        this.memory[storeAddress] = value;
+        break;
+      case 'CALL':
+        this.callStack.push({ pc: this.pc, stack: [...this.stack] });
+        this.pc = instruction.operand!;
+        break;
+      case 'RETURN':
+        const { pc, stack } = this.callStack.pop()!;
+        this.pc = pc;
+        this.stack = stack;
+        break;
+      default:
+        throw new Error(`Unknown opcode: ${instruction.opcode}`);
+    }
+  }
 }
 
-export { VirtualMachine };
+export { VirtualMachine, ExecutionContext, Instruction };
