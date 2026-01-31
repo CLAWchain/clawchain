@@ -1,74 +1,55 @@
-import { Block } from './blockchain/Block';
-import { MerklePatriciaTrie } from './MerklePatriciaTrie';
+import { MerklePatriciaTrie } from '../state/MerklePatriciaTrie';
+import { compress, decompress } from 'zlib';
+import { StateSnapshotStorage } from './StateSnapshotStorage';
 
 class StateManager {
-  private stateTrie: MerklePatriciaTrie;
-  private currentStateRoot: string;
-  private stateDiffs: Map<number, Map<string, any>>;
+  private trie: MerklePatriciaTrie;
+  private snapshotInterval: number = 60 * 60 * 1000; // 1 hour
+  private lastSnapshotTime: number = 0;
+  private snapshotStorage: StateSnapshotStorage;
 
   constructor() {
-    this.stateTrie = new MerklePatriciaTrie();
-    this.currentStateRoot = '0x0';
-    this.stateDiffs = new Map();
+    this.trie = new MerklePatriciaTrie();
+    this.snapshotStorage = new StateSnapshotStorage();
   }
 
-  applyBlockToState(block: Block): void {
-    for (const tx of block.transactions) {
-      this.stateTrie.set(tx.from, tx.amount);
-      this.stateTrie.set(tx.to, tx.amount);
+  // Methods for managing state
+  get(key: Uint8Array): Uint8Array | undefined {
+    return this.trie.get(key);
+  }
+
+  set(key: Uint8Array, value: Uint8Array): void {
+    this.trie.set(key, value);
+    this.maybeSnapshot();
+  }
+
+  private maybeSnapshot(): void {
+    const now = Date.now();
+    if (now - this.lastSnapshotTime >= this.snapshotInterval) {
+      this.snapshot();
+      this.lastSnapshotTime = now;
     }
-    this.currentStateRoot = this.stateTrie.generateRoot();
-    this.trackStateDiff(block.number);
   }
 
-  trackStateDiff(blockNumber: number): void {
-    const stateDiff = new Map();
-    this.stateTrie.traverse((key, value) => {
-      stateDiff.set(key, value);
-    });
-    this.stateDiffs.set(blockNumber, stateDiff);
+  private async snapshot(): Promise<void> {
+    console.log('Taking state snapshot...');
+    const snapshotData = this.trie.serialize();
+    const compressedData = await compress(snapshotData);
+    await this.snapshotStorage.storeSnapshot(compressedData);
   }
 
-  getStateDiff(fromBlockNumber: number, toBlockNumber: number): Map<string, any> {
-    const fromDiff = this.stateDiffs.get(fromBlockNumber) || new Map();
-    const toDiff = this.stateDiffs.get(toBlockNumber) || new Map();
-    const diff = new Map();
-
-    for (const [key, value] of toDiff) {
-      if (!fromDiff.has(key) || fromDiff.get(key) !== value) {
-        diff.set(key, value);
-      }
-    }
-
-    for (const [key, value] of fromDiff) {
-      if (!toDiff.has(key)) {
-        diff.set(key, null);
-      }
+  static async restoreFromSnapshot(): Promise<StateManager> {
+    const snapshotStorage = new StateSnapshotStorage();
+    const snapshotData = await snapshotStorage.loadLatestSnapshot();
+    if (!snapshotData) {
+      return new StateManager();
     }
 
-    return diff;
-  }
-
-  downloadStateSnapshot(blockNumber: number): Uint8Array {
-    // Implement state snapshot download using the Merkle Patricia Trie
-    throw new Error('Not implemented');
-  }
-
-  applyStateSnapshot(blockNumber: number, snapshotData: Uint8Array): void {
-    // Implement state snapshot application using the Merkle Patricia Trie
-    throw new Error('Not implemented');
-  }
-
-  generateStateProof(key: string): Uint8Array {
-    return this.stateTrie.generateProof(key);
-  }
-
-  verifyStateProof(key: string, value: any, proof: Uint8Array): boolean {
-    return this.stateTrie.verifyProof(key, value, proof);
-  }
-
-  updateState(block: Block): void {
-    this.applyBlockToState(block);
+    const decompressedData = await decompress(snapshotData);
+    const trie = MerklePatriciaTrie.deserialize(decompressedData);
+    const stateManager = new StateManager();
+    stateManager.trie = trie;
+    return stateManager;
   }
 }
 
