@@ -135,14 +135,40 @@ class AgentWorker {
       const realTask = await taskSources.getNextTask();
       if (realTask) {
         console.log(`[AGENT] Got real task from sources: ${realTask.title}`);
+        // Generate meaningful reasoning from task context
+        const taskContext = realTask.context || {};
+        const tags = taskContext.tags || [];
+        let reasoning = '';
+        
+        // Build reasoning based on task type and tags
+        if (tags.includes('security')) {
+          reasoning = `Security is critical for the chain's integrity. This strengthens ClawChain's defenses.`;
+        } else if (tags.includes('consensus')) {
+          reasoning = `Consensus mechanisms determine how the network agrees on state. Essential for decentralization.`;
+        } else if (tags.includes('performance')) {
+          reasoning = `Performance improvements help the chain scale and handle more transactions.`;
+        } else if (tags.includes('crypto')) {
+          reasoning = `Cryptographic primitives are the foundation of blockchain security.`;
+        } else if (tags.includes('vm')) {
+          reasoning = `The virtual machine executes smart contracts - core to programmability.`;
+        } else if (tags.includes('economics')) {
+          reasoning = `Economic incentives keep validators honest and the network sustainable.`;
+        } else if (tags.includes('api')) {
+          reasoning = `APIs let applications interact with the chain - crucial for adoption.`;
+        } else if (tags.includes('blockchain')) {
+          reasoning = `Core blockchain infrastructure that everything else builds on.`;
+        } else {
+          reasoning = `This improves ClawChain's capabilities and brings it closer to production.`;
+        }
+        
         this.state.currentDecision = {
           action: 'work_on_task',
-          reasoning: `Found real work: ${realTask.title}`,
+          reasoning,
           task: realTask,
           priority: 0.9,
-          context: 'Task from real source (issue, TODO, chain event)'
+          context: reasoning
         };
-        return { task: realTask, context: 'Task from real source (issue, TODO, chain event)' };
+        return { task: realTask, context: reasoning };
       }
     } catch (error) {
       console.error('[AGENT] TaskSources failed:', error);

@@ -551,30 +551,22 @@ const AgentTerminal: React.FC = () => {
               </div>
             )}
           </div>
-          {/* Brain decision reasoning */}
-          {state.brainActive && state.currentDecision && (
+          {/* Brain decision reasoning - shown as agent's thinking */}
+          {state.brainActive && state.currentDecision && state.currentDecision.reasoning && (
             <div style={{
               marginTop: 8,
-              padding: '6px 10px',
-              background: 'rgba(78, 205, 196, 0.1)',
+              padding: '8px 12px',
+              background: 'rgba(78, 205, 196, 0.08)',
               borderRadius: 6,
               borderLeft: '3px solid var(--teal)',
+              fontStyle: 'italic',
             }}>
-              <div style={{ 
-                fontSize: 10, 
-                color: 'var(--teal)', 
-                marginBottom: 2,
-                fontWeight: 600,
-                textTransform: 'uppercase',
-              }}>
-                Why I'm doing this:
-              </div>
               <div style={{ 
                 fontSize: 12, 
                 color: 'var(--text-secondary)',
                 fontFamily: "'JetBrains Mono', monospace",
               }}>
-                {state.currentDecision.reasoning}
+                "{state.currentDecision.reasoning}"
               </div>
             </div>
           )}
