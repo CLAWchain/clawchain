@@ -1,37 +1,71 @@
 import { Chain } from './Chain';
+import { Block, Transaction } from './Block';
 import { TransactionPool } from './TransactionPool';
-import { StateManager } from './StateManager';
-import { Block } from './Block';
-import { TransactionReceipt } from './TransactionReceipt';
+import { ValidatorManager } from '../validators/ValidatorManager';
+import { EventBus } from '../events/EventBus';
+import { BlockProducer } from './BlockProducer';
+import { stateManager } from './StateManager';
+import { generateRandomBase58 } from './Block';
 
-export class BlockProductionStressTests {
-  private chain: Chain;
-  private txPool: TransactionPool;
-  private stateManager: StateManager;
+const MAX_TRANSACTIONS = 1000;
+const NUM_TESTS = 10;
 
-  constructor(chain: Chain, txPool: TransactionPool, stateManager: StateManager) {
-    this.chain = chain;
-    this.txPool = txPool;
-    this.stateManager = stateManager;
-  }
+describe('Block Production Stress Tests', () => {
+  let chain: Chain;
+  let txPool: TransactionPool;
+  let validatorManager: ValidatorManager;
+  let eventBus: EventBus;
+  let blockProducer: BlockProducer;
 
-  async runTransactionPoolStressTest(numTransactions: number) {
-    // Implement stress test for transaction pool
-  }
+  beforeAll(() => {
+    chain = new Chain();
+    txPool = new TransactionPool();
+    validatorManager = new ValidatorManager();
+    eventBus = new EventBus();
+    blockProducer = new BlockProducer(chain, txPool, validatorManager, eventBus);
+  });
 
-  async runStateManagementStressTest(numTransactions: number) {
-    // Implement stress test for state management
-  }
+  afterAll(() => {
+    blockProducer.stop();
+  });
 
-  async runConsensusValidationStressTest(numBlocks: number) {
-    // Implement stress test for consensus validation
-  }
+  test('Produce blocks under high transaction load', async () => {
+    blockProducer.start();
 
-  async runBlockProductionTimingTest(duration: number) {
-    // Implement test for block production timing
-  }
+    for (let i = 0; i < NUM_TESTS; i++) {
+      console.log(`\n===== Test ${i + 1}/${NUM_TESTS} =====`);
 
-  async runFailureHandlingTest() {
-    // Implement test for failure handling
-  }
-}
+      // Generate a large number of transactions
+      const transactions: Transaction[] = [];
+      for (let j = 0; j < MAX_TRANSACTIONS; j++) {
+        const tx: Transaction = {
+          hash: generateRandomBase58(64),
+          from: generateRandomBase58(44),
+          to: generateRandomBase58(44),
+          value: BigInt(Math.floor(Math.random() * 1000000000)),
+          gasPrice: 1000000n,
+          gasLimit: 21000n,
+          nonce: j,
+          signature: generateRandomBase58(64)
+        };
+        transactions.push(tx);
+      }
+
+      // Submit transactions to the pool
+      console.log(`Submitting ${transactions.length} transactions to the pool...`);
+      await txPool.addTransactions(transactions);
+
+      // Wait for the block producer to process the transactions
+      await new Promise((resolve) => setTimeout(resolve, 15000));
+
+      // Verify the block production
+      const latestBlock = chain.getLatestBlock();
+      expect(latestBlock).not.toBeUndefined();
+      expect(latestBlock?.transactions.length).toBeGreaterThan(0);
+      expect(latestBlock?.header.gasUsed).toBeGreaterThan(0n);
+
+      // Clear the transaction pool for the next test
+      await txPool.clearPool();
+    }
+  }, 60000);
+});
