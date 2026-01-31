@@ -1,5 +1,10 @@
 export class VirtualMachine {
   private stack: any[] = [];
+  private gas: number;
+
+  constructor(initialGas: number) {
+    this.gas = initialGas;
+  }
 
   execute(bytecode: Uint8Array) {
     let pc = 0; // program counter
@@ -10,20 +15,28 @@ export class VirtualMachine {
           pc++;
           const value = bytecode[pc];
           this.pushToStack(value);
+          this.deductGas(1); // Gas cost for PUSH
           pc++;
           break;
         case 0x02: // POP
           this.popFromStack();
+          this.deductGas(1); // Gas cost for POP
           break;
         case 0x03: // ADD
           const b = this.popFromStack();
           const a = this.popFromStack();
           this.pushToStack(a + b);
+          this.deductGas(3); // Gas cost for ADD
           break;
-        // Add more opcodes here
+        // Add more opcodes here with appropriate gas costs
         default:
           throw new Error(`Unknown opcode: ${opcode}`);
       }
+
+      if (this.gas <= 0) {
+        throw new Error('Out of gas');
+      }
+
       pc++;
     }
   }
@@ -42,5 +55,9 @@ export class VirtualMachine {
 
   getStackSize() {
     return this.stack.length;
+  }
+
+  private deductGas(amount: number) {
+    this.gas -= amount;
   }
 }
