@@ -4,17 +4,17 @@ import JsonRpcServer from './JsonRpcServer';
 import { Transaction } from './transaction';
 import { BlockExplorer } from './BlockExplorer';
 import WebSocketSubscriptions from './WebSocketSubscriptions';
+import { TransactionPool } from './transaction-pool';
 
 class WebSocketServer extends JsonRpcServer {
   private wss: WebSocketServer;
-  private transactionQueue: Transaction[] = [];
-  private blockExplorer: BlockExplorer;
+  private transactionPool: TransactionPool;
   private subscriptions: WebSocketSubscriptions;
 
   constructor() {
     super();
     this.wss = new WebSocketServer({ port: 8080 });
-    this.blockExplorer = new BlockExplorer();
+    this.transactionPool = new TransactionPool();
     this.subscriptions = new WebSocketSubscriptions();
 
     this.wss.on('connection', (ws, req) => {
@@ -50,19 +50,9 @@ class WebSocketServer extends JsonRpcServer {
       return { result: 'Unsubscribed' };
     });
 
-    this.registerSubscription('newHeads', (params, ws) => {
-      // TODO: Implement newHeads subscription
-      return null;
-    });
-
-    this.registerSubscription('logs', (params, ws) => {
-      // TODO: Implement logs subscription
-      return null;
-    });
-
     this.registerSubscription('pendingTransactions', (params, ws) => {
-      // TODO: Implement pendingTransactions subscription
-      return null;
+      const pendingTransactions = this.transactionPool.getPendingTransactions();
+      return { result: pendingTransactions };
     });
   }
 
@@ -83,17 +73,9 @@ class WebSocketServer extends JsonRpcServer {
   private startTransactionFeed() {
     setInterval(async () => {
       // Check for new transactions in the mempool
-      const newTransactions = await this.getNewTransactions();
-      this.transactionQueue = this.transactionQueue.concat(newTransactions);
-
-      // Broadcast new transactions to all connected clients
+      const newTransactions = await this.transactionPool.getPendingTransactions();
       this.subscriptions.broadcastPendingTransactions(newTransactions);
     }, 1000);
-  }
-
-  private async getNewTransactions(): Promise<Transaction[]> {
-    // TODO: Implement logic to fetch new transactions from the mempool
-    return [];
   }
 }
 
