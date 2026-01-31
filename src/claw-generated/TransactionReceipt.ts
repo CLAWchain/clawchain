@@ -1,15 +1,22 @@
-import { BloomFilter } from './bloom-filter';
+import { Event } from './Event';
 
 export class TransactionReceipt {
-  status: boolean;
-  gasUsed: number;
-  logs: any[];
-  bloomFilter: BloomFilter;
+    private transactions: Transaction[] = [];
+    private events: Event[] = [];
 
-  constructor(status: boolean, gasUsed: number, logs: any[], bloomFilter: BloomFilter) {
-    this.status = status;
-    this.gasUsed = gasUsed;
-    this.logs = logs;
-    this.bloomFilter = bloomFilter;
-  }
+    addTransaction(tx: Transaction): void {
+        this.transactions.push(tx);
+    }
+
+    addEvents(events: Event[]): void {
+        this.events.push(...events);
+    }
+
+    getTransactions(): Transaction[] {
+        return this.transactions;
+    }
+
+    getEvents(): Event[] {
+        return this.events;
+    }
 }

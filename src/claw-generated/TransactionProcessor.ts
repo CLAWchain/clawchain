@@ -1,84 +1,52 @@
-import { BigNumber } from 'ethers';
-import { Account } from './account';
-import { StateManager } from './StateManager';
-import { StakingStateManager } from './StakingStateManager';
+import { EventEmitter } from './EventEmitter.sol';
 import { TransactionReceipt } from './TransactionReceipt';
-import { TransactionOrdering } from './TransactionOrdering';
-import { Transaction } from './Transaction';
-import { BloomFilter } from './bloom-filter';
+import { BloomFilter } from './BloomFilter';
 
 class TransactionProcessor {
-  private stateManager: StateManager;
-  private stakingStateManager: StakingStateManager;
-  private transactionOrdering: TransactionOrdering;
+    private eventEmitter: EventEmitter;
+    private transactionReceipt: TransactionReceipt;
+    private bloomFilter: BloomFilter;
 
-  constructor(stateManager: StateManager, stakingStateManager: StakingStateManager) {
-    this.stateManager = stateManager;
-    this.stakingStateManager = stakingStateManager;
-    this.transactionOrdering = new TransactionOrdering(stateManager);
-  }
-
-  async processTransactions(transactions: Transaction[]): Promise<TransactionReceipt[]> {
-    const receipts: TransactionReceipt[] = [];
-    for (const tx of transactions) {
-      const receipt = await this.processTransaction(tx);
-      receipts.push(receipt);
+    constructor() {
+        this.eventEmitter = new EventEmitter();
+        this.transactionReceipt = new TransactionReceipt();
+        this.bloomFilter = new BloomFilter();
     }
-    return receipts;
-  }
 
-  async processTransaction(tx: Transaction): Promise<TransactionReceipt> {
-    // 1. Execute the transaction and apply state changes
-    const { status, gasUsed, logs } = await this.executeTransaction(tx);
+    async processTransaction(tx: Transaction): Promise<void> {
+        // Validate and execute the transaction
+        await this.executeTransaction(tx);
 
-    // 2. Generate the transaction receipt
-    const bloomFilter = this.generateBloomFilter(logs);
-    return this.generateTransactionReceipt(status, gasUsed, logs, bloomFilter);
-  }
+        // Capture and store any events emitted during execution
+        this.captureEvents(tx);
 
-  private async executeTransaction(tx: Transaction): Promise<{ status: boolean; gasUsed: number; logs: any[] }> {
-    // Implement transaction execution logic here
-    return { status: true, gasUsed: 21000, logs: [] };
-  }
+        // Update the transaction receipt and bloom filter
+        this.updateTransactionReceipt(tx);
+        this.updateBloomFilter(tx);
+    }
 
-  private generateTransactionReceipt(
-    status: boolean,
-    gasUsed: number,
-    logs: any[],
-    bloomFilter: BloomFilter
-  ): TransactionReceipt {
-    return new TransactionReceipt(status, gasUsed, logs, bloomFilter);
-  }
+    private async executeTransaction(tx: Transaction): Promise<void> {
+        // Execute the transaction and update the state
+        await this.executeContractCall(tx);
+    }
 
-  private generateBloomFilter(logs: any[]): BloomFilter {
-    // Implement bloom filter generation logic here
-    return new BloomFilter();
-  }
+    private captureEvents(tx: Transaction): void {
+        // Iterate through the emitted events and store them
+        for (const event of tx.events) {
+            this.eventEmitter.emit(event.message);
+        }
+    }
 
-  async processStakeTransaction(from: Account, amount: BigNumber, delegateTo?: string): Promise<TransactionReceipt> {
-    // 1. Validate the stake amount
-    // 2. Update the staker's balance in the staking state trie
-    // 3. Track the delegation, if provided
-    // 4. Emit a staking event
-    // 5. Return the transaction receipt
-    return { status: true, gasUsed: BigNumber.from(0), logs: [], bloomFilter: new BloomFilter() };
-  }
+    private updateTransactionReceipt(tx: Transaction): void {
+        // Add the transaction details and emitted events to the receipt
+        this.transactionReceipt.addTransaction(tx);
+        this.transactionReceipt.addEvents(tx.events);
+    }
 
-  async processWithdrawTransaction(from: Account, amount: BigNumber): Promise<TransactionReceipt> {
-    // 1. Validate the withdrawal amount
-    // 2. Update the staker's balance in the staking state trie
-    // 3. Emit a withdrawal event
-    // 4. Return the transaction receipt
-    return { status: true, gasUsed: BigNumber.from(0), logs: [], bloomFilter: new BloomFilter() };
-  }
-
-  async processClaimRewardsTransaction(from: Account): Promise<TransactionReceipt> {
-    // 1. Calculate the staker's rewards based on their stake and the total staked
-    // 2. Transfer the rewards to the staker's account
-    // 3. Emit a rewards event
-    // 4. Return the transaction receipt
-    return { status: true, gasUsed: BigNumber.from(0), logs: [], bloomFilter: new BloomFilter() };
-  }
+    private updateBloomFilter(tx: Transaction): void {
+        // Update the bloom filter with the emitted event data
+        for (const event of tx.events) {
+            this.bloomFilter.add(event.message);
+        }
+    }
 }
-
-export { TransactionProcessor };

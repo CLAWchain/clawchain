@@ -1,43 +1,49 @@
+type Query {
+  getBlock(blockNumber: Int!): Block
+  getTransaction(transactionHash: String!): Transaction
+  getEvents(
+    contractAddress: String
+    eventName: String
+    fromBlock: Int
+    toBlock: Int
+  ): [Event]
+}
+
 type Block {
-  height: Int!
+  number: Int!
+  hash: String!
+  parentHash: String!
   timestamp: Int!
   transactions: [Transaction!]!
-  stateRoot: String!
-  hash: String!
 }
 
 type Transaction {
   hash: String!
-  block: Block!
   from: String!
   to: String!
   value: String!
-  gasUsed: Int!
-  timestamp: Int!
-  status: String!
-  logs: [Log!]!
+  gas: Int!
+  gasPrice: String!
+  nonce: Int!
+  input: String!
+  receipt: TransactionReceipt!
 }
 
-type Log {
+type TransactionReceipt {
+  transactionHash: String!
+  blockNumber: Int!
+  blockHash: String!
+  contractAddress: String
+  events: [Event!]!
+}
+
+type Event {
   address: String!
-  topics: [String!]!
-  data: String!
+  name: String!
+  parameters: [EventParameter!]!
 }
 
-type Account {
-  address: String!
-  balance: String!
-  transactions: [Transaction!]!
-}
-
-type Query {
-  getBlock(height: Int!): Block
-  getTransaction(hash: String!): Transaction
-  getAccount(address: String!): Account
-  getBlocks(limit: Int, offset: Int): [Block!]!
-  getTransactions(limit: Int, offset: Int): [Transaction!]!
-}
-
-type Mutation {
-  sendTransaction(from: String!, to: String!, value: String!, data: String): Transaction
+type EventParameter {
+  name: String!
+  value: String!
 }
