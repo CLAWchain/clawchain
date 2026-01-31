@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
 
@@ -17,10 +17,12 @@ jobs:
         node-version: '16'
     - run: npm ci
     - run: npm run build
-    - name: Deploy to Netlify
-      uses: netlify/actions/cli@master
+    - name: Deploy to production
       env:
-        NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-      with:
-        args: deploy --dir=build --prod
+        HOST: ${{ secrets.HOST }}
+        USER: ${{ secrets.USER }}
+        KEY: ${{ secrets.SSH_KEY }}
+      run: |
+        ssh $USER@$HOST 'mkdir -p /var/www/clawchain'
+        scp -r backend frontend $USER@$HOST:/var/www/clawchain/
+        ssh $USER@$HOST 'cd /var/www/clawchain && npm install && pm2 restart clawchain'

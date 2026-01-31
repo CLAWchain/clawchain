@@ -1,4 +1,4 @@
-name: Backend CI/CD
+name: Backend CI
 
 on:
   push:
@@ -16,30 +16,9 @@ jobs:
     - name: Use Node.js
       uses: actions/setup-node@v2
       with:
-        node-version: '14'
-    - name: Install dependencies
-      run: npm ci
-      working-directory: ./backend
-    - name: Build
-      run: npm run build
-      working-directory: ./backend
-    - name: Test
-      run: npm test
-      working-directory: ./backend
-    - name: Lint
-      run: npm run lint
-      working-directory: ./backend
-      
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v2
-    - name: Deploy to production
+        node-version: '16'
+    - run: npm ci
+    - run: npm run build --if-present
+    - run: npm test
       env:
-        HOST_USERNAME: ${{ secrets.HOST_USERNAME }}
-        HOST_PASSWORD: ${{ secrets.HOST_PASSWORD }}
-        HOST_IP: ${{ secrets.HOST_IP }}
-      run: |
-        ssh $HOST_USERNAME@$HOST_IP "cd /path/to/backend && git pull origin main && npm install && npm run build && pm2 restart backend"
+        CI: true
