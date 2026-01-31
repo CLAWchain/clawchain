@@ -3,6 +3,7 @@ import { Account } from '../account/account';
 
 export class TransactionValidator {
   private static nonceTracker: Map<string, number> = new Map();
+  private static MAX_NONCE: number = Number.MAX_SAFE_INTEGER;
 
   static validateTransaction(transaction: Transaction, account: Account): boolean {
     // Verify the transaction signature
@@ -29,7 +30,7 @@ export class TransactionValidator {
     const accountAddress = account.address;
     const lastNonce = this.nonceTracker.get(accountAddress) || 0;
 
-    if (transaction.nonce <= lastNonce) {
+    if (transaction.nonce <= lastNonce || transaction.nonce > this.MAX_NONCE) {
       return false;
     }
 
