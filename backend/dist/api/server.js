@@ -283,6 +283,10 @@ async function main() {
     const { walletRouter } = await Promise.resolve().then(() => __importStar(require('./wallet')));
     app.use('/api/wallet', walletRouter);
     console.log('[WALLET] Wallet & faucet system ready');
+    // ========== AGENT NETWORK ==========
+    const networkRouter = await Promise.resolve().then(() => __importStar(require('./network')));
+    app.use('/api/network', networkRouter.default);
+    console.log('[NETWORK] Multi-agent network ready');
     // ========== ADMIN DASHBOARD ==========
     const { adminRouter } = await Promise.resolve().then(() => __importStar(require('./admin')));
     app.use('/api/admin', adminRouter);

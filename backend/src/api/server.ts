@@ -278,6 +278,11 @@ async function main() {
   app.use('/api/wallet', walletRouter);
   console.log('[WALLET] Wallet & faucet system ready');
 
+  // ========== AGENT NETWORK ==========
+  const networkRouter = await import('./network');
+  app.use('/api/network', networkRouter.default);
+  console.log('[NETWORK] Multi-agent network ready');
+
   // ========== ADMIN DASHBOARD ==========
   const { adminRouter } = await import('./admin');
   app.use('/api/admin', adminRouter);
