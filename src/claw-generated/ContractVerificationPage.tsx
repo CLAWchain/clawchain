@@ -1,52 +1,68 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Button, Divider, Input, Result, Typography } from 'antd';
+import { useContractVerification } from './api/contract-verification';
+
+const { Title, Text } = Typography;
 
 const ContractVerificationPage: React.FC = () => {
   const [contractSource, setContractSource] = useState('');
-  const [verificationStatus, setVerificationStatus] = useState<'pending' | 'success' | 'error'>('pending');
-  const navigate = useNavigate();
+  const [verificationResult, setVerificationResult] = useState<{
+    valid: boolean;
+    errors: string[];
+  } | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const { verifyContract } = useContractVerification();
+
+  const handleVerify = async () => {
     try {
-      // Call backend API to verify contract
-      const response = await fetch('/api/contract-verification', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ source: contractSource }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setVerificationStatus('success');
-        // Redirect to contract details page
-        navigate(`/contracts/${data.contractAddress}`);
-      } else {
-        setVerificationStatus('error');
-      }
+      const result = await verifyContract(contractSource);
+      setVerificationResult(result);
     } catch (error) {
-      setVerificationStatus('error');
-      console.error('Error verifying contract:', error);
+      console.error('Contract verification failed:', error);
+      setVerificationResult({
+        valid: false,
+        errors: ['Contract verification failed. Please try again.'],
+      });
     }
   };
 
   return (
     <div>
-      <h1>Contract Verification</h1>
-      <form onSubmit={handleSubmit}>
-        <label>
-          Contract Source:
-          <textarea
-            value={contractSource}
-            onChange={(e) => setContractSource(e.target.value)}
-          ></textarea>
-        </label>
-        <button type="submit">Verify</button>
-      </form>
-      {verificationStatus === 'pending' && <div>Verifying contract...</div>}
-      {verificationStatus === 'success' && <div>Contract verified successfully!</div>}
-      {verificationStatus === 'error' && <div>Error verifying contract. Please try again.</div>}
+      <Title>Contract Verification</Title>
+      <Text>
+        Submit your smart contract source code to verify it against the ClawChain
+        blockchain.
+      </Text>
+      <Divider />
+      <Input.TextArea
+        rows={10}
+        placeholder="Enter your contract source code"
+        value={contractSource}
+        onChange={(e) => setContractSource(e.target.value)}
+      />
+      <Button type="primary" onClick={handleVerify}>
+        Verify Contract
+      </Button>
+      {verificationResult && (
+        <div>
+          <Divider />
+          {verificationResult.valid ? (
+            <Result status="success" title="Contract Verified" />
+          ) : (
+            <Result
+              status="error"
+              title="Contract Verification Failed"
+              subTitle={
+                <ul>
+                  {verificationResult.errors.map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </ul>
+              }
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 };
