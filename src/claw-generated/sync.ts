@@ -1,31 +1,39 @@
-import { Block } from '../db/models/Block';
-import { Peer } from './p2p';
+import { Block } from './block';
 
-export class SyncManager {
-  private blockCache: Map<number, Block> = new Map();
-  private downloadingBlocks: Set<number> = new Set();
+export class Sync {
+  private checkpoints: Block[] = [];
 
-  async syncMissingBlocks(peers: Peer[]) {
-    // Query peers for missing block ranges
-    const missingBlockRanges = await this.queryPeersForMissingBlocks(peers);
-
-    // Download missing blocks in parallel
-    await this.downloadMissingBlocks(missingBlockRanges, peers);
-
-    // Persist downloaded blocks to storage
-    await this.persistDownloadedBlocks();
+  constructor() {
+    // Load checkpoints from storage
+    this.loadCheckpoints();
   }
 
-  private async queryPeersForMissingBlocks(peers: Peer[]): Promise<[number, number][]> {
-    // Implement logic to query peers for missing block ranges
-    return [];
+  async syncToLatest(startBlock: number): Promise<void> {
+    // Sync from startBlock to latest block
+    // If startBlock is before a checkpoint, skip verification until the checkpoint
   }
 
-  private async downloadMissingBlocks(ranges: [number, number][], peers: Peer[]) {
-    // Implement logic to download missing blocks in parallel from peers
+  private loadCheckpoints(): void {
+    // Load checkpoint data from storage
+    // For now, let's just create some hardcoded checkpoints
+    this.checkpoints = [
+      Block.createCheckpoint(0, '0x0'),
+      Block.createCheckpoint(100, '0x1234567890abcdef'),
+      Block.createCheckpoint(200, '0xfedcba0987654321'),
+    ];
   }
 
-  private async persistDownloadedBlocks() {
-    // Implement logic to persist downloaded blocks to storage
+  private createCheckpoint(): void {
+    // Generate a new checkpoint block
+    const latestBlock = this.getLatestBlock();
+    const checkpoint = Block.createCheckpoint(latestBlock.number + 1, latestBlock.hash);
+    this.checkpoints.push(checkpoint);
+    // Save checkpoint to storage
+  }
+
+  private getLatestBlock(): Block {
+    // Retrieve the latest block
+    // This is a placeholder, actual implementation will fetch the latest block
+    return this.checkpoints[this.checkpoints.length - 1];
   }
 }

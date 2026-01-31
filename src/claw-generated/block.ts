@@ -1,31 +1,29 @@
-import { Transaction } from './transaction';
-import { MerkleTree } from './merkle-tree';
+import { hash } from './utils';
 
 export class Block {
-  timestamp: number;
-  transactions: Transaction[];
-  parentHash: string;
-  hash: string;
+  public number: number;
+  public timestamp: number;
+  public hash: string;
+  public previousHash: string;
+  public transactions: any[];
 
-  constructor(timestamp: number, transactions: Transaction[], parentHash: string) {
+  constructor(
+    number: number,
+    timestamp: number,
+    hash: string,
+    previousHash: string,
+    transactions: any[]
+  ) {
+    this.number = number;
     this.timestamp = timestamp;
+    this.hash = hash;
+    this.previousHash = previousHash;
     this.transactions = transactions;
-    this.parentHash = parentHash;
-    this.hash = this.calculateHash();
   }
 
-  calculateHash(): string {
-    // Implement hash calculation logic here
-    return 'placeholder-hash';
-  }
-
-  validate(): boolean {
-    // Implement block validation logic here
-    return true;
-  }
-
-  serialize(): string {
-    // Implement block serialization logic here
-    return 'placeholder-serialized-block';
+  static createCheckpoint(blockNumber: number, previousHash: string): Block {
+    const timestamp = Date.now();
+    const hash = hash(`${blockNumber}:${timestamp}:${previousHash}`);
+    return new Block(blockNumber, timestamp, hash, previousHash, []);
   }
 }
