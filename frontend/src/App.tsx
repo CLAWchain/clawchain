@@ -93,11 +93,15 @@ export default function App() {
     blockHeight: 0,
     tps: 0
   });
+  const [uptime, setUptime] = useState('0h 0m');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const lastBlockTime = useRef<number>(Date.now());
   const recentTxCounts = useRef<number[]>([]);
+  
+  // Fixed genesis timestamp - Jan 30, 2026 00:00:00 UTC
+  const GENESIS_TIMESTAMP = 1769731200000;
 
   // Detect mobile
   useEffect(() => {
@@ -105,6 +109,19 @@ export default function App() {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Real uptime timer - total hours since genesis
+  useEffect(() => {
+    const updateUptime = () => {
+      const elapsed = Date.now() - GENESIS_TIMESTAMP;
+      const totalHours = Math.floor(elapsed / (1000 * 60 * 60));
+      const minutes = Math.floor((elapsed / (1000 * 60)) % 60);
+      setUptime(`${totalHours}h ${minutes}m`);
+    };
+    updateUptime();
+    const interval = setInterval(updateUptime, 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:4000' : '';
@@ -289,7 +306,7 @@ export default function App() {
         {[
           { value: stats.blockHeight.toLocaleString(), label: 'Block Height', color: 'var(--coral)' },
           { value: stats.tps, label: 'TPS', color: 'var(--teal)' },
-          { value: '24/7', label: 'Uptime', color: 'var(--coral)' },
+          { value: uptime, label: 'Uptime', color: 'var(--coral)' },
         ].map((stat, i) => (
           <div key={i} className="card" style={{ 
             padding: isMobile ? '16px 20px' : 20, 
