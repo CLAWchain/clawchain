@@ -1,34 +1,35 @@
-import { Block, Transaction, TransactionReceipt } from '../types';
+import { ethers } from 'ethers';
 
-export class TransactionProcessor {
-  async processTransaction(tx: Transaction, block: Block): Promise<TransactionReceipt> {
-    // Validate the transaction
-    this.validateTransaction(tx);
-
-    // Execute the transaction and get the result
-    const result = await this.executeTransaction(tx, block);
-
-    // Generate the transaction receipt
-    const receipt = this.generateReceipt(tx, result);
-
-    return receipt;
+export class Transaction {
+  public static verifySignature(
+    senderAddress: string,
+    data: string,
+    signature: string
+  ): boolean {
+    try {
+      const recoveredAddress = ethers.utils.verifyMessage(data, signature);
+      return recoveredAddress === senderAddress;
+    } catch (err) {
+      console.error('Error verifying transaction signature:', err);
+      return false;
+    }
   }
 
-  private validateTransaction(tx: Transaction): void {
-    // Implement transaction validation logic
+  public static async validateNonce(
+    senderAddress: string,
+    nonce: number,
+    stateManager: StateManager
+  ): Promise<boolean> {
+    const currentNonce = await stateManager.getNonce(senderAddress);
+    return nonce === currentNonce;
   }
 
-  private async executeTransaction(tx: Transaction, block: Block): Promise<any> {
-    // Implement transaction execution logic
-    return { status: 'success', gasUsed: 1000, logs: [], bloom: '0x0' };
-  }
-
-  private generateReceipt(tx: Transaction, result: any): TransactionReceipt {
-    return {
-      status: result.status,
-      gasUsed: result.gasUsed,
-      logs: result.logs,
-      bloom: result.bloom
-    };
+  public static async validateBalance(
+    senderAddress: string,
+    amount: ethers.BigNumber,
+    stateManager: StateManager
+  ): Promise<boolean> {
+    const balance = await stateManager.getBalance(senderAddress);
+    return balance.gte(amount);
   }
 }
