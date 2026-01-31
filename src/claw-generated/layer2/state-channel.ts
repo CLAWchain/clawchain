@@ -1,55 +1,56 @@
-import { Account } from '../account/account';
-import { Transaction } from '../transaction/transaction';
-import { TransactionSigner } from '../crypto/transaction-signer';
+import { BigNumber } from 'ethers';
 
-export class StateChannel {
-  readonly id: string;
-  readonly initiator: Account;
-  readonly counterparty: Account;
-  readonly initialDeposit: number;
-  private currentState: any; // Placeholder for actual state representation
-  private stateHistory: any[]; // Placeholder for state history
+interface StateChannel {
+  id: string;
+  participants: string[];
+  balance: BigNumber;
+  lastUpdateBlock: number;
+  isOpen: boolean;
+}
 
-  constructor(
-    id: string,
-    initiator: Account,
-    counterparty: Account,
-    initialDeposit: number
-  ) {
-    this.id = id;
-    this.initiator = initiator;
-    this.counterparty = counterparty;
-    this.initialDeposit = initialDeposit;
-    this.currentState = { balance: initialDeposit };
-    this.stateHistory = [];
+class StateChannelManager {
+  private channels: StateChannel[] = [];
+
+  createChannel(participants: string[], initialBalance: BigNumber): StateChannel {
+    const channel: StateChannel = {
+      id: this.generateChannelId(),
+      participants,
+      balance: initialBalance,
+      lastUpdateBlock: 0,
+      isOpen: true
+    };
+    this.channels.push(channel);
+    return channel;
   }
 
-  /**
-   * Update the state of the channel off-chain.
-   * @param transaction The transaction representing the state update
-   * @param signer The account signing the state update
-   * @returns true if the update was successful, false otherwise
-   */
-  updateState(transaction: Transaction, signer: Account): boolean {
-    // Validate the transaction signature
-    if (!TransactionSigner.verifySignature(transaction, signer)) {
-      return false;
+  closeChannel(channelId: string): void {
+    const channel = this.getChannel(channelId);
+    if (channel) {
+      channel.isOpen = false;
     }
-
-    // Apply the state update
-    // Update the currentState object accordingly
-    this.currentState = { ...this.currentState, ...transaction.state };
-    this.stateHistory.push(transaction);
-
-    return true;
   }
 
-  /**
-   * Close the state channel and settle the final state on the main chain.
-   * @returns The final state of the channel
-   */
-  closeChannel(): any {
-    // Implement logic to close the channel and submit the final state to the main chain
-    return this.currentState;
+  updateChannelBalance(channelId: string, newBalance: BigNumber): void {
+    const channel = this.getChannel(channelId);
+    if (channel) {
+      channel.balance = newBalance;
+      channel.lastUpdateBlock = this.getCurrentBlockNumber();
+    }
+  }
+
+  private generateChannelId(): string {
+    // Generate a unique channel ID
+    return 'channel-' + Math.random().toString(36).substring(2, 10);
+  }
+
+  private getChannel(channelId: string): StateChannel | undefined {
+    return this.channels.find(channel => channel.id === channelId);
+  }
+
+  private getCurrentBlockNumber(): number {
+    // Placeholder, will need to integrate with ClawChain node
+    return 12345;
   }
 }
+
+export { StateChannelManager, StateChannel };
