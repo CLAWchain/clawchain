@@ -1,29 +1,30 @@
-import { Account, AccountInfo } from '../state/account';
-import { TxnProcessor } from '../tx/processor';
+import { parse, Response } from 'jsonrpc-lite';
 
-export class RPCServer {
-  private accounts: Account[];
-  private txnProcessor: TxnProcessor;
+export class JsonRpcServer {
+  async handleRequest(requestBody: string): Promise<string> {
+    try {
+      const request = parse(requestBody);
+      console.log('Received JSON-RPC request:', request);
 
-  constructor(accounts: Account[], txnProcessor: TxnProcessor) {
-    this.accounts = accounts;
-    this.txnProcessor = txnProcessor;
-  }
+      // TODO: Implement request handling
+      const response: Response = {
+        jsonrpc: '2.0',
+        id: request.id,
+        result: 'Hello, JSON-RPC!',
+      };
 
-  async getAccountInfo(pubkey: string): Promise<AccountInfo> {
-    const account = this.accounts.find(a => a.publicKey === pubkey);
-    if (!account) {
-      throw new Error(`Account not found: ${pubkey}`);
+      return JSON.stringify(response);
+    } catch (error) {
+      console.error('Error handling JSON-RPC request:', error);
+      const response: Response = {
+        jsonrpc: '2.0',
+        id: null,
+        error: {
+          code: -32603,
+          message: 'Internal error',
+        },
+      };
+      return JSON.stringify(response);
     }
-
-    return {
-      lamports: account.lamports,
-      owner: account.owner.toString(),
-      executable: account.executable
-    };
-  }
-
-  async processTransaction(tx: any): Promise<void> {
-    this.txnProcessor.processTransaction(tx);
   }
 }
