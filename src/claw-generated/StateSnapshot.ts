@@ -1,26 +1,23 @@
-import { MerklePatriciaTrie } from './Trie';
-import { Account } from './account';
+import { Trie } from './Trie';
 
-export class StateSnapshot {
-  private trie: MerklePatriciaTrie<Account>;
-  private stateRoot: Buffer;
-  private blockHeight: number;
+class StateSnapshot {
+  private trie: Trie;
+  private blockNumber: number;
 
-  constructor(trie: MerklePatriciaTrie<Account>, stateRoot: Buffer, blockHeight: number) {
+  constructor(trie: Trie, blockNumber: number) {
     this.trie = trie;
-    this.stateRoot = stateRoot;
-    this.blockHeight = blockHeight;
+    this.blockNumber = blockNumber;
   }
 
-  getAccount(address: Buffer): Account {
-    return this.trie.get(address);
+  serialize(): Uint8Array {
+    // Implement efficient compression and serialization of the state trie
+    return new Uint8Array();
   }
 
-  getStateRoot(): Buffer {
-    return this.stateRoot;
-  }
-
-  getBlockHeight(): number {
-    return this.blockHeight;
+  static deserialize(data: Uint8Array): StateSnapshot {
+    // Implement deserialization and decompression of the state snapshot
+    return new StateSnapshot(new Trie(), 0);
   }
 }
+
+export { StateSnapshot };
