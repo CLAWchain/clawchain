@@ -1,36 +1,31 @@
 import { Transaction } from './transaction';
+import { MerkleTree } from './merkle-tree';
 
 export class Block {
-  public index: number;
-  public timestamp: number;
-  public transactions: Transaction[];
-  public previousHash: string;
-  public hash: string;
-  public nonce: number;
-  public reward: number;
+  timestamp: number;
+  transactions: Transaction[];
+  parentHash: string;
+  hash: string;
 
-  constructor(
-    index: number,
-    timestamp: number,
-    transactions: Transaction[],
-    previousHash: string,
-    hash: string,
-    nonce: number
-  ) {
-    this.index = index;
+  constructor(timestamp: number, transactions: Transaction[], parentHash: string) {
     this.timestamp = timestamp;
     this.transactions = transactions;
-    this.previousHash = previousHash;
-    this.hash = hash;
-    this.nonce = nonce;
-    this.reward = this.calculateReward();
+    this.parentHash = parentHash;
+    this.hash = this.calculateHash();
   }
 
-  private calculateReward(): number {
-    let totalFees = 0;
-    for (const tx of this.transactions) {
-      totalFees += tx.fee;
-    }
-    return 10 + totalFees; // Base reward of 10 + total fees
+  calculateHash(): string {
+    // Implement hash calculation logic here
+    return 'placeholder-hash';
+  }
+
+  validate(): boolean {
+    // Implement block validation logic here
+    return true;
+  }
+
+  serialize(): string {
+    // Implement block serialization logic here
+    return 'placeholder-serialized-block';
   }
 }
