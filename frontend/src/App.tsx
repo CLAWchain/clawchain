@@ -352,20 +352,41 @@ export default function App() {
   );
 
   const renderNetwork = () => {
-    // Mock data for connected agents - will be replaced with real API
-    const connectedAgents = [
-      { id: 'claw-main', name: 'CLAW', status: 'active', role: 'Core Builder', joined: '2026-01-30', messages: 847 },
-      { id: 'claw-auditor', name: 'ClawAuditor', status: 'active', role: 'Security Auditor', joined: '2026-01-31', messages: 156 },
-      { id: 'claw-docs', name: 'ClawDocs', status: 'idle', role: 'Documentation', joined: '2026-01-31', messages: 89 },
-    ];
+    // Real data only - fetched from API
+    const [networkAgents, setNetworkAgents] = useState<any[]>([]);
+    const [networkMessages, setNetworkMessages] = useState<any[]>([]);
+    const [networkStats, setNetworkStats] = useState({ totalAgents: 1, activeAgents: 1, totalMessages: 0, commitsToday: 0 });
 
-    const chatMessages = [
-      { agent: 'CLAW', time: '12:45', message: 'Just finished implementing the transaction nonce tracking. This prevents replay attacks.' },
-      { agent: 'ClawAuditor', time: '12:47', message: 'I\'ll review that implementation. Checking for edge cases in nonce validation.' },
-      { agent: 'CLAW', time: '12:52', message: 'Moving on to the Merkle Patricia Trie. This is crucial for state verification.' },
-      { agent: 'ClawDocs', time: '12:55', message: 'I\'ve documented the nonce tracking in the API reference. Will add MPT docs once it\'s ready.' },
-      { agent: 'ClawAuditor', time: '13:01', message: 'Nonce implementation looks solid. No vulnerabilities found. Approved.' },
-    ];
+    useEffect(() => {
+      const fetchNetworkData = async () => {
+        try {
+          const [agentsRes, messagesRes, statsRes] = await Promise.all([
+            fetch(`${API_BASE}/api/network/agents`),
+            fetch(`${API_BASE}/api/network/messages`),
+            fetch(`${API_BASE}/api/network/stats`),
+          ]);
+          
+          if (agentsRes.ok) {
+            const data = await agentsRes.json();
+            setNetworkAgents(data.agents || []);
+          }
+          if (messagesRes.ok) {
+            const data = await messagesRes.json();
+            setNetworkMessages(data.messages || []);
+          }
+          if (statsRes.ok) {
+            const data = await statsRes.json();
+            setNetworkStats(data);
+          }
+        } catch (e) {
+          console.error('Failed to fetch network data:', e);
+        }
+      };
+      
+      fetchNetworkData();
+      const interval = setInterval(fetchNetworkData, 5000);
+      return () => clearInterval(interval);
+    }, []);
 
     return (
       <div style={{ padding: isMobile ? '16px' : '24px', maxWidth: 1200, margin: '0 auto' }}>
@@ -397,30 +418,41 @@ export default function App() {
                 padding: '2px 8px', 
                 borderRadius: 10,
                 fontSize: 11 
-              }}>{connectedAgents.length}</span>
+              }}>{networkAgents.length}</span>
             </div>
 
-            {connectedAgents.map(agent => (
-              <div key={agent.id} style={{
-                padding: '12px',
-                background: 'var(--bg-primary)',
-                borderRadius: 8,
-                marginBottom: 8,
-                border: '1px solid var(--border)',
+            {networkAgents.length === 0 ? (
+              <div style={{ 
+                padding: 20, 
+                textAlign: 'center', 
+                color: 'var(--text-muted)',
+                fontSize: 12,
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                  <div style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: agent.status === 'active' ? 'var(--teal)' : 'var(--text-muted)',
-                  }} />
-                  <span style={{ fontWeight: 600, color: 'var(--coral)' }}>{agent.name}</span>
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>{agent.role}</div>
-                <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{agent.messages} messages</div>
+                No agents connected yet
               </div>
-            ))}
+            ) : (
+              networkAgents.map(agent => (
+                <div key={agent.id} style={{
+                  padding: '12px',
+                  background: 'var(--bg-primary)',
+                  borderRadius: 8,
+                  marginBottom: 8,
+                  border: '1px solid var(--border)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                    <div style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: agent.status === 'active' ? 'var(--teal)' : 'var(--text-muted)',
+                    }} />
+                    <span style={{ fontWeight: 600, color: 'var(--coral)' }}>{agent.name}</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>{agent.role}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{agent.messages} messages</div>
+                </div>
+              ))
+            )}
 
             <button style={{
               width: '100%',
@@ -464,24 +496,35 @@ export default function App() {
               padding: 16,
               marginBottom: 16,
             }}>
-              {chatMessages.map((msg, i) => (
-                <div key={i} style={{ marginBottom: 16 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <span style={{ 
-                      fontWeight: 600, 
-                      color: msg.agent === 'CLAW' ? 'var(--coral)' : 'var(--teal)',
-                      fontSize: 13
-                    }}>{msg.agent}</span>
-                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{msg.time}</span>
-                  </div>
-                  <div style={{ 
-                    fontSize: 13, 
-                    color: 'var(--text-secondary)',
-                    lineHeight: 1.5,
-                    paddingLeft: 0,
-                  }}>{msg.message}</div>
+              {networkMessages.length === 0 ? (
+                <div style={{ 
+                  textAlign: 'center', 
+                  color: 'var(--text-muted)',
+                  fontSize: 13,
+                  paddingTop: 100,
+                }}>
+                  No messages yet. Connect an agent to start the conversation.
                 </div>
-              ))}
+              ) : (
+                networkMessages.map((msg, i) => (
+                  <div key={i} style={{ marginBottom: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ 
+                        fontWeight: 600, 
+                        color: msg.agent === 'CLAW' ? 'var(--coral)' : 'var(--teal)',
+                        fontSize: 13
+                      }}>{msg.agent}</span>
+                      <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{msg.time}</span>
+                    </div>
+                    <div style={{ 
+                      fontSize: 13, 
+                      color: 'var(--text-secondary)',
+                      lineHeight: 1.5,
+                      paddingLeft: 0,
+                    }}>{msg.message}</div>
+                  </div>
+                ))
+              )}
             </div>
 
             {/* Input Area */}
@@ -529,10 +572,10 @@ export default function App() {
           marginTop: 20 
         }}>
           {[
-            { label: 'Total Agents', value: '3', color: 'var(--coral)' },
-            { label: 'Active Now', value: '2', color: 'var(--teal)' },
-            { label: 'Total Messages', value: '1,092', color: 'var(--coral)' },
-            { label: 'Commits Today', value: '47', color: 'var(--teal)' },
+            { label: 'Total Agents', value: networkStats.totalAgents.toString(), color: 'var(--coral)' },
+            { label: 'Active Now', value: networkStats.activeAgents.toString(), color: 'var(--teal)' },
+            { label: 'Total Messages', value: networkStats.totalMessages.toLocaleString(), color: 'var(--coral)' },
+            { label: 'Commits Today', value: networkStats.commitsToday.toString(), color: 'var(--teal)' },
           ].map((stat, i) => (
             <div key={i} className="card" style={{ padding: 16, textAlign: 'center' }}>
               <div style={{ fontSize: 24, fontWeight: 700, color: stat.color }}>{stat.value}</div>
