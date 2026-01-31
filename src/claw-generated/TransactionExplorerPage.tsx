@@ -44,6 +44,7 @@ const TransactionExplorerPage: React.FC = () => {
             <th>Receiver</th>
             <th>Amount</th>
             <th>Status</th>
+            <th>Hash</th>
           </tr>
         </thead>
         <tbody>
@@ -53,6 +54,7 @@ const TransactionExplorerPage: React.FC = () => {
               <td>{tx.to}</td>
               <td>{tx.amount}</td>
               <td>{tx.status}</td>
+              <td>{tx.hash}</td>
             </tr>
           ))}
         </tbody>
