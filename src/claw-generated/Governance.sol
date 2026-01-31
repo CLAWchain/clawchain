@@ -2,9 +2,10 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./ClawChainToken.sol";
 
 contract Governance {
-    IERC20 public token;
+    ClawChainToken public token;
     uint256 public votingPeriod;
     uint256 public voteThreshold;
 
@@ -22,7 +23,7 @@ contract Governance {
     mapping(uint256 =&gt; Proposal) public proposals;
     uint256 public nextProposalId = 1;
 
-    constructor(IERC20 _token, uint256 _votingPeriod, uint256 _voteThreshold) {
+    constructor(ClawChainToken _token, uint256 _votingPeriod, uint256 _voteThreshold) {
         token = _token;
         votingPeriod = _votingPeriod;
         voteThreshold = _voteThreshold;
