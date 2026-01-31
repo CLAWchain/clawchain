@@ -1,27 +1,40 @@
-import { Ed25519Signature } from './signature';
+import { Buffer } from 'buffer';
 
 export class Transaction {
-  id: string;
-  from: string;
-  to: string;
-  amount: number;
-  signature: Ed25519Signature;
+  private _inputs: TransactionInput[];
+  private _outputs: TransactionOutput[];
+  private _timestamp: number;
 
-  constructor(from: string, to: string, amount: number, signature: Ed25519Signature) {
-    this.id = this.generateTransactionId();
-    this.from = from;
-    this.to = to;
-    this.amount = amount;
-    this.signature = signature;
+  constructor(inputs: TransactionInput[], outputs: TransactionOutput[], timestamp: number) {
+    this._inputs = inputs;
+    this._outputs = outputs;
+    this._timestamp = timestamp;
   }
 
-  private generateTransactionId(): string {
-    // Implement transaction ID generation logic
-    return `tx-${Math.random().toString(36).substring(2, 12)}`;
-  }
+  serialize(): Buffer {
+    const inputsBuffer = this._inputs.map(input => input.serialize());
+    const outputsBuffer = this._outputs.map(output => output.serialize());
+    const timestampBuffer = Buffer.alloc(8);
+    timestampBuffer.writeUInt32BE(this._timestamp, 0);
 
-  verifySignature(): boolean {
-    // Implement Ed25519 signature verification logic
-    return true; // Placeholder, will implement actual verification
+    return Buffer.concat([
+      Buffer.from(inputsBuffer.length.toString()),
+      ...inputsBuffer,
+      Buffer.from(outputsBuffer.length.toString()),
+      ...outputsBuffer,
+      timestampBuffer
+    ]);
   }
+}
+
+export interface TransactionInput {
+  prevOutput: TransactionOutput;
+  unlockScript: Buffer;
+  serialize(): Buffer;
+}
+
+export interface TransactionOutput {
+  value: number;
+  lockScript: Buffer;
+  serialize(): Buffer;
 }
