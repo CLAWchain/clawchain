@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export const fetchNetworkStats = async () =&gt; {
+export const fetchNetworkStats = async () => {
   const response = await axios.get('/api/network-stats');
   return {
     tps: response.data.transactionsPerSecond,

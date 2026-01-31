@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getNetworkStats } from '../../services/blockchain';
+import { fetchNetworkStats } from '../services/statsService';
 
 interface NetworkStatsProps {
   // Add any necessary props
@@ -15,11 +15,11 @@ const NetworkStats: React.FC<NetworkStatsProps> = () => {
   });
 
   useEffect(() => {
-    const fetchNetworkStats = async () => {
-      const networkStats = await getNetworkStats();
+    const fetchData = async () => {
+      const networkStats = await fetchNetworkStats();
       setStats(networkStats);
     };
-    fetchNetworkStats();
+    fetchData();
   }, []);
 
   return (
