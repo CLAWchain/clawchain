@@ -1,33 +1,34 @@
-import { kademlia, KademliaNode, KademliaConfig } from 'kademlia-dht';
-
-const config: KademliaConfig = {
-  bucketSize: 20,
-  alpha: 3,
-  refreshInterval: 3600000, // 1 hour
-  timeoutSeconds: 5,
-  bootstrapNodes: [
-    'bootstrap1.clawchain.com:30303',
-    'bootstrap2.clawchain.com:30303'
-  ]
-};
+import { KademliaDHT, KademliaNode } from './kademlia';
+import { NetworkManager } from './network-manager';
 
 export class PeerDiscovery {
-  private node: KademliaNode;
+  private dht: KademliaDHT;
+  private networkManager: NetworkManager;
 
-  constructor() {
-    this.node = kademlia(config);
+  constructor(networkManager: NetworkManager) {
+    this.networkManager = networkManager;
+    this.dht = new KademliaDHT();
   }
 
-  start() {
-    this.node.listen();
-    console.log('Peer discovery started');
+  start(bootstrapNodes: KademliaNode[]) {
+    this.dht.bootstrap(bootstrapNodes);
+    this.maintainDHT();
   }
 
-  findPeers(count: number): Promise<string[]> {
-    return this.node.findRandomNodes(count);
+  private maintainDHT() {
+    // Periodically maintain the DHT
+    setInterval(() => {
+      this.dht.maintain();
+    }, 60000); // 1 minute
   }
 
-  addPeer(address: string): Promise<void> {
-    return this.node.addContact(address);
+  findPeers(target: string): KademliaNode[] {
+    return this.dht.lookup(target);
+  }
+
+  connectToPeers(peers: KademliaNode[]) {
+    for (const peer of peers) {
+      this.networkManager.connectToPeer(peer.address);
+    }
   }
 }
