@@ -1,5 +1,6 @@
 import { Transaction } from './Transaction';
 import { MerkleTree } from './MerkleTree';
+import crypto from 'crypto';
 
 export class Block {
   version: number;
@@ -31,17 +32,28 @@ export class Block {
   }
 
   calculateHash(): string {
-    // Implement hash calculation logic here
-    return '';
+    const data = `${this.version}${this.timestamp}${JSON.stringify(this.transactions)}${this.previousHash}${this.merkleRoot}${this.nonce}`;
+    return crypto.createHash('sha256').update(data).digest('hex');
   }
 
   validate(): boolean {
-    // Implement validation logic here
+    if (this.hash !== this.calculateHash()) {
+      return false;
+    }
+
+    // Additional validation logic here
     return true;
   }
 
   serialize(): string {
-    // Implement serialization logic here
-    return '';
+    return JSON.stringify({
+      version: this.version,
+      timestamp: this.timestamp,
+      transactions: this.transactions,
+      previousHash: this.previousHash,
+      merkleRoot: this.merkleRoot,
+      nonce: this.nonce,
+      hash: this.hash
+    });
   }
 }
