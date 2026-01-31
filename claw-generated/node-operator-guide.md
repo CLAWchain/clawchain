@@ -1,73 +1,61 @@
 # ClawChain Node Operator Guide
 
 ## Hardware Requirements
-To run a ClawChain node, you'll need the following hardware:
+- CPU: Minimum 4 cores, recommended 8 cores or more
+- RAM: Minimum 8GB, recommended 16GB or more
+- Storage: Minimum 500GB SSD, recommended 1TB SSD or more
+- Network: Minimum 100Mbps internet connection, recommended 1Gbps or more
 
-- CPU: Minimum 2 cores, recommended 4 cores or more
-- RAM: Minimum 4GB, recommended 8GB or more
-- Storage: Minimum 100GB SSD, recommended 500GB SSD or more
-- Network: Stable internet connection with minimum 10Mbps download and 5Mbps upload speeds
+## Software Requirements
+- Operating System: Ubuntu 18.04 or later, or CentOS 7 or later
+- Node.js: Version 14 or later
+- npm: Version 6 or later
+- Git: Version 2.17 or later
 
-## Node Configuration
+## Setup Instructions
 
-### 1. Install Dependencies
-You'll need to install the following software on your system:
+1. Install the required software dependencies:
+   - Install Node.js and npm: 
+     ```
+     curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash -
+     sudo apt-get install -y nodejs
+     ```
+   - Install Git:
+     ```
+     sudo apt-get install -y git
+     ```
 
-- Node.js (version 14 or higher)
-- npm (version 6 or higher)
-- Git
+2. Clone the ClawChain repository:
+   ```
+   git clone https://github.com/clawchain/clawchain.git
+   cd clawchain
+   ```
 
-You can install these using your system's package manager (e.g., `apt-get`, `yum`, `brew`).
+3. Install the ClawChain node dependencies:
+   ```
+   npm install
+   ```
 
-### 2. Clone the ClawChain Repository
-Use Git to clone the ClawChain repository:
+4. Configure the node:
+   - Copy the example config file:
+     ```
+     cp config.example.json config.json
+     ```
+   - Edit the `config.json` file and update the following settings:
+     - `nodeUrl`: The public URL of your node
+     - `p2pPort`: The port for peer-to-peer connections (default: 30303)
+     - `rpcPort`: The port for the RPC API (default: 8545)
 
-```
-git clone https://github.com/clawchain/clawchain.git
-cd clawchain
-```
+5. Start the node:
+   ```
+   npm start
+   ```
 
-### 3. Install Node Dependencies
-Install the required Node.js dependencies by running:
+6. Monitor the node's status and logs:
+   ```
+   npm run logs
+   ```
 
-```
-npm install
-```
+That's it! Your ClawChain node is now running and ready to participate in the network.
 
-### 4. Configure Node Settings
-Create a new file called `node-config.json` in the project root directory. This file will contain your node's configuration settings.
-
-Here's an example configuration:
-
-```json
-{
-  "nodeUrl": "http://localhost:8545",
-  "privateKey": "YOUR_PRIVATE_KEY_HERE",
-  "genesisBlockHash": "0x...",
-  "chainId": 1234
-}
-```
-
-### 5. Run the Node
-To start your ClawChain node, run the following command:
-
-```
-npm start
-```
-
-This will launch the node and connect it to the ClawChain network. You can monitor the node's status and logs using the provided CLI or web-based dashboard.
-
-### 6. Run as a Service
-For production use, you'll want to run the ClawChain node as a persistent service on your system. This ensures the node remains online and automatically restarts if the system reboots.
-
-You can use a process manager like PM2 or systemd to run the node as a service. Refer to the relevant documentation for your operating system.
-
-## Troubleshooting
-If you encounter any issues while running your ClawChain node, check the following:
-
-- Ensure all dependencies are installed correctly
-- Verify the node configuration settings are correct
-- Check the node logs for any error messages
-- Ensure your system meets the minimum hardware requirements
-
-For further assistance, please reach out to the ClawChain community or the project maintainers.
+If you have any questions or issues, please refer to the ClawChain documentation or reach out to the community for assistance.
