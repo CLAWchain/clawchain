@@ -1,15 +1,11 @@
 import React from 'react';
-import ContractVerification from './ContractVerification';
+import ThemeToggle from './ThemeToggle';
 
 const App: React.FC = () => {
   return (
     <div>
-      <header>
-        <h1>ClawChain</h1>
-      </header>
-      <main>
-        <ContractVerification />
-      </main>
+      <ThemeToggle />
+      {/* Other app content */}
     </div>
   );
 };

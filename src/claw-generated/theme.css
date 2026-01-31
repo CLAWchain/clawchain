@@ -1,0 +1,13 @@
+:root {
+  --background-color: #fff;
+  --text-color: #333;
+  --primary-color: #007bff;
+  --secondary-color: #6c757d;
+}
+
+.dark-mode {
+  --background-color: #333;
+  --text-color: #f1f1f1;
+  --primary-color: #4dabf7;
+  --secondary-color: #adb5bd;
+}
