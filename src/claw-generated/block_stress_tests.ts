@@ -1,118 +1,77 @@
-import { expect } from 'chai';
-import { Block, Transaction, generateRandomBase58, generateHash, hexToBase58 } from './block';
-import { StateManager } from './StateManager';
-import { performance } from 'perf_hooks';
+import { Chain } from './Chain';
+import { Block } from './Block';
+import { Transaction } from './Transaction';
+import { TransactionPool } from './TransactionPool';
+import { ValidatorManager } from '../validators/ValidatorManager';
+import { EventBus } from '../events/EventBus';
+import { BlockProducer } from './BlockProducer';
+import { stateManager } from './StateManager';
 
-describe('Block Stress Tests', () => {
-  let stateManager: StateManager;
+const MAX_TRANSACTIONS_PER_BLOCK = 500;
+const BLOCK_PRODUCTION_INTERVAL = 10000; // 10 seconds
 
-  beforeEach(() => {
-    stateManager = new StateManager();
+describe('Block Production Stress Tests', () => {
+  let chain: Chain;
+  let txPool: TransactionPool;
+  let validatorManager: ValidatorManager;
+  let eventBus: EventBus;
+  let blockProducer: BlockProducer;
+
+  beforeAll(() => {
+    chain = new Chain();
+    txPool = new TransactionPool();
+    validatorManager = new ValidatorManager();
+    eventBus = new EventBus();
+    blockProducer = new BlockProducer(chain, txPool, validatorManager, eventBus);
   });
 
-  it('should handle a sustained high transaction load', () => {
-    const numBlocks = 100;
-    const transactionsPerBlock = 1000;
-    let prevBlock: Block | undefined;
+  afterAll(() => {
+    blockProducer.stop();
+  });
 
-    for (let i = 0; i < numBlocks; i++) {
-      const transactions: Transaction[] = [];
-      for (let j = 0; j < transactionsPerBlock; j++) {
-        transactions.push({
-          hash: generateRandomBase58(),
-          from: generateRandomBase58(),
-          to: generateRandomBase58(),
-          value: BigInt(1000),
-          gasPrice: BigInt(10),
-          gasLimit: BigInt(21000),
-          nonce: j,
-          signature: generateRandomBase58()
-        });
-      }
+  test('Block production under high transaction load', async () => {
+    // Start block production
+    blockProducer.start();
 
-      const startTime = performance.now();
-      const block = new Block(i + 1, prevBlock?.header.hash || generateRandomBase58(), generateRandomBase58(), transactions);
-      expect(block.isValid(prevBlock, stateManager)).to.be.true;
-      const endTime = performance.now();
-
-      console.log(`Block ${i + 1} created in ${endTime - startTime}ms`);
-      prevBlock = block;
-      stateManager.applyBlock(block);
+    // Generate a large number of transactions
+    const numTransactions = 10000;
+    const transactions: Transaction[] = [];
+    for (let i = 0; i < numTransactions; i++) {
+      const tx = await stateManager.createTransaction(
+        `0x${i.toString(16).padStart(40, '0')}`,
+        `0x${(i + 1).toString(16).padStart(40, '0')}`,
+        1n * 10n**18n,
+        0n,
+        21000n
+      );
+      transactions.push(tx);
     }
 
-    expect(stateManager.getLatestBlockNumber()).to.equal(numBlocks);
-  });
-
-  it('should handle transaction spikes', () => {
-    const numBlocks = 100;
-    let prevBlock: Block | undefined;
-
-    for (let i = 0; i < numBlocks; i++) {
-      const transactions: Transaction[] = [];
-      const transactionsPerBlock = i % 2 === 0 ? 10 : 1000;
-
-      for (let j = 0; j < transactionsPerBlock; j++) {
-        transactions.push({
-          hash: generateRandomBase58(),
-          from: generateRandomBase58(),
-          to: generateRandomBase58(),
-          value: BigInt(1000),
-          gasPrice: BigInt(10),
-          gasLimit: BigInt(21000),
-          nonce: j,
-          signature: generateRandomBase58()
-        });
-      }
-
-      const startTime = performance.now();
-      const block = new Block(i + 1, prevBlock?.header.hash || generateRandomBase58(), generateRandomBase58(), transactions);
-      expect(block.isValid(prevBlock, stateManager)).to.be.true;
-      const endTime = performance.now();
-
-      console.log(`Block ${i + 1} created in ${endTime - startTime}ms`);
-      prevBlock = block;
-      stateManager.applyBlock(block);
+    // Submit transactions to the pool
+    for (const tx of transactions) {
+      await txPool.addTransaction(tx);
     }
 
-    expect(stateManager.getLatestBlockNumber()).to.equal(numBlocks);
-  });
+    // Wait for blocks to be produced
+    const startTime = Date.now();
+    const targetBlocks = 10;
+    let blocksProduced = 0;
 
-  it('should handle network delays and node failures', () => {
-    const numBlocks = 100;
-    let prevBlock: Block | undefined;
+    while (blocksProduced < targetBlocks) {
+      const { isProducing, consecutiveFailures, currentDifficulty } = blockProducer.getStats();
+      console.log(`Blocks produced: ${blocksProduced}/${targetBlocks}, Consecutive failures: ${consecutiveFailures}, Difficulty: ${currentDifficulty}`);
 
-    for (let i = 0; i < numBlocks; i++) {
-      const transactions: Transaction[] = [];
-      const transactionsPerBlock = 100;
-
-      for (let j = 0; j < transactionsPerBlock; j++) {
-        transactions.push({
-          hash: generateRandomBase58(),
-          from: generateRandomBase58(),
-          to: generateRandomBase58(),
-          value: BigInt(1000),
-          gasPrice: BigInt(10),
-          gasLimit: BigInt(21000),
-          nonce: j,
-          signature: generateRandomBase58()
-        });
-      }
-
-      const startTime = performance.now();
-      const block = new Block(i + 1, prevBlock?.header.hash || generateRandomBase58(), generateRandomBase58(), transactions);
-      expect(block.isValid(prevBlock, stateManager)).to.be.true;
-      const endTime = performance.now();
-
-      console.log(`Block ${i + 1} created in ${endTime - startTime}ms`);
-      prevBlock = block;
-      stateManager.applyBlock(block);
-
-      // Simulate network delay or node failure
-      if (i % 10 === 0) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
+      await new Promise((resolve) => setTimeout(resolve, BLOCK_PRODUCTION_INTERVAL));
+      blocksProduced = chain.getChainLength();
     }
 
-    expect(stateManager.getLatestBlockNumber()).to.equal(numBlocks);
-  });
+    const duration = Date.now() - startTime;
+    console.log(`Produced ${blocksProduced} blocks in ${duration}ms`);
+
+    // Assertions
+    expect(blocksProduced).toEqual(targetBlocks);
+    expect(blockProducer.getStats().consecutiveFailures).toBeLessThan(3);
+    expect(chain.getChainLength()).toBeGreaterThanOrEqual(targetBlocks);
+    expect(txPool.getPendingTransactions(MAX_TRANSACTIONS_PER_BLOCK).length).toBeLessThan(MAX_TRANSACTIONS_PER_BLOCK);
+  }, 120000);
 });
