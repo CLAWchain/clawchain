@@ -2,9 +2,11 @@ import { EventBus } from '../events/EventBus';
 
 class GrafanaDashboard {
   private eventBus: EventBus;
+  private grafanaAPI: GrafanaAPI;
 
-  constructor(eventBus: EventBus) {
+  constructor(eventBus: EventBus, grafanaAPI: GrafanaAPI) {
     this.eventBus = eventBus;
+    this.grafanaAPI = grafanaAPI;
   }
 
   create() {
@@ -30,24 +32,29 @@ class GrafanaDashboard {
   }
 
   private updateBlockHeightChart(blockHeight: number) {
-    // Update Grafana block height chart
+    this.grafanaAPI.updateChart('block-height', blockHeight);
   }
 
   private updateTransactionVolumeChart(transactionCount: number) {
-    // Update Grafana transaction volume chart
+    this.grafanaAPI.updateChart('transaction-volume', transactionCount);
   }
 
   private updateValidatorStatusChart(validatorStatus: { address: string; status: string; missedBlocks: number }) {
-    // Update Grafana validator status chart
+    this.grafanaAPI.updateChart('validator-status', validatorStatus);
   }
 
   private updateConsensusStatusChart(consensusStatus: { healthy: boolean; message?: string }) {
-    // Update Grafana consensus status chart
+    this.grafanaAPI.updateChart('consensus-status', consensusStatus);
   }
 
   private addAlertNotification(alert: { title: string; message: string }) {
-    // Add alert notification to Grafana dashboard
+    this.grafanaAPI.addAlert(alert);
   }
+}
+
+interface GrafanaAPI {
+  updateChart(chartId: string, data: any): void;
+  addAlert(alert: { title: string; message: string }): void;
 }
 
 export { GrafanaDashboard };
