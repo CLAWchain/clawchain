@@ -3,16 +3,19 @@ import WebSocket, { WebSocketServer } from 'ws';
 import JsonRpcServer from './JsonRpcServer';
 import { Transaction } from './transaction';
 import { BlockExplorer } from './BlockExplorer';
+import WebSocketSubscriptions from './WebSocketSubscriptions';
 
 class WebSocketServer extends JsonRpcServer {
   private wss: WebSocketServer;
   private transactionQueue: Transaction[] = [];
   private blockExplorer: BlockExplorer;
+  private subscriptions: WebSocketSubscriptions;
 
   constructor() {
     super();
     this.wss = new WebSocketServer({ port: 8080 });
     this.blockExplorer = new BlockExplorer();
+    this.subscriptions = new WebSocketSubscriptions();
 
     this.wss.on('connection', (ws, req) => {
       console.log('WebSocket connection established');
@@ -21,7 +24,7 @@ class WebSocketServer extends JsonRpcServer {
       });
     });
 
-    // Start the transaction feed broadcast loop
+    this.registerSubscriptionHandlers();
     this.startTransactionFeed();
   }
 
@@ -36,11 +39,41 @@ class WebSocketServer extends JsonRpcServer {
     }
   }
 
-  registerSubscription(name: string, handler: (params: any, ws: WebSocket) => void) {
+  registerSubscriptionHandlers() {
+    this.registerSubscription('subscribe', (params, ws) => {
+      this.subscriptions.subscribe(ws, params.topic);
+      return { result: 'Subscribed' };
+    });
+
+    this.registerSubscription('unsubscribe', (params, ws) => {
+      this.subscriptions.unsubscribe(ws, params.topic);
+      return { result: 'Unsubscribed' };
+    });
+
+    this.registerSubscription('newHeads', (params, ws) => {
+      // TODO: Implement newHeads subscription
+      return null;
+    });
+
+    this.registerSubscription('logs', (params, ws) => {
+      // TODO: Implement logs subscription
+      return null;
+    });
+
+    this.registerSubscription('pendingTransactions', (params, ws) => {
+      // TODO: Implement pendingTransactions subscription
+      return null;
+    });
+  }
+
+  registerSubscription(name: string, handler: (params: any, ws: WebSocket) => any) {
     this.methodHandlers[name] = (params) => {
       this.wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-          handler(params, client);
+          const result = handler(params, client);
+          if (result !== null) {
+            client.send(JSON.stringify(result));
+          }
         }
       });
       return null;
@@ -54,27 +87,13 @@ class WebSocketServer extends JsonRpcServer {
       this.transactionQueue = this.transactionQueue.concat(newTransactions);
 
       // Broadcast new transactions to all connected clients
-      this.broadcastTransactions(newTransactions);
+      this.subscriptions.broadcastPendingTransactions(newTransactions);
     }, 1000);
   }
 
   private async getNewTransactions(): Promise<Transaction[]> {
     // TODO: Implement logic to fetch new transactions from the mempool
     return [];
-  }
-
-  private broadcastTransactions(transactions: Transaction[]) {
-    this.wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify({ type: 'transactions', data: transactions }));
-      }
-    });
-  }
-
-  registerTransactionFeedSubscription() {
-    this.registerSubscription('subscribeToTransactionFeed', (params, ws) => {
-      // TODO: Implement logic to handle transaction feed subscriptions
-    });
   }
 }
 
