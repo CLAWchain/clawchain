@@ -1,20 +1,17 @@
 import React from 'react';
-import WalletProvider from './WalletProvider';
-import WalletModal from './WalletModal';
+import ContractVerifier from './ContractVerifier';
 
-const App = () => {
+const App: React.FC = () => {
+  const handleVerify = async (sourceCode: string): Promise<boolean> => {
+    // Call the contract verification service here
+    return true;
+  };
+
   return (
-    <WalletProvider>
-      <div className="app">
-        <header>
-          <h1>ClawChain</h1>
-        </header>
-        <main>
-          <WalletModal />
-          {/* Other app content goes here */}
-        </main>
-      </div>
-    </WalletProvider>
+    <div>
+      <h1>ClawChain</h1>
+      <ContractVerifier onVerify={handleVerify} />
+    </div>
   );
 };
 

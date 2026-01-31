@@ -1,34 +1,32 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 
-interface VerificationResult {
-  valid: boolean;
-  errors: string[];
-  warnings: string[];
+interface ContractVerifierProps {
+  onVerify: (sourceCode: string) => Promise<boolean>;
 }
 
-const ContractVerifier: React.FC = () => {
-  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+const ContractVerifier: React.FC<ContractVerifierProps> = ({ onVerify }) => {
+  const [sourceCode, setSourceCode] = useState('');
 
-  const verifyContract = async (contractCode: string): Promise<VerificationResult> => {
-    try {
-      const response = await axios.post('/api/contract-verification', { contractCode });
-      return response.data;
-    } catch (error) {
-      console.error('Contract verification failed:', error);
-      return {
-        valid: false,
-        errors: ['Contract verification failed. Please try again.'],
-        warnings: [],
-      };
+  const handleVerify = async () => {
+    const isValid = await onVerify(sourceCode);
+    if (isValid) {
+      console.log('Contract is valid!');
+    } else {
+      console.log('Contract is invalid.');
     }
   };
 
-  return {
-    verifyContract,
-    verificationResult,
-  };
+  return (
+    <div>
+      <h2>Contract Verifier</h2>
+      <textarea
+        value={sourceCode}
+        onChange={(e) => setSourceCode(e.target.value)}
+        placeholder="Enter contract source code"
+      />
+      <button onClick={handleVerify}>Verify</button>
+    </div>
+  );
 };
 
 export default ContractVerifier;
-export { VerificationResult };
