@@ -1,52 +1,68 @@
 # ClawChain Node Operator Guide
 
 ## Hardware Requirements
-- CPU: Minimum 4 cores, recommended 8+ cores
-- RAM: Minimum 8GB, recommended 16GB+
-- Storage: Minimum 100GB SSD, recommended 500GB+ SSD
-- Network: Stable internet connection with minimum 10Mbps bandwidth
+To run a ClawChain node, you will need the following minimum hardware specifications:
+
+- CPU: Quad-core processor (Intel Core i5 or AMD Ryzen 5 equivalent or better)
+- RAM: 8GB or more
+- Storage: 500GB SSD or faster
+- Network: Stable internet connection with at least 10Mbps download and 5Mbps upload speeds
+
+The node will need to store the entire blockchain data, which can grow over time as more transactions are processed. An SSD is recommended for faster sync times and better overall performance.
 
 ## Software Requirements
-- Operating System: Ubuntu 20.04 or later
-- Node.js: Version 14 or later
-- npm: Version 6 or later
+ClawChain nodes can run on the following operating systems:
+
+- Ubuntu 20.04 LTS or later
+- Debian 10 or later
+- CentOS 8 or later
+- macOS 10.15 (Catalina) or later
+
+You will also need to have the following software installed:
+
+- Node.js 14.x or later
+- npm 6.x or later
 - Git
 
-## Setting up a Node
-1. Install the required software:
-   - Install Node.js and npm: https://nodejs.org/
-   - Install Git: `sudo apt-get install git`
+## Node Configuration
+To configure your ClawChain node, follow these steps:
 
-2. Clone the ClawChain repository:
-   ```
-   git clone https://github.com/clawchain/clawchain.git
-   cd clawchain
-   ```
+1. Clone the ClawChain repository:
+```
+git clone https://github.com/clawchain/clawchain.git
+```
 
-3. Install the node dependencies:
-   ```
-   npm install
-   ```
+2. Install the required dependencies:
+```
+cd clawchain
+npm install
+```
 
-4. Configure the node:
-   - Copy the example config file: `cp config.example.json config.json`
-   - Customize the configuration as needed (e.g., set the node's IP address, ports, etc.)
+3. Create a new node configuration file:
+```
+cp config.example.json config.json
+```
+
+4. Update the configuration file with your node settings, such as:
+   - `rpcPort`: The port for the JSON-RPC API (default: 8545)
+   - `p2pPort`: The port for the peer-to-peer network (default: 30303)
+   - `dataDir`: The directory to store the blockchain data
 
 5. Start the node:
-   ```
-   npm start
-   ```
+```
+npm start
+```
 
-6. Monitor the node's status:
-   - Check the logs for any errors or warnings
-   - Use the provided CLI tools to view the node's status and performance
+Your node will now start syncing the blockchain data. This process can take several hours depending on your hardware and network connection.
 
-## Maintaining the Node
-- Keep the node software up-to-date by regularly pulling the latest changes from the repository and restarting the node
-- Monitor the node's resource usage and scale the hardware as needed
-- Ensure the node has a stable internet connection and firewall configuration
-- Participate in the ClawChain community to stay informed about network updates and best practices
+## Monitoring and Maintenance
+To ensure your node remains healthy and up-to-date, you should regularly monitor its status and perform maintenance tasks. Some key things to watch for:
 
-## Additional Resources
-- ClawChain GitHub repository: https://github.com/clawchain/clawchain
-- ClawChain community forum: https://forum.clawchain.org
+- Disk space usage: Ensure you have enough free space to accommodate the growing blockchain data.
+- Sync status: Check that your node is staying in sync with the network.
+- Software updates: Keep your node software up-to-date with the latest releases.
+- Network connectivity: Ensure your node can communicate with other peers in the network.
+
+You can use tools like PM2 or systemd to run the node as a service and automatically restart it if it crashes. Additionally, you may want to set up monitoring and alerting to receive notifications about any issues with your node.
+
+For more advanced node operations, such as running a validator or participating in consensus, please refer to the ClawChain validator documentation.
