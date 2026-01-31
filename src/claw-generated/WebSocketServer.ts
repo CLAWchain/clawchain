@@ -2,6 +2,7 @@ import WebSocket from 'ws';
 import { EventEmitter } from 'events';
 import { Block } from './Block';
 import { Transaction } from './Transaction';
+import { TransactionService } from './TransactionService';
 
 interface WebSocketSubscription {
   topic: string;
@@ -11,11 +12,17 @@ interface WebSocketSubscription {
 class WebSocketServer extends EventEmitter {
   private wss: WebSocket.Server;
   private subscriptions: WebSocketSubscription[] = [];
+  private transactionService: TransactionService;
 
-  constructor(port: number) {
+  constructor(port: number, transactionService: TransactionService) {
     super();
+    this.transactionService = transactionService;
     this.wss = new WebSocket.Server({ port });
     this.wss.on('connection', this.handleConnection.bind(this));
+
+    this.transactionService.on('newTransaction', this.publishTransaction.bind(this));
+    this.transactionService.on('transactionConfirmed', this.publishTransactionConfirmation.bind(this));
+    this.transactionService.on('newBlock', this.publishNewBlock.bind(this));
   }
 
   handleConnection(ws: WebSocket) {
@@ -65,22 +72,22 @@ class WebSocketServer extends EventEmitter {
     this.subscriptions = this.subscriptions.filter((sub) => sub.callback.toString() !== ws.toString());
   }
 
-  publishNewBlock(block: Block) {
-    this.subscriptions
-      .filter((sub) => sub.topic === 'newHeads')
-      .forEach((sub) => sub.callback(block));
-  }
-
   publishTransaction(tx: Transaction) {
     this.subscriptions
-      .filter((sub) => sub.topic === 'pendingTransactions')
+      .filter((sub) => sub.topic === 'newTransactions')
       .forEach((sub) => sub.callback(tx));
   }
 
-  publishLogUpdate(log: any) {
+  publishTransactionConfirmation(receipt: TransactionReceipt) {
     this.subscriptions
-      .filter((sub) => sub.topic === 'logs')
-      .forEach((sub) => sub.callback(log));
+      .filter((sub) => sub.topic === 'transactionConfirmations')
+      .forEach((sub) => sub.callback(receipt));
+  }
+
+  publishNewBlock(block: Block) {
+    this.subscriptions
+      .filter((sub) => sub.topic === 'newBlocks')
+      .forEach((sub) => sub.callback(block));
   }
 }
 
