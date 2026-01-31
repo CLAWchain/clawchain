@@ -1,23 +1,26 @@
-import { Wallet } from './wallet';
-import { MultiSig } from './multisig';
+import { Ed25519Signer } from './crypto';
 
 export class Transaction {
-  private inputs: any[];
-  private outputs: any[];
-  private signatures: string[];
+  public readonly id: string;
+  public readonly from: string;
+  public readonly to: string;
+  public readonly amount: number;
+  public readonly signature: string;
 
-  constructor(inputs: any[], outputs: any[]) {
-    this.inputs = inputs;
-    this.outputs = outputs;
-    this.signatures = [];
+  constructor(from: string, to: string, amount: number, signature: string) {
+    this.from = from;
+    this.to = to;
+    this.amount = amount;
+    this.signature = signature;
+    this.id = this.computeId();
   }
 
-  addSignature(signature: string): void {
-    this.signatures.push(signature);
+  private computeId(): string {
+    // Implement transaction ID generation logic
+    return `tx_${this.from}_${this.to}_${this.amount}`;
   }
 
-  verifySignatures(publicKeys: string[], requiredSignatures: number): boolean {
-    const multiSig = new MultiSig(publicKeys, requiredSignatures);
-    return multiSig.verifySignatures(this.signatures);
+  public verifySignature(): boolean {
+    return Ed25519Signer.verify(this.from, `${this.from}:${this.to}:${this.amount}`, this.signature);
   }
 }
