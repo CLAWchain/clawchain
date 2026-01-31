@@ -1,32 +1,65 @@
-import { Node } from './node';
-import { RoutingTable } from './routing-table';
-import { NetworkClient } from './network-client';
+import { NodeId, Node, Message, RoutingTable } from './types';
 
-export class Kademlia {
+class KademliaNode implements Node {
+  id: NodeId;
   routingTable: RoutingTable;
-  networkClient: NetworkClient;
+  bootstrapNodes: Node[];
 
-  constructor(networkClient: NetworkClient) {
-    this.routingTable = new RoutingTable();
-    this.networkClient = networkClient;
+  constructor(id: NodeId, bootstrapNodes: Node[]) {
+    this.id = id;
+    this.routingTable = new RoutingTable(this.id);
+    this.bootstrapNodes = bootstrapNodes;
   }
 
-  async lookup(targetId: string): Promise<Node[]> {
-    let closestNodes = this.routingTable.findClosestNodes(targetId, 3);
-    let result: Node[] = [];
+  handleMessage(message: Message): void {
+    // Handle incoming messages and update routing table
+    console.log(`Received message from ${message.sender}: ${message.type}`);
+    this.routingTable.addNode({
+      id: message.sender,
+      handleMessage: (msg) => this.handleMessage(msg),
+      findNode: (target) => this.findNode(target),
+      store: (key, value) => this.store(key, value),
+      retrieve: (key) => this.retrieve(key)
+    });
+  }
 
-    while (closestNodes.length > 0 && result.length < 3) {
-      let lookupResults = await Promise.all(closestNodes.map(node => this.lookupNode(node, targetId)));
-      result = result.concat(lookupResults.flatMap(r => r));
-      closestNodes = this.routingTable.findClosestNodes(targetId, 3);
+  findNode(target: NodeId): Node[] {
+    // Implement Kademlia node lookup
+    return this.routingTable.getClosestNodes(target, 3);
+  }
+
+  store(key: string, value: any): void {
+    // Implement Kademlia data storage
+    console.log(`Storing key ${key} with value ${value}`);
+  }
+
+  retrieve(key: string): any {
+    // Implement Kademlia data retrieval
+    console.log(`Retrieving key ${key}`);
+    return null;
+  }
+
+  joinNetwork(): void {
+    // Join the network using bootstrap nodes
+    for (const node of this.bootstrapNodes) {
+      node.handleMessage({
+        sender: this.id,
+        type: 'JOIN_REQUEST',
+        payload: {}
+      });
     }
-
-    return result;
   }
 
-  private async lookupNode(node: Node, targetId: string): Promise<Node[]> {
-    let response = await this.networkClient.sendFindNodeRequest(node, targetId);
-    response.nodes.forEach(n => this.routingTable.addNode(n));
-    return response.nodes;
+  leaveNetwork(): void {
+    // Leave the network by notifying other nodes
+    for (const node of this.routingTable.getNodes()) {
+      node.handleMessage({
+        sender: this.id,
+        type: 'LEAVE_NETWORK',
+        payload: {}
+      });
+    }
   }
 }
+
+export { KademliaNode };
