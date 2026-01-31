@@ -1,69 +1,52 @@
-// src/claw-generated/vm.ts
-import { Contract, ContractState, Transaction } from './contract';
+import { Instruction, OperandSize } from './types';
 
 export class VirtualMachine {
-  private gasLimit: number;
-  private gasUsed: number;
-  private callStack: Contract[] = [];
+  private stack: number[] = [];
+  private pc: number = 0;
+  private memory: number[] = [];
 
-  constructor(gasLimit: number) {
-    this.gasLimit = gasLimit;
-    this.gasUsed = 0;
-  }
-
-  async execute(contract: Contract, tx: Transaction): Promise<ContractState> {
-    this.callStack.push(contract);
-    const result = await this.executeInternal(contract, tx);
-    this.callStack.pop();
-    return result;
-  }
-
-  private async executeInternal(contract: Contract, tx: Transaction): Promise<ContractState> {
-    const initialState = contract.state.clone();
-
-    // Execute the transaction
-    await contract.execute(tx, this);
-
-    // Update gas usage
-    this.consumeGas(this.gasUsed);
-
-    // Revert state if transaction failed
-    if (!this.checkGasLimit()) {
-      contract.state = initialState;
-      throw new Error('Out of gas');
+  execute(instructions: Instruction[]) {
+    while (this.pc < instructions.length) {
+      const instruction = instructions[this.pc];
+      this.executeInstruction(instruction);
+      this.pc++;
     }
-
-    return contract.state;
   }
 
-  async call(targetContract: Contract, callData: any, value: number): Promise<any> {
-    // Push the target contract onto the call stack
-    this.callStack.push(targetContract);
-
-    // Create a new transaction for the call
-    const tx = {
-      to: targetContract.address,
-      data: callData,
-      value: value,
-    };
-
-    // Execute the call
-    const result = await this.executeInternal(targetContract, tx);
-
-    // Pop the target contract from the call stack
-    this.callStack.pop();
-
-    return result;
-  }
-
-  private checkGasLimit(): boolean {
-    return this.gasUsed <= this.gasLimit;
-  }
-
-  private consumeGas(amount: number): void {
-    this.gasUsed += amount;
-    if (!this.checkGasLimit()) {
-      throw new Error('Out of gas');
+  private executeInstruction(instruction: Instruction) {
+    switch (instruction.opcode) {
+      case 'PUSH':
+        this.stack.push(instruction.operand as number);
+        break;
+      case 'POP':
+        this.stack.pop();
+        break;
+      case 'ADD':
+        this.binaryOperation((a, b) => a + b);
+        break;
+      case 'SUB':
+        this.binaryOperation((a, b) => a - b);
+        break;
+      case 'MUL':
+        this.binaryOperation((a, b) => a * b);
+        break;
+      case 'DIV':
+        this.binaryOperation((a, b) => a / b);
+        break;
+      case 'JUMP':
+        this.pc = instruction.operand as number;
+        break;
+      case 'JUMPI':
+        this.pc = this.stack.pop() ? (instruction.operand as number) : this.pc;
+        break;
+      default:
+        throw new Error(`Unknown opcode: ${instruction.opcode}`);
     }
+  }
+
+  private binaryOperation(operation: (a: number, b: number) => number) {
+    const b = this.stack.pop();
+    const a = this.stack.pop();
+    this.stack.push(operation(a, b));
   }
 }
