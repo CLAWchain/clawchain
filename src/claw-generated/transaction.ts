@@ -1,31 +1,27 @@
 export class Transaction {
-  id: string;
   from: string;
   to: string;
-  amount: number;
-  timestamp: number;
+  value: number;
   nonce: number;
-  signature: string;
+  gasLimit: number;
+  gasPrice: number;
+  data: string;
 
-  constructor(
-    from: string,
-    to: string,
-    amount: number,
-    timestamp: number,
-    nonce: number,
-    signature: string
-  ) {
-    this.id = this.generateId();
-    this.from = from;
-    this.to = to;
-    this.amount = amount;
-    this.timestamp = timestamp;
-    this.nonce = nonce;
-    this.signature = signature;
-  }
-
-  private generateId(): string {
-    // Implement transaction ID generation logic
-    return 'tx_' + Math.random().toString(36).substring(2, 10);
+  constructor(params: {
+    from: string;
+    to: string;
+    value: number;
+    nonce: number;
+    gasLimit: number;
+    gasPrice: number;
+    data: string;
+  }) {
+    this.from = params.from;
+    this.to = params.to;
+    this.value = params.value;
+    this.nonce = params.nonce;
+    this.gasLimit = params.gasLimit;
+    this.gasPrice = params.gasPrice;
+    this.data = params.data;
   }
 }
