@@ -1,19 +1,51 @@
 import { Instruction, VMState } from './types';
 
+const GAS_COSTS: Record<string, number> = {
+  PUSH: 3,
+  POP: 2,
+  ADD: 5,
+  SUB: 5,
+  MUL: 10,
+  DIV: 10,
+  LOAD: 3,
+  STORE: 20,
+};
+
 export class VirtualMachine {
   private stack: any[] = [];
   private pc: number = 0;
   private memory: Uint8Array = new Uint8Array();
+  private gasLimit: number;
+  private gasUsed: number = 0;
+
+  constructor(gasLimit: number) {
+    this.gasLimit = gasLimit;
+  }
 
   execute(instructions: Instruction[]) {
-    while (this.pc < instructions.length) {
-      const instruction = instructions[this.pc];
-      this.executeInstruction(instruction);
-      this.pc++;
+    try {
+      while (this.pc < instructions.length) {
+        const instruction = instructions[this.pc];
+        this.executeInstruction(instruction);
+        this.pc++;
+      }
+    } catch (err) {
+      if (err.message === 'Out of gas') {
+        console.error('Execution halted due to out of gas');
+      } else {
+        throw err;
+      }
     }
   }
 
   private executeInstruction(instruction: Instruction) {
+    const gasCost = GAS_COSTS[instruction.opcode] || 0;
+    if (this.gasUsed + gasCost > this.gasLimit) {
+      throw new Error('Out of gas');
+    }
+
+    this.gasUsed += gasCost;
+
     switch (instruction.opcode) {
       case 'PUSH':
         this.stack.push(instruction.operand);

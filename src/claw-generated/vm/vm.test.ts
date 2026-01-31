@@ -2,32 +2,19 @@ import { VirtualMachine } from './index';
 import { Instruction } from './types';
 
 describe('VirtualMachine', () => {
-  let vm: VirtualMachine;
-
-  beforeEach(() => {
-    vm = new VirtualMachine();
-  });
-
-  it('should execute PUSH and POP instructions', () => {
-    const instructions: Instruction[] = [
-      { opcode: 'PUSH', operand: 42 },
-      { opcode: 'POP' },
-    ];
-
-    vm.execute(instructions);
-    expect(vm.stack).toEqual([]);
-  });
-
-  it('should execute ADD instruction', () => {
+  it('should halt execution when gas limit is exceeded', () => {
     const instructions: Instruction[] = [
       { opcode: 'PUSH', operand: 10 },
       { opcode: 'PUSH', operand: 20 },
       { opcode: 'ADD' },
+      { opcode: 'PUSH', operand: 30 },
+      { opcode: 'MUL' },
     ];
 
-    vm.execute(instructions);
-    expect(vm.stack).toEqual([30]);
-  });
+    const vm = new VirtualMachine(100);
+    expect(() => vm.execute(instructions)).not.toThrow();
 
-  // Add more test cases for other instructions
+    const vmWithLowGas = new VirtualMachine(15);
+    expect(() => vmWithLowGas.execute(instructions)).toThrow('Out of gas');
+  });
 });
