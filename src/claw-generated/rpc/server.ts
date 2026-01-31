@@ -1,15 +1,11 @@
-import { RPC_METHODS } from './methods';
+import { RpcMethods } from './methods';
 
-export class JsonRpcServer {
-  // ... existing code ...
-
-  handleRequest(method: string, params: any[]) {
-    switch (method) {
-      case 'getBalance':
-        return RPC_METHODS.getBalance(params[0]);
-      // ... handle other methods ...
-      default:
-        throw new Error(`Unknown RPC method: ${method}`);
+export class RpcServer {
+  async handleRequest(method: string, params: any): Promise<any> {
+    if (RpcMethods[method]) {
+      return await RpcMethods[method](params);
+    } else {
+      throw new Error(`Unknown RPC method: ${method}`);
     }
   }
 }
