@@ -1,29 +1,24 @@
-import { generateRandomBytes } from '../crypto';
-import { mnemonicToEntropy, entropyToMnemonic } from 'bip39';
+import { Mnemonic } from './mnemonic';
 
 export class Wallet {
-  private seed: Uint8Array;
+  private mnemonic: string;
+  private seed: Buffer;
 
-  constructor(entropyBits: number = 128) {
-    this.seed = generateRandomBytes(entropyBits / 8);
+  constructor(mnemonic: string) {
+    this.mnemonic = mnemonic;
+    this.seed = Mnemonic.seedFromPhrase(mnemonic);
   }
 
-  generateMnemonic(wordCount: 12 | 24 = 12): string {
-    const entropy = this.seed.slice(0, wordCount / 6);
-    return entropyToMnemonic(entropy);
+  static generateWallet(wordCount: 12 | 24): Wallet {
+    const mnemonic = Mnemonic.generatePhrase(wordCount);
+    return new Wallet(mnemonic);
   }
 
-  validateMnemonic(mnemonic: string): boolean {
-    try {
-      mnemonicToEntropy(mnemonic);
-      return true;
-    } catch {
-      return false;
-    }
+  getMnemonic(): string {
+    return this.mnemonic;
   }
 
-  deriveSeedFromMnemonic(mnemonic: string): Uint8Array {
-    const entropy = mnemonicToEntropy(mnemonic);
-    return new Uint8Array(entropy);
+  getSeed(): Buffer {
+    return this.seed;
   }
 }
