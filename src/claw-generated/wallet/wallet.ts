@@ -1,20 +1,34 @@
-import { ECDSASignatureScheme } from './signing';
+import { KeyPair } from './keypair';
 
-export class WalletService {
-  private signatureScheme: ECDSASignatureScheme;
+export class Wallet {
+  private _keyPair: KeyPair;
 
-  constructor() {
-    this.signatureScheme = new ECDSASignatureScheme();
+  constructor(keyPair: KeyPair) {
+    this._keyPair = keyPair;
   }
 
-  async connectWallet(): Promise<string> {
-    // Connect to user's wallet and return the connected account address
-    const { publicKey } = this.signatureScheme.generateKeyPair();
-    return publicKey.toString('hex');
+  get publicKey(): Uint8Array {
+    return this._keyPair.publicKey;
   }
 
-  async switchAccount(newAccount: string): Promise<void> {
-    // Switch to the new account
-    // (e.g., notify the application of the account change)
+  get privateKey(): Uint8Array {
+    return this._keyPair.privateKey;
+  }
+
+  static async create(password: string): Promise<Wallet> {
+    const keyPair = await KeyPair.generate(password);
+    return new Wallet(keyPair);
+  }
+
+  static async fromEncryptedFile(
+    password: string,
+    encryptedData: Uint8Array
+  ): Promise<Wallet> {
+    const keyPair = await KeyPair.fromEncryptedFile(password, encryptedData);
+    return new Wallet(keyPair);
+  }
+
+  async saveToEncryptedFile(password: string): Promise<Uint8Array> {
+    return await this._keyPair.toEncryptedFile(password);
   }
 }

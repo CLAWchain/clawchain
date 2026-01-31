@@ -1,57 +1,38 @@
-import * as crypto from 'crypto';
-import * as argon2 from 'argon2';
-import * as fs from 'fs';
-import * as path from 'path';
+import { randomBytes } from 'crypto';
+import { argon2 } from 'argon2-wasm';
 
-export class Keypair {
-  private publicKey: Buffer;
-  private secretKey: Buffer;
+export class KeyPair {
+  private _publicKey: Uint8Array;
+  private _privateKey: Uint8Array;
 
-  constructor(publicKey: Buffer, secretKey: Buffer) {
-    this.publicKey = publicKey;
-    this.secretKey = secretKey;
+  constructor(publicKey: Uint8Array, privateKey: Uint8Array) {
+    this._publicKey = publicKey;
+    this._privateKey = privateKey;
   }
 
-  static async generate(password: string): Promise<Keypair> {
-    const { publicKey, secretKey } = await this.generateKeypair(password);
-    return new Keypair(publicKey, secretKey);
+  get publicKey(): Uint8Array {
+    return this._publicKey;
   }
 
-  static async generateKeypair(password: string): Promise<{ publicKey: Buffer, secretKey: Buffer }> {
-    const { publicKey, secretKey } = crypto.generateKeyPairSync('ed25519', {
-      publicKeyEncoding: { type: 'spki', format: 'der' },
-      secretKeyEncoding: { type: 'pkcs8', format: 'der' }
-    });
-
-    const encryptedSecretKey = await argon2.hash(secretKey, { type: argon2.argon2id });
-
-    return { publicKey, secretKey: encryptedSecretKey };
+  get privateKey(): Uint8Array {
+    return this._privateKey;
   }
 
-  static async load(password: string, filepath: string): Promise<Keypair> {
-    const { publicKey, secretKey } = await this.loadKeypair(password, filepath);
-    return new Keypair(publicKey, secretKey);
+  static async generate(password: string): Promise<KeyPair> {
+    const keyBytes = await argon2.hash(randomBytes(32), password);
+    return new KeyPair(keyBytes.slice(0, 32), keyBytes.slice(32));
   }
 
-  static async loadKeypair(password: string, filepath: string): Promise<{ publicKey: Buffer, secretKey: Buffer }> {
-    const data = await fs.promises.readFile(filepath);
-    const { publicKey, secretKey } = this.parseKeypairData(data);
-    const decryptedSecretKey = await argon2.verify(secretKey, password);
-    return { publicKey, secretKey: decryptedSecretKey };
+  static async fromEncryptedFile(
+    password: string,
+    encryptedData: Uint8Array
+  ): Promise<KeyPair> {
+    const keyBytes = await argon2.hash(encryptedData, password);
+    return new KeyPair(keyBytes.slice(0, 32), keyBytes.slice(32));
   }
 
-  static async save(keypair: Keypair, password: string, filepath: string): Promise<void> {
-    const data = this.serializeKeypairData(keypair.publicKey, keypair.secretKey);
-    await fs.promises.writeFile(filepath, data);
-  }
-
-  private static parseKeypairData(data: Buffer): { publicKey: Buffer, secretKey: Buffer } {
-    // Parse Solana CLI keypair format
-    return { publicKey: data.slice(0, 32), secretKey: data.slice(32) };
-  }
-
-  private static serializeKeypairData(publicKey: Buffer, secretKey: Buffer): Buffer {
-    // Serialize to Solana CLI keypair format
-    return Buffer.concat([publicKey, secretKey]);
+  async toEncryptedFile(password: string): Promise<Uint8Array> {
+    const keyBytes = new Uint8Array([...this._publicKey, ...this._privateKey]);
+    return await argon2.hash(keyBytes, password);
   }
 }
