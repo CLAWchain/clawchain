@@ -1,24 +1,40 @@
 import { Block } from '../block/block';
+import { CheckpointManager } from '../checkpoint_manager';
 
-export async function getBlock(params: {
-  slot: number;
-  includeTransactions?: boolean;
-  encoding?: 'json' | 'binary';
-}): Promise&lt;Block&gt; {
-  // Fetch the block data by slot number
-  const block = await Block.getBySlot(params.slot);
+class GetBlockRpcMethod {
+  private checkpointManager: CheckpointManager;
 
-  // Include transaction details if requested
-  if (params.includeTransactions) {
-    block.transactions = await Promise.all(block.transactionIds.map(
-      (txId) => Transaction.getByHash(txId)
-    ));
+  constructor(checkpointManager: CheckpointManager) {
+    this.checkpointManager = checkpointManager;
   }
 
-  // Encode the response as requested
-  if (params.encoding === 'binary') {
-    return block.toBinary();
-  } else {
-    return block.toJSON();
+  async getBlock(blockHash: string): Promise<Block | null> {
+    // Fetch the block from the blockchain
+    const block = await this.fetchBlock(blockHash);
+    if (!block) {
+      return null;
+    }
+
+    // Check if the block is before the latest checkpoint
+    const latestCheckpoint = this.checkpointManager.getLatestCheckpoint();
+    if (latestCheckpoint && block.height <= latestCheckpoint.blockHeight) {
+      // Return the block without the transaction details
+      return {
+        hash: block.hash,
+        height: block.height,
+        parentHash: block.parentHash,
+        timestamp: block.timestamp,
+        transactions: []
+      };
+    }
+
+    return block;
+  }
+
+  private async fetchBlock(blockHash: string): Promise<Block | null> {
+    // Fetch the block from the blockchain storage
+    // ...
   }
 }
+
+export { GetBlockRpcMethod };
