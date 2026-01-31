@@ -1,63 +1,43 @@
-import { JsonRpcServer } from './server';
-import { ClawChain } from '../chain';
-import { TransactionReceipt } from '../transaction/TransactionReceipt';
+import { StakingStateManager } from '../StakingStateManager';
+import { Account } from '../account';
+import { BigNumber } from 'ethers';
 
-class RpcMethods {
-  private chain: ClawChain;
+export class RpcMethods {
+  private stakingStateManager: StakingStateManager;
 
-  constructor(private rpcServer: JsonRpcServer, chain: ClawChain) {
-    this.chain = chain;
-
-    this.registerMethods();
+  constructor(stakingStateManager: StakingStateManager) {
+    this.stakingStateManager = stakingStateManager;
   }
 
-  private registerMethods() {
-    this.rpcServer.registerMethod('clawchain_getBalance', this.getBalance);
-    this.rpcServer.registerMethod('clawchain_sendTransaction', this.sendTransaction);
-    this.rpcServer.registerMethod('clawchain_getTransactionReceipt', this.getTransactionReceipt);
-    this.rpcServer.registerMethod('clawchain_call', this.call);
-    this.rpcServer.registerMethod('clawchain_simulateTransaction', this.simulateTransaction);
-  }
-
-  private async getBalance(address: string): Promise<string> {
-    const balance = await this.chain.getBalance(address);
+  async getStakerBalance(account: Account): Promise<string> {
+    const balance = await this.stakingStateManager.getStakerBalance(account);
     return balance.toString();
   }
 
-  private async sendTransaction(
-    from: string,
-    to: string,
-    value: string,
-    data: string
-  ): Promise<string> {
-    const txHash = await this.chain.sendTransaction(from, to, value, data);
-    return txHash;
+  async stake(account: Account, validator: string, amount: string): Promise<void> {
+    const amountBN = BigNumber.from(amount);
+    await this.stakingStateManager.setStakerBalance(account, amountBN);
+    await this.stakingStateManager.setDelegation(account, validator);
   }
 
-  private async getTransactionReceipt(txHash: string): Promise<TransactionReceipt> {
-    const receipt = await this.chain.getTransactionReceipt(txHash);
-    return receipt;
+  async unstake(account: Account, validator: string, amount: string): Promise<void> {
+    const amountBN = BigNumber.from(amount);
+    await this.stakingStateManager.setStakerBalance(account, amountBN.neg());
+    await this.stakingStateManager.setDelegation(account, '');
   }
 
-  private async call(
-    from: string,
-    to: string,
-    value: string,
-    data: string
-  ): Promise<string> {
-    const result = await this.chain.call(from, to, value, data);
-    return result;
+  async claimRewards(account: Account, validator: string): Promise<string> {
+    const lastClaimTimestamp = await this.stakingStateManager.getLastClaimTimestamp(validator);
+    const rewards = await this.calculateRewards(validator, lastClaimTimestamp);
+    await this.stakingStateManager.setLastClaimTimestamp(validator, Math.floor(Date.now() / 1000));
+    return rewards.toString();
   }
 
-  private async simulateTransaction(
-    from: string,
-    to: string,
-    value: string,
-    data: string
-  ): Promise<{ logs: string[], computeUnits: number }> {
-    const { logs, computeUnits } = await this.chain.simulateTransaction(from, to, value, data);
-    return { logs, computeUnits };
+  private async calculateRewards(validator: string, lastClaimTimestamp: number): Promise<BigNumber> {
+    const totalStaked = await this.stakingStateManager.getTotalStaked();
+    const timeSinceLastClaim = Math.max(0, Math.floor(Date.now() / 1000) - lastClaimTimestamp);
+    const annualRewards = totalStaked.mul(10).div(100); // 10% annual interest rate
+    const rewards = annualRewards.mul(timeSinceLastClaim).div(365 * 24 * 60 * 60);
+    return rewards;
   }
 }
-
-export { RpcMethods };
