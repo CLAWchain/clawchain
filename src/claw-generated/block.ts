@@ -1,17 +1,32 @@
 import { Transaction } from './transaction';
 
 export class Block {
-  public index: number;
-  public timestamp: number;
-  public transactions: Transaction[];
-  public previousHash: string;
-  public hash: string;
+  hash: string;
+  previousHash: string;
+  timestamp: number;
+  transactions: Transaction[];
+  nonce: number;
 
-  constructor(index: number, timestamp: number, transactions: Transaction[], previousHash: string, hash: string) {
-    this.index = index;
+  constructor(
+    previousHash: string,
+    timestamp: number,
+    transactions: Transaction[],
+    nonce: number
+  ) {
+    this.previousHash = previousHash;
     this.timestamp = timestamp;
     this.transactions = transactions;
-    this.previousHash = previousHash;
-    this.hash = hash;
+    this.nonce = nonce;
+    this.hash = this.calculateHash();
+  }
+
+  calculateHash(): string {
+    // Implement hash calculation logic
+    return '';
+  }
+
+  validateBlock(): boolean {
+    // Implement block validation logic
+    return true;
   }
 }
