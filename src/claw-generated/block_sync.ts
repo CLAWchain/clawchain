@@ -1,5 +1,5 @@
 import { Block, BlockHeader } from './blockchain/block';
-import { PeerManager } from './networking/peer_manager';
+import { PeerManager } from './network/PeerManager';
 import { DatabaseService } from './storage/database';
 import { CheckpointManager } from './checkpoint_manager';
 
