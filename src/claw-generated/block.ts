@@ -1,31 +1,35 @@
+import { BloomFilter } from './bloom-filter';
+
 export class Block {
   hash: string;
-  previousHash: string;
+  number: number;
   timestamp: number;
   transactions: Transaction[];
-  nonce: number;
+  bloom: BloomFilter;
 
-  constructor(
-    hash: string,
-    previousHash: string,
-    timestamp: number,
-    transactions: Transaction[],
-    nonce: number
-  ) {
+  constructor(hash: string, number: number, timestamp: number, transactions: Transaction[]) {
     this.hash = hash;
-    this.previousHash = previousHash;
+    this.number = number;
     this.timestamp = timestamp;
     this.transactions = transactions;
-    this.nonce = nonce;
+    this.bloom = this.generateBloom();
+  }
+
+  private generateBloom(): BloomFilter {
+    const bloom = new BloomFilter(1024, 3);
+    for (const tx of this.transactions) {
+      bloom.add(tx.hash);
+      bloom.add(tx.from);
+      bloom.add(tx.to);
+    }
+    return bloom;
   }
 }
 
-export interface Transaction {
-  id: string;
+export class Transaction {
+  hash: string;
   from: string;
   to: string;
-  amount: number;
-  fee: number;
-  nonce: number;
-  signature: string;
+  value: number;
+  data: string;
 }
