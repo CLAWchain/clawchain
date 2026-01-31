@@ -1,13 +1,12 @@
 import { Block } from '../blockchain/block';
 import { Peer } from './peer';
-import { CompactBlock } from './compact_block';
+import { Transaction } from '../blockchain/transaction';
 
-class BlockPropagation {
-  private peers: Peer[] = [];
+class BlockPropagationManager {
+  private peers: Peer[];
 
   constructor() {
-    // Subscribe to new block events from the blockchain
-    // TODO: Implement this
+    this.peers = [];
   }
 
   addPeer(peer: Peer) {
@@ -18,12 +17,50 @@ class BlockPropagation {
     this.peers = this.peers.filter(p => p !== peer);
   }
 
-  broadcastBlock(block: Block) {
-    const compactBlock = new CompactBlock(block);
+  onNewBlock(block: Block) {
+    this.broadcastCompactBlock(block);
+  }
+
+  private broadcastCompactBlock(block: Block) {
+    const compactBlock = this.createCompactBlock(block);
+    const serializedCompactBlock = this.serializeCompactBlock(compactBlock);
+
     for (const peer of this.peers) {
-      peer.sendCompactBlock(compactBlock);
+      peer.sendCompactBlock(serializedCompactBlock);
+      const missingTransactions = compactBlock.missingTransactions;
+      if (missingTransactions.length > 0) {
+        peer.sendMissingTransactions(missingTransactions);
+      }
     }
+  }
+
+  private createCompactBlock(block: Block): CompactBlock {
+    const transactions = block.transactions;
+    const transactionIds = transactions.map(tx => tx.id);
+    const missingTransactions = this.findMissingTransactions(transactions);
+
+    return {
+      blockHeader: block.header,
+      transactionIds,
+      missingTransactions
+    };
+  }
+
+  private findMissingTransactions(transactions: Transaction[]): Transaction[] {
+    // Implement logic to find transactions that are missing from the recipient's mempool
+    return [];
+  }
+
+  private serializeCompactBlock(compactBlock: CompactBlock): string {
+    // Implement serialization logic here
+    return '';
   }
 }
 
-export { BlockPropagation };
+interface CompactBlock {
+  blockHeader: BlockHeader;
+  transactionIds: string[];
+  missingTransactions: Transaction[];
+}
+
+export { BlockPropagationManager, CompactBlock };
