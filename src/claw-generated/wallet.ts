@@ -1,37 +1,30 @@
-import { KeyPair, createKeyPair, sign as ed25519Sign } from 'crypto';
-import { Transaction, TransactionInput, TransactionOutput, SignedTransaction } from './transaction';
+import { Account, State } from './state';
+import { Transaction, TransactionInput, TransactionOutput } from './transaction';
+import { TransactionNonce } from './transaction-nonce';
 
 export class Wallet {
-  private _keypair: KeyPair;
+  private _account: Account;
+  private _nonce: TransactionNonce;
 
-  constructor() {
-    this._keypair = this.generateKeyPair();
+  constructor(state: State) {
+    this._account = state.createAccount();
+    this._nonce = new TransactionNonce();
   }
 
-  generateKeyPair(): KeyPair {
-    const { publicKey, privateKey } = createKeyPair('ed25519');
-    return { publicKey, privateKey };
+  createTransaction(
+    outputs: TransactionOutput[],
+    timestamp: number
+  ): Transaction {
+    const inputs = this.getUnspentOutputs().map(output => ({
+      prevOutput: output,
+      unlockScript: this._account.sign(output.lockScript)
+    }));
+    const nonce = this._nonce.getNonce(this._account);
+    this._nonce.incrementNonce(this._account);
+    return new Transaction(inputs, outputs, timestamp, nonce);
   }
 
-  get publicKey(): Buffer {
-    return this._keypair.publicKey;
+  getUnspentOutputs(): TransactionOutput[] {
+    // implementation omitted for brevity
   }
-
-  get privateKey(): Buffer {
-    return this._keypair.privateKey;
-  }
-
-  signTransaction(transaction: Transaction): SignedTransaction {
-    const signature = this.sign(transaction.serialize(), this.privateKey);
-    return { transaction, signature };
-  }
-
-  private sign(data: Buffer, privateKey: Buffer): Buffer {
-    return ed25519Sign(data, null, 'ed25519', privateKey);
-  }
-}
-
-export interface SignedTransaction {
-  transaction: Transaction;
-  signature: Buffer;
 }
