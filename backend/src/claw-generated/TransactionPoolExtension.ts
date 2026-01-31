@@ -1,29 +1,47 @@
-import { Transaction } from '../blockchain/Block';
-import { verifyTransactionSignature } from '../blockchain/Crypto';
 import { TransactionPool, ValidationResult } from '../blockchain/TransactionPool';
+import { verifyTransactionSignature } from '../blockchain/Crypto';
 
 export class TransactionPoolExtension extends TransactionPool {
   async addTransaction(tx: Transaction): Promise<ValidationResult> {
     // Validate transaction
-    const validation = await this.validateTransaction(tx);
+    const validation = await super.validateTransaction(tx);
     if (!validation.valid) {
       console.log(`[POOL] Transaction rejected: ${validation.error}`);
       return validation;
     }
 
     // Verify signature
-    if (!await this.verifyTransactionSignature(tx)) {
-      return { valid: false, error: 'Invalid signature' };
+    if (!this.verifyTransactionSignature(tx)) {
+      return { valid: false, error: 'Invalid transaction signature' };
     }
 
-    return super.addTransaction(tx);
+    this.pendingTransactions.set(tx.hash, tx);
+    this.knownHashes.add(tx.hash);
+
+    try {
+      // ... existing code ...
+    } catch (error) {
+      console.error('[POOL] Database error:', error);
+    }
+
+    console.log(`[POOL] Transaction ${tx.hash.substring(0, 16)}... added (${stateManager.formatBalance(tx.value)})`);
+
+    // Emit event
+    eventBus.emit('transaction_added', {
+      hash: tx.hash,
+      from: tx.from,
+      to: tx.to,
+      value: tx.value.toString()
+    });
+
+    return { valid: true };
   }
 
-  private async verifyTransactionSignature(tx: Transaction): Promise<boolean> {
+  private verifyTransactionSignature(tx: Transaction): boolean {
     try {
       return verifyTransactionSignature(tx);
     } catch (error) {
-      console.error('[POOL] Signature verification failed:', error);
+      console.error('[POOL] Transaction signature verification failed:', error);
       return false;
     }
   }
