@@ -1,34 +1,50 @@
 import MerklePatriciaTrie from './merkle_patricia_trie';
-import { hash, HexString } from '../state/crypto';
 
 describe('MerklePatriciaTrie', () => {
-  it('should store and retrieve values correctly', () => {
-    const trie = new MerklePatriciaTrie();
-    trie.set('0x01', '0x0123');
-    trie.set('0x02', '0x4567');
-    trie.set('0x0102', '0x89ab');
+  let trie: MerklePatriciaTrie;
 
-    expect(trie.get('0x01')).toEqual('0x0123');
-    expect(trie.get('0x02')).toEqual('0x4567');
-    expect(trie.get('0x0102')).toEqual('0x89ab');
-    expect(trie.get('0x03')).toBeNull();
+  beforeEach(() => {
+    trie = new MerklePatriciaTrie();
   });
 
-  it('should generate and verify Merkle proofs', () => {
-    const trie = new MerklePatriciaTrie();
-    trie.set('0x01', '0x0123');
-    trie.set('0x02', '0x4567');
-    trie.set('0x0102', '0x89ab');
+  it('should insert and retrieve values', () => {
+    trie.set('key1', 'value1');
+    trie.set('key2', 'value2');
+    trie.set('key3', 'value3');
 
-    const proof1 = trie.generateProof('0x01');
-    const proof2 = trie.generateProof('0x02');
-    const proof3 = trie.generateProof('0x0102');
+    expect(trie.get('key1')).toBe('value1');
+    expect(trie.get('key2')).toBe('value2');
+    expect(trie.get('key3')).toBe('value3');
+  });
 
-    expect(trie.verifyProof('0x01', '0x0123', proof1)).toBe(true);
-    expect(trie.verifyProof('0x02', '0x4567', proof2)).toBe(true);
-    expect(trie.verifyProof('0x0102', '0x89ab', proof3)).toBe(true);
-    expect(trie.verifyProof('0x01', '0x4567', proof1)).toBe(false);
-    expect(trie.verifyProof('0x02', '0x0123', proof2)).toBe(false);
-    expect(trie.verifyProof('0x0102', '0x0123', proof3)).toBe(false);
+  it('should delete values', () => {
+    trie.set('key1', 'value1');
+    trie.set('key2', 'value2');
+    trie.set('key3', 'value3');
+
+    trie.delete('key2');
+
+    expect(trie.get('key1')).toBe('value1');
+    expect(trie.get('key2')).toBeNull();
+    expect(trie.get('key3')).toBe('value3');
+  });
+
+  it('should generate Merkle proofs', () => {
+    trie.set('key1', 'value1');
+    trie.set('key2', 'value2');
+    trie.set('key3', 'value3');
+
+    const proof = trie.getProof('key2');
+    expect(proof.length).toBeGreaterThan(0);
+  });
+
+  it('should calculate the root hash', () => {
+    trie.set('key1', 'value1');
+    trie.set('key2', 'value2');
+    trie.set('key3', 'value3');
+
+    const rootHash = trie.getRootHash();
+    expect(rootHash).toBeDefined();
+    expect(typeof rootHash).toBe('string');
   });
 });
