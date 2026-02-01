@@ -1,45 +1,22 @@
-import { Request, Response } from 'express';
-import { getBalance, sendTransaction } from '@clawchain/core';
-import { createProofOfWork } from './proof-of-work';
+import { NextFunction, Request, Response } from 'express';
+import { mintTokens } from '../services/tokenService';
+import { recordFaucetRequest } from '../services/faucetService';
 
-const FAUCET_AMOUNT = 10000;
-const COOLDOWN_PERIOD = 24 * 60 * 60 * 1000; // 24 hours
-const POW_DIFFICULTY = 4;
+export const faucetHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { address } = req.body;
 
-const ipRequestCounts: { [key: string]: number } = {};
-const addressRequestCounts: { [key: string]: number } = {};
+    // Check if address has already received tokens in the last 24 hours
+    const hasReceivedTokens = await recordFaucetRequest(address);
+    if (hasReceivedTokens) {
+      return res.status(429).json({ error: 'You can only request tokens once per day' });
+    }
 
-export async function faucetHandler(req: Request, res: Response) {
-  const { address, nonce } = req.body;
-  const ip = req.ip;
+    // Mint 10 CLAW tokens and send to the address
+    await mintTokens(address, 10);
 
-  // Check IP rate limit
-  if (ipRequestCounts[ip] && ipRequestCounts[ip] >= 5) {
-    return res.status(429).json({ error: 'Too many requests from this IP address' });
+    return res.status(200).json({ message: 'Tokens dispensed successfully' });
+  } catch (error) {
+    next(error);
   }
-
-  // Check address rate limit
-  if (addressRequestCounts[address] && addressRequestCounts[address] >= 3) {
-    return res.status(429).json({ error: 'Too many requests from this address' });
-  }
-
-  // Verify proof-of-work
-  if (!await createProofOfWork(address, nonce, POW_DIFFICULTY)) {
-    return res.status(400).json({ error: 'Invalid proof-of-work' });
-  }
-
-  // Check balance
-  const balance = await getBalance(address);
-  if (balance >= FAUCET_AMOUNT) {
-    return res.status(400).json({ error: 'Address already has sufficient funds' });
-  }
-
-  // Send transaction
-  await sendTransaction(address, FAUCET_AMOUNT);
-
-  // Update request counts
-  ipRequestCounts[ip] = (ipRequestCounts[ip] || 0) + 1;
-  addressRequestCounts[address] = (addressRequestCounts[address] || 0) + 1;
-
-  return res.json({ success: true, amount: FAUCET_AMOUNT });
-}
+};
