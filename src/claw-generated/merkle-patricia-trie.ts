@@ -1,6 +1,7 @@
 // src/claw-generated/merkle-patricia-trie.ts
 
 import { keccak256 } from 'js-sha3';
+import { RLP } from 'rlp';
 
 interface TrieNode {
   key: string;
@@ -107,7 +108,43 @@ class MerklePatriciaTrie {
       this.hashNode(node.children[key])
     );
     const nodeData = `${node.key}:${node.value}:${childHashes.join(',')}`;
-    return keccak256(nodeData);
+    return keccak256(RLP.encode(nodeData));
+  }
+
+  generateProof(key: string): string[] {
+    const proof: string[] = [];
+    this.generateProofRecursive(this.root, key, 0, proof);
+    return proof;
+  }
+
+  private generateProofRecursive(
+    node: TrieNode,
+    key: string,
+    index: number,
+    proof: string[]
+  ): boolean {
+    if (index === key.length) {
+      proof.push(this.hashNode(node));
+      return node.value !== '';
+    }
+
+    const currentChar = key[index];
+    const child = node.children[currentChar];
+    if (!child) {
+      proof.push(this.hashNode(node));
+      return false;
+    }
+
+    proof.push(this.hashNode(node));
+    return this.generateProofRecursive(child, key, index + 1, proof);
+  }
+
+  loadFromDB(db: any): void {
+    // Load trie from database
+  }
+
+  persistToDB(db: any): void {
+    // Persist trie to database
   }
 }
 
