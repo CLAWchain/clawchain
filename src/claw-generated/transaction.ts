@@ -6,10 +6,12 @@ export class Transaction {
   private inputs: TransactionInput[];
   private outputs: TransactionOutput[];
   private signature: Ed25519Signature;
+  private nonce: number;
 
-  constructor(inputs: TransactionInput[], outputs: TransactionOutput[]) {
+  constructor(inputs: TransactionInput[], outputs: TransactionOutput[], nonce: number) {
     this.inputs = inputs;
     this.outputs = outputs;
+    this.nonce = nonce;
   }
 
   sign(wallet: Wallet): void {
@@ -33,7 +35,10 @@ export class Transaction {
       return Buffer.concat([amountBuffer, output.recipient]);
     }));
 
-    return Buffer.concat([inputCount, inputsBuffer, outputCount, outputsBuffer, this.signature]);
+    const nonceBuffer = Buffer.alloc(4);
+    nonceBuffer.writeUInt32BE(this.nonce);
+
+    return Buffer.concat([inputCount, inputsBuffer, outputCount, outputsBuffer, nonceBuffer, this.signature]);
   }
 }
 
