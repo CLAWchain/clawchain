@@ -1,5 +1,5 @@
 import { Wallet } from './wallet';
-import { sign } from 'crypto';
+import { sign, verify } from 'crypto';
 
 export class Transaction {
   private _data: any;
@@ -38,6 +38,12 @@ export class Transaction {
 
   validate(wallet: Wallet): boolean {
     // Validate the transaction nonce against the wallet's nonce
-    return this._nonce === wallet.nonce;
+    if (this._nonce !== wallet.nonce) {
+      return false;
+    }
+
+    // Validate the transaction signature
+    const dataToVerify = this.serialize();
+    return verify(null, dataToVerify, wallet.publicKey, this._signature, 'ed25519');
   }
 }
