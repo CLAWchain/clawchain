@@ -1,19 +1,28 @@
 export class Block {
-  hash: string;
-  parentHash: string;
-  transactions: Transaction[];
   timestamp: number;
-  height: number;
+  transactions: any[];
+  prevHash: string;
+  hash: string;
 
-  constructor(hash: string, parentHash: string, transactions: Transaction[], timestamp: number, height: number) {
-    this.hash = hash;
-    this.parentHash = parentHash;
-    this.transactions = transactions;
+  constructor(timestamp: number, transactions: any[], prevHash: string) {
     this.timestamp = timestamp;
-    this.height = height;
+    this.transactions = transactions;
+    this.prevHash = prevHash;
+    this.hash = this.calculateHash();
   }
-}
 
-export class Transaction {
-  // Implement transaction properties and methods
+  calculateHash(): string {
+    // Implement hash calculation logic here
+    return "TODO";
+  }
+
+  isValid(): boolean {
+    // Implement validation logic here
+    return true;
+  }
+
+  serialize(): string {
+    // Implement serialization logic here
+    return JSON.stringify(this);
+  }
 }
