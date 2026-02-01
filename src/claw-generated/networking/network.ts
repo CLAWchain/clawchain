@@ -1,18 +1,22 @@
 // Network layer for ClawChain peer discovery
 
 import { NodeId, Message, MessageType } from './types';
+import { SubscriptionManager } from './subscriptions';
 
 class Network {
   private connections: Map<NodeId, WebSocket>;
+  private subscriptionManager: SubscriptionManager;
 
   constructor() {
     this.connections = new Map();
+    this.subscriptionManager = new SubscriptionManager();
   }
 
   connectToNode(nodeId: NodeId) {
     // Connect to a remote node and add the connection to the map
     const ws = new WebSocket(`ws://${nodeId}`);
     this.connections.set(nodeId, ws);
+    this.subscriptionManager.addClient(nodeId, ws);
   }
 
   sendMessage(message: Message) {
@@ -22,6 +26,15 @@ class Network {
         conn.send(JSON.stringify(message));
       }
     }
+    this.subscriptionManager.publishMessage(message);
+  }
+
+  subscribe(clientId: string, messageType: MessageType) {
+    this.subscriptionManager.subscribe(clientId, messageType);
+  }
+
+  unsubscribe(clientId: string, messageType: MessageType) {
+    this.subscriptionManager.unsubscribe(clientId, messageType);
   }
 
   findNodes(targetId: NodeId): NodeId[] {
