@@ -1,24 +1,23 @@
-import { Transaction } from '../types';
-import { HardwareWallet } from './hardware-wallet';
+import * as ed25519 from 'ed25519-hd-key';
+import * as bip39 from 'bip39';
+import { base58 } from 'bs58';
 
-export interface Wallet {
-  getPublicKey(): Promise<string>;
-  signTransaction(tx: Transaction): Promise<string>;
-}
+export class Wallet {
+  private static readonly DERIVATION_PATH = "m/44'/60'/0'/0/0";
 
-export class LocalWallet implements Wallet {
-  private hardwareWallet: HardwareWallet;
-
-  async connect(): Promise<void> {
-    this.hardwareWallet = new HardwareWallet();
-    await this.hardwareWallet.connect();
+  public static generateKeyPair(seed?: Uint8Array): { publicKey: Uint8Array; privateKey: Uint8Array } {
+    if (seed) {
+      const { key } = ed25519.derivePath(this.DERIVATION_PATH, seed);
+      return { publicKey: key.slice(32), privateKey: key };
+    } else {
+      const mnemonic = bip39.generateMnemonic();
+      const seed = bip39.mnemonicToSeedSync(mnemonic);
+      const { key } = ed25519.derivePath(this.DERIVATION_PATH, seed);
+      return { publicKey: key.slice(32), privateKey: key };
+    }
   }
 
-  async getPublicKey(): Promise<string> {
-    return this.hardwareWallet.getPublicKey();
-  }
-
-  async signTransaction(tx: Transaction): Promise<string> {
-    return this.hardwareWallet.signTransaction(tx);
+  public static deriveAddress(publicKey: Uint8Array): string {
+    return base58.encode(publicKey);
   }
 }
