@@ -1,19 +1,46 @@
-import { ethers } from 'ethers';
+import { Buffer } from 'buffer';
+import { randomBytes } from 'crypto';
+import nacl from 'tweetnacl';
 
-const provider = new ethers.providers.JsonRpcProvider('https://testnet.clawchain.io');
-const wallet = new ethers.Wallet(process.env.FAUCET_PRIVATE_KEY!, provider);
-const clawToken = new ethers.Contract(
-  '0x1234567890123456789012345678901234567890',
-  ['function balanceOf(address) view returns (uint256)','function transfer(address,uint256) returns (bool)'],
-  wallet
-);
+interface Transaction {
+  from: string;
+  to: string;
+  amount: number;
+  signature: string;
+}
 
-export const getTokenBalance = async (address: string) => {
-  const balance = await clawToken.balanceOf(address);
-  return balance.toNumber();
-};
+class Blockchain {
+  private mempool: Transaction[] = [];
 
-export const mintTokens = async (address: string, amount: number) => {
-  const tx = await clawToken.transfer(address, amount);
-  await tx.wait();
-};
+  addTransaction(tx: Transaction): boolean {
+    if (this.verifyTransaction(tx)) {
+      this.mempool.push(tx);
+      return true;
+    }
+    return false;
+  }
+
+  verifyTransaction(tx: Transaction): boolean {
+    // Verify the transaction signature against the 'from' public key
+    const publicKey = Buffer.from(tx.from, 'hex');
+    const signature = Buffer.from(tx.signature, 'hex');
+    const message = Buffer.from(`${tx.from}${tx.to}${tx.amount}`);
+    return nacl.sign.detached.verify(message, signature, publicKey);
+  }
+
+  mineBlock(): void {
+    // Process transactions from the mempool, verifying signatures
+    for (const tx of this.mempool) {
+      if (this.verifyTransaction(tx)) {
+        // Add the verified transaction to the block
+      } else {
+        // Discard invalid transactions
+      }
+    }
+    // Clear the mempool
+    this.mempool = [];
+    // Add the new block to the chain
+  }
+}
+
+export default Blockchain;
