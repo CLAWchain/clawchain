@@ -4,9 +4,44 @@ import nacl from 'tweetnacl';
 import { Wallet } from './wallet';
 import { Transaction, TransactionInput, TransactionOutput } from './transaction';
 
+class Block {
+  hash: string;
+  previousHash: string;
+  timestamp: number;
+  transactions: Transaction[];
+  finality: number;
+
+  constructor(
+    previousHash: string,
+    transactions: Transaction[],
+    timestamp: number = Date.now()
+  ) {
+    this.previousHash = previousHash;
+    this.transactions = transactions;
+    this.timestamp = timestamp;
+    this.finality = 0;
+    this.hash = this.calculateHash();
+  }
+
+  calculateHash(): string {
+    const data = this.previousHash + this.timestamp + JSON.stringify(this.transactions);
+    return crypto.createHash('sha256').update(data).digest('hex');
+  }
+
+  incrementFinality(): void {
+    this.finality++;
+  }
+}
+
 class Blockchain {
+  private chain: Block[] = [];
   private mempool: Transaction[] = [];
   private wallets: { [key: string]: Wallet } = {};
+
+  constructor() {
+    // Create the genesis block
+    this.chain.push(new Block('0', []));
+  }
 
   addTransaction(tx: Transaction): boolean {
     const senderWallet = this.wallets[tx.from];
@@ -32,17 +67,33 @@ class Blockchain {
 
   mineBlock(): void {
     // Process transactions from the mempool, verifying signatures and nonces
+    const transactions: Transaction[] = [];
     for (const tx of this.mempool) {
       const senderWallet = this.wallets[tx.from];
       if (senderWallet && this.verifyTransaction(tx, senderWallet) && tx.nonce === senderWallet.getNonce()) {
-        // Add the verified transaction to the block
+        transactions.push(tx);
       } else {
         // Discard invalid transactions
       }
     }
+
+    // Create the new block
+    const previousBlock = this.chain[this.chain.length - 1];
+    const newBlock = new Block(previousBlock.hash, transactions);
+
+    // Add the new block to the chain
+    this.chain.push(newBlock);
+
+    // Increment the finality of the previous block
+    previousBlock.incrementFinality();
+
     // Clear the mempool
     this.mempool = [];
-    // Add the new block to the chain
+  }
+
+  getBlockFinality(blockHash: string): number {
+    const block = this.chain.find((b) => b.hash === blockHash);
+    return block ? block.finality : 0;
   }
 }
 
