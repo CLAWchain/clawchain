@@ -6,13 +6,15 @@ export class Transaction {
   recipient: Uint8Array;
   amount: number;
   timestamp: number;
+  nonce: number;
   signature: Uint8Array;
 
-  constructor(sender: Uint8Array, recipient: Uint8Array, amount: number) {
+  constructor(sender: Uint8Array, recipient: Uint8Array, amount: number, nonce: number) {
     this.sender = sender;
     this.recipient = recipient;
     this.amount = amount;
     this.timestamp = Date.now();
+    this.nonce = nonce;
   }
 
   serialize(): Uint8Array {
@@ -20,7 +22,8 @@ export class Transaction {
       ...this.sender,
       ...this.recipient,
       ...new Uint8Array(this.amount.toString().split('').map(Number)),
-      ...new Uint8Array(this.timestamp.toString().split('').map(Number))
+      ...new Uint8Array(this.timestamp.toString().split('').map(Number)),
+      ...new Uint8Array(this.nonce.toString().split('').map(Number))
     ]);
     return data;
   }
@@ -29,7 +32,8 @@ export class Transaction {
     this.signature = sodium.crypto_sign_detached(this.serialize(), wallet.getPrivateKey());
   }
 
-  verify(wallet: Wallet): boolean {
-    return sodium.crypto_sign_verify_detached(this.signature, this.serialize(), wallet.getPublicKey());
+  verify(wallet: Wallet, lastNonce: number): boolean {
+    return this.nonce > lastNonce &&
+           sodium.crypto_sign_verify_detached(this.signature, this.serialize(), wallet.getPublicKey());
   }
 }
