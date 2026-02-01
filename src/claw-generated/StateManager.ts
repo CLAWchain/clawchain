@@ -1,86 +1,53 @@
-import { GenesisConfig } from './GenesisConfig';
-import { Chain } from './Chain';
-import { Crypto } from './Crypto';
+import { BlockHeader } from '../chain/BlockHeader';
+import { Account } from './Account';
 
 export class StateManager {
-  private static instance: StateManager;
-  private state: Map<string, number>;
-  private stateCheckpoints: Map<number, Map<string, number>>;
-  private pruningInterval: number;
-  private maxCheckpointAge: number;
+  private state: { [key: string]: Account } = {};
+  private previousState: { [key: string]: Account } = {};
+  private stateDiffs: { [blockHash: string]: { [address: string]: Account } } = {};
 
-  private constructor() {
-    this.state = new Map();
-    this.stateCheckpoints = new Map();
-    this.pruningInterval = 100; // Prune state every 100 blocks
-    this.maxCheckpointAge = 1000; // Keep checkpoints for up to 1000 blocks
-    this.initializeState();
+  applyBlockChanges(blockHeader: BlockHeader) {
+    // Store the current state as the previous state
+    this.previousState = { ...this.state };
+
+    // Apply the changes from the new block
+    blockHeader.transactions.forEach(tx => {
+      const senderAccount = this.getAccount(tx.from);
+      senderAccount.balance -= tx.amount;
+      this.updateAccount(tx.from, senderAccount);
+
+      const receiverAccount = this.getAccount(tx.to);
+      receiverAccount.balance += tx.amount;
+      this.updateAccount(tx.to, receiverAccount);
+    });
+
+    // Generate the state diff
+    this.stateDiffs[blockHeader.hash] = this.getDiff(this.previousState, this.state);
   }
 
-  public static getInstance(): StateManager {
-    if (!StateManager.instance) {
-      StateManager.instance = new StateManager();
-    }
-    return StateManager.instance;
+  getAccount(address: string): Account {
+    return this.state[address] || new Account();
   }
 
-  private initializeState(): void {
-    const genesisConfig = GenesisConfig.getInstance();
-    const genesisBlock = genesisConfig.generateGenesisBlock();
-
-    // Set initial token allocations
-    for (const [address, balance] of Object.entries(genesisConfig.initialTokenAllocations)) {
-      this.setBalance(Crypto.toBuffer(address), balance);
-    }
-
-    // Set initial validator set
-    const chain = Chain.getInstance();
-    for (const validator of genesisConfig.initialValidators) {
-      chain.addValidator(Crypto.toBuffer(validator));
-    }
-
-    // Create initial state checkpoint
-    this.createStateCheckpoint(0);
+  updateAccount(address: string, account: Account) {
+    this.state[address] = account;
   }
 
-  public getBalance(address: Buffer): number {
-    const addressHex = Crypto.bufferToHex(address);
-    return this.state.get(addressHex) || 0;
-  }
+  private getDiff(
+    previousState: { [key: string]: Account },
+    newState: { [key: string]: Account }
+  ): { [address: string]: Account } {
+    const diff: { [address: string]: Account } = {};
 
-  public setBalance(address: Buffer, balance: number): void {
-    const addressHex = Crypto.bufferToHex(address);
-    this.state.set(addressHex, balance);
-  }
-
-  public createStateCheckpoint(blockNumber: number): void {
-    this.stateCheckpoints.set(blockNumber, new Map(this.state));
-  }
-
-  public pruneState(currentBlockNumber: number): void {
-    // Remove old checkpoints
-    for (const [blockNumber, checkpoint] of this.stateCheckpoints.entries()) {
-      if (currentBlockNumber - blockNumber > this.maxCheckpointAge) {
-        this.stateCheckpoints.delete(blockNumber);
+    for (const address in newState) {
+      if (
+        !previousState[address] ||
+        !previousState[address].equals(newState[address])
+      ) {
+        diff[address] = newState[address];
       }
     }
 
-    // Prune the live state data
-    for (const [address, balance] of this.state.entries()) {
-      const latestCheckpoint = this.getLatestCheckpointBeforeBlock(currentBlockNumber);
-      if (latestCheckpoint && this.state.get(address) === latestCheckpoint.get(address)) {
-        this.state.delete(address);
-      }
-    }
-  }
-
-  private getLatestCheckpointBeforeBlock(blockNumber: number): Map<string, number> | null {
-    let latestCheckpoint: Map<string, number> | null = null;
-    for (const [checkpointBlockNumber, checkpoint] of this.stateCheckpoints.entries()) {
-      if (checkpointBlockNumber <= blockNumber) {
-        latestCheckpoint = checkpoint;
-      }
-    }
-    return latestCheckpoint;
+    return diff;
   }
 }
