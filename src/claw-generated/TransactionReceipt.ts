@@ -1,48 +1,49 @@
-export class TransactionReceipt {
-  readonly transactionHash: string;
-  readonly transactionIndex: number;
-  readonly blockHash: string;
-  readonly blockNumber: number;
-  readonly from: string;
-  readonly to: string;
-  readonly contractAddress: string | null;
-  readonly cumulativeGasUsed: number;
-  readonly gasUsed: number;
-  readonly logs: LogEntry[];
-  readonly logsBloom: string;
-  readonly status: number;
+import { BloomFilter } from './utils/BloomFilter';
 
-  constructor(
-    transactionHash: string,
-    transactionIndex: number,
-    blockHash: string,
-    blockNumber: number,
-    from: string,
-    to: string,
-    contractAddress: string | null,
-    cumulativeGasUsed: number,
-    gasUsed: number,
-    logs: LogEntry[],
-    logsBloom: string,
-    status: number
-  ) {
-    this.transactionHash = transactionHash;
-    this.transactionIndex = transactionIndex;
-    this.blockHash = blockHash;
-    this.blockNumber = blockNumber;
-    this.from = from;
-    this.to = to;
-    this.contractAddress = contractAddress;
-    this.cumulativeGasUsed = cumulativeGasUsed;
-    this.gasUsed = gasUsed;
-    this.logs = logs;
-    this.logsBloom = logsBloom;
-    this.status = status;
+interface EventData {
+  name: string;
+  parameters: any[];
+}
+
+class TransactionReceipt {
+  private events: EventData[] = [];
+  private bloomFilter: BloomFilter;
+
+  constructor() {
+    this.bloomFilter = new BloomFilter();
   }
+
+  static addEvent(eventData: EventData) {
+    // Add the event to the current transaction receipt
+    TransactionReceipt.instance.events.push(eventData);
+    TransactionReceipt.instance.updateBloomFilter(eventData);
+  }
+
+  private updateBloomFilter(eventData: EventData) {
+    // Add the event data to the bloom filter
+    this.bloomFilter.add(eventData.name);
+    for (const param of eventData.parameters) {
+      this.bloomFilter.add(param.toString());
+    }
+  }
+
+  getEvents(): EventData[] {
+    return this.events;
+  }
+
+  getBloomFilter(): BloomFilter {
+    return this.bloomFilter;
+  }
+
+  static get instance(): TransactionReceipt {
+    // Ensure there is only one instance of TransactionReceipt
+    if (!TransactionReceipt._instance) {
+      TransactionReceipt._instance = new TransactionReceipt();
+    }
+    return TransactionReceipt._instance;
+  }
+
+  private static _instance: TransactionReceipt;
 }
 
-export interface LogEntry {
-  address: string;
-  topics: string[];
-  data: string;
-}
+export { TransactionReceipt, EventData };

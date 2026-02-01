@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./CRC721Base.sol";
+import "../events/EventManager.ts";
 
 /**
  * @title CRC-721 Non-Fungible Token Standard
@@ -19,6 +20,7 @@ contract CRC721 is CRC721Base {
      */
     function mint(address to, uint256 tokenId, string memory tokenURI) public {
         _mint(to, tokenId, tokenURI);
+        eventManager.emitEvent('Transfer', [address(0), to, tokenId]);
     }
 
     /**
@@ -26,7 +28,9 @@ contract CRC721 is CRC721Base {
      * @param tokenId The unique identifier of the token to be burned.
      */
     function burn(uint256 tokenId) public {
+        address owner = ownerOf(tokenId);
         _burn(tokenId);
+        eventManager.emitEvent('Transfer', [owner, address(0), tokenId]);
     }
 
     /**
@@ -37,5 +41,6 @@ contract CRC721 is CRC721Base {
      */
     function transferFrom(address from, address to, uint256 tokenId) public {
         _transferFrom(from, to, tokenId);
+        eventManager.emitEvent('Transfer', [from, to, tokenId]);
     }
 }
