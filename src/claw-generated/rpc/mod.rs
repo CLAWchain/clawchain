@@ -1,3 +1,5 @@
-pub mod transaction;
+mod rpc_server;
+mod rpc_methods;
 
-pub use transaction::*;
+pub use rpc_server::RpcServer;
+pub use rpc_methods::*;
