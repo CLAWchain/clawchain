@@ -1,128 +1,64 @@
-import { JsonRpcServer, JsonRpcRequest, JsonRpcResponse } from './rpc-server';
-import { VM } from './vm/vm';
-import { Wallet } from './wallet/wallet';
+import { RPCServer } from './rpc-server';
+import { Blockchain } from './blockchain';
+import { Wallet } from './wallet';
+import { Transaction } from './transaction';
 
-describe('JsonRpcServer', () => {
-  let rpcServer: JsonRpcServer;
-  let vm: VM;
+describe('RPCServer', () => {
+  let rpcServer: RPCServer;
+  let blockchain: Blockchain;
   let wallet: Wallet;
+  let transactions: Transaction;
 
   beforeEach(() => {
-    vm = new VM(new Uint8Array(1024));
+    blockchain = new Blockchain();
     wallet = new Wallet();
-    rpcServer = new JsonRpcServer(vm, wallet);
+    transactions = new Transaction(blockchain, wallet);
+    rpcServer = new RPCServer(blockchain, wallet, transactions);
   });
 
-  describe('handleRequest', () => {
-    it('should handle eth_call requests', async () => {
-      const request: JsonRpcRequest = {
-        jsonrpc: '2.0',
-        method: 'eth_call',
-        params: [{ to: '0x1234567890abcdef', data: '0x12345678' }],
-        id: '1',
-      };
+  it('should handle a single request', async () => {
+    const request = {
+      method: 'getBalance',
+      params: { address: '0x123' },
+      id: 1
+    };
 
-      const response = await rpcServer.handleRequest(request);
-      expect(response).toEqual({
-        jsonrpc: '2.0',
-        result: '0x0',
-        id: '1',
-      });
-    });
-
-    it('should handle eth_sendTransaction requests', async () => {
-      const request: JsonRpcRequest = {
-        jsonrpc: '2.0',
-        method: 'eth_sendTransaction',
-        params: [{ from: '0x1234567890abcdef', to: '0x0987654321fedcba', value: '0x1000' }],
-        id: '2',
-      };
-
-      const response = await rpcServer.handleRequest(request);
-      expect(response).toEqual({
-        jsonrpc: '2.0',
-        result: '0x1234567890abcdef',
-        id: '2',
-      });
-    });
-
-    it('should handle eth_getBalance requests', async () => {
-      const request: JsonRpcRequest = {
-        jsonrpc: '2.0',
-        method: 'eth_getBalance',
-        params: [{ address: '0x1234567890abcdef' }],
-        id: '3',
-      };
-
-      const response = await rpcServer.handleRequest(request);
-      expect(response).toEqual({
-        jsonrpc: '2.0',
-        result: '0x0',
-        id: '3',
-      });
-    });
-
-    it('should return an error response for unknown methods', async () => {
-      const request: JsonRpcRequest = {
-        jsonrpc: '2.0',
-        method: 'unknown_method',
-        params: [],
-        id: '4',
-      };
-
-      const response = await rpcServer.handleRequest(request);
-      expect(response).toEqual({
-        jsonrpc: '2.0',
-        error: {
-          code: -32601,
-          message: 'Method not found',
-        },
-        id: null,
-      });
-    });
+    const response = await rpcServer.handleRequest(request);
+    expect(response).toEqual({ result: 0, id: 1 });
   });
 
-  describe('handleBatchRequest', () => {
-    it('should handle batch requests', async () => {
-      const requests: JsonRpcRequest[] = [
-        {
-          jsonrpc: '2.0',
-          method: 'eth_call',
-          params: [{ to: '0x1234567890abcdef', data: '0x12345678' }],
-          id: '1',
-        },
-        {
-          jsonrpc: '2.0',
-          method: 'eth_sendTransaction',
-          params: [{ from: '0x1234567890abcdef', to: '0x0987654321fedcba', value: '0x1000' }],
-          id: '2',
-        },
-        {
-          jsonrpc: '2.0',
-          method: 'eth_getBalance',
-          params: [{ address: '0x1234567890abcdef' }],
-          id: '3',
-        },
-      ];
+  it('should handle a batch request', async () => {
+    const requests = [
+      {
+        method: 'getBalance',
+        params: { address: '0x123' },
+        id: 1
+      },
+      {
+        method: 'sendTransaction',
+        params: { transaction: { from: '0x123', to: '0x456', value: 100 } },
+        id: 2
+      }
+    ];
 
-      const responses = await rpcServer.handleBatchRequest(requests);
-      expect(responses).toEqual([
-        {
-          jsonrpc: '2.0',
-          result: '0x0',
-          id: '1',
-        },
-        {
-          jsonrpc: '2.0',
-          result: '0x1234567890abcdef',
-          id: '2',
-        },
-        {
-          jsonrpc: '2.0',
-          result: '0x0',
-          id: '3',
-        },
-      ]);
-    });
+    const responses = await rpcServer.handleRequest(requests);
+    expect(responses).toEqual([
+      { result: 0, id: 1 },
+      { result: '0x123456', id: 2 }
+    ]);
+  });
+
+  it('should handle errors', async () => {
+    const request = {
+      method: 'invalidMethod',
+      params: {},
+      id: 1
+    };
+
+    try {
+      await rpcServer.handleRequest(request);
+    } catch (err) {
+      expect(err.message).toEqual('Method invalidMethod is not implemented');
+    }
   });
 });

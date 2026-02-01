@@ -1,31 +1,27 @@
-import { Ed25519KeyPair } from '../crypto';
+import { Ed25519KeyPair } from 'crypto';
 
 export class Wallet {
   private keyPair: Ed25519KeyPair;
+  private nonce: number;
 
   constructor() {
     this.keyPair = Ed25519KeyPair.generate();
+    this.nonce = 0;
   }
 
-  getPublicKey(): Uint8Array {
+  getPublicKey(): Buffer {
     return this.keyPair.publicKey;
   }
 
-  getPrivateKey(): Uint8Array {
+  getPrivateKey(): Buffer {
     return this.keyPair.privateKey;
   }
 
-  signTransaction(transaction: Transaction): SignedTransaction {
-    const signature = this.keyPair.sign(transaction.serialize());
-    return { transaction, signature };
+  getNonce(): number {
+    return this.nonce;
   }
-}
 
-export interface Transaction {
-  serialize(): Uint8Array;
-}
-
-export interface SignedTransaction {
-  transaction: Transaction;
-  signature: Uint8Array;
+  incrementNonce(): void {
+    this.nonce++;
+  }
 }

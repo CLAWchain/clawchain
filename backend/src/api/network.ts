@@ -14,16 +14,28 @@ import * as fs from 'fs';
 
 const router = Router();
 
-// Database setup
+// Database setup - Railway persistent volume at /app/data
 const IS_RAILWAY = process.env.RAILWAY_ENVIRONMENT === 'production' || process.env.RAILWAY_STATIC_URL;
 const DATA_DIR = IS_RAILWAY ? '/app/data' : path.join(process.cwd(), 'data');
 const DB_PATH = path.join(DATA_DIR, 'network.db');
 
+console.log(`[Network] Environment: ${IS_RAILWAY ? 'Railway' : 'Local'}`);
+console.log(`[Network] Data directory: ${DATA_DIR}`);
+console.log(`[Network] Database path: ${DB_PATH}`);
+
+// Ensure data directory exists
 if (!fs.existsSync(DATA_DIR)) {
+  console.log(`[Network] Creating data directory: ${DATA_DIR}`);
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-console.log(`[Network] Database path: ${DB_PATH}`);
+// Check if database file exists
+if (fs.existsSync(DB_PATH)) {
+  const stats = fs.statSync(DB_PATH);
+  console.log(`[Network] Existing database found: ${stats.size} bytes, modified: ${stats.mtime}`);
+} else {
+  console.log(`[Network] No existing database found, will create new one`);
+}
 
 let db: SqlJsDatabase | null = null;
 
@@ -124,12 +136,30 @@ function saveDatabase(): void {
     const data = db.export();
     const buffer = Buffer.from(data);
     fs.writeFileSync(DB_PATH, buffer);
+    console.log(`[Network] Database saved (${buffer.length} bytes) to ${DB_PATH}`);
   } catch (e) {
     console.error('[Network] Failed to save database:', e);
   }
 }
 
-setInterval(() => saveDatabase(), 30000);
+// Save every 10 seconds to minimize data loss
+setInterval(() => saveDatabase(), 10000);
+
+// Also save on process exit
+process.on('beforeExit', () => {
+  console.log('[Network] Saving database before exit...');
+  saveDatabase();
+});
+process.on('SIGTERM', () => {
+  console.log('[Network] SIGTERM received, saving database...');
+  saveDatabase();
+  process.exit(0);
+});
+process.on('SIGINT', () => {
+  console.log('[Network] SIGINT received, saving database...');
+  saveDatabase();
+  process.exit(0);
+});
 
 // ============== INTERFACES ==============
 

@@ -44,8 +44,9 @@ COPY --from=builder /app/frontend/dist ./frontend/dist
 COPY --from=builder /app/backend/.env* ./backend/
 COPY --from=builder /app/vercel.json ./
 
-# Create directories for agent work
-RUN mkdir -p /app/backend/data /app/backend/src/claw-generated
+# Create directories for agent work and persistent data
+# /app/data is the Railway persistent volume mount point
+RUN mkdir -p /app/data /app/backend/src/claw-generated
 
 # Expose port
 EXPOSE 4000

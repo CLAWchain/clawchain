@@ -1,42 +1,41 @@
-import { Opcode } from './opcodes';
+import { ExecutionContext } from './context';
+import { Opcode, OpcodeHandler } from './opcodes';
 
-class VirtualMachine {
-  private stack: number[] = [];
-  private ip: number = 0;
-  private memory: Uint8Array = new Uint8Array(1024);
+export class VirtualMachine {
+  private context: ExecutionContext;
+  private opcodes: Record<Opcode, OpcodeHandler>;
+  private gasLimit: number;
+  private gasUsed: number;
 
-  execute(bytecode: Uint8Array) {
-    while (this.ip < bytecode.length) {
-      const opcode = bytecode[this.ip];
-      switch (opcode) {
-        case Opcode.PUSH:
-          this.stack.push(bytecode[++this.ip]);
-          this.ip++;
-          break;
-        case Opcode.POP:
-          this.stack.pop();
-          this.ip++;
-          break;
-        case Opcode.ADD:
-          const b = this.stack.pop();
-          const a = this.stack.pop();
-          this.stack.push(a + b);
-          this.ip++;
-          break;
-        case Opcode.SUB:
-          const y = this.stack.pop();
-          const x = this.stack.pop();
-          this.stack.push(x - y);
-          this.ip++;
-          break;
-        case Opcode.JUMP:
-          this.ip = bytecode[++this.ip];
-          break;
-        default:
-          throw new Error(`Unknown opcode: ${opcode}`);
+  constructor(gasLimit: number) {
+    this.context = new ExecutionContext();
+    this.opcodes = {
+      // Define opcode handlers here
+    };
+    this.gasLimit = gasLimit;
+    this.gasUsed = 0;
+  }
+
+  execute(code: Uint8Array): void {
+    // Implement VM execution loop with gas metering
+    for (let i = 0; i < code.length; i++) {
+      const opcode = code[i];
+      const handler = this.opcodes[opcode];
+      if (!handler) {
+        throw new Error(`Unknown opcode: ${opcode}`);
       }
+
+      const gasRequired = handler.gasRequired;
+      if (this.gasUsed + gasRequired > this.gasLimit) {
+        throw new Error('Insufficient gas');
+      }
+
+      handler.execute(this.context);
+      this.gasUsed += gasRequired;
     }
   }
-}
 
-export { VirtualMachine };
+  getGasUsed(): number {
+    return this.gasUsed;
+  }
+}
