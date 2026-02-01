@@ -1,49 +1,46 @@
-import { Lock, ReadWriteLock } from 'async-mutex';
+import { GenesisConfig } from './GenesisConfig';
+import { Chain } from './Chain';
+import { Crypto } from './Crypto';
 
-class StateManager {
-  private state: Map<string, any>;
-  private lock: ReadWriteLock;
+export class StateManager {
+  private static instance: StateManager;
+  private state: Map<string, number>;
 
-  constructor() {
+  private constructor() {
     this.state = new Map();
-    this.lock = new ReadWriteLock();
+    this.initializeState();
   }
 
-  async get(key: string): Promise<any> {
-    const release = await this.lock.readLock();
-    try {
-      return this.state.get(key);
-    } finally {
-      release();
+  public static getInstance(): StateManager {
+    if (!StateManager.instance) {
+      StateManager.instance = new StateManager();
+    }
+    return StateManager.instance;
+  }
+
+  private initializeState(): void {
+    const genesisConfig = GenesisConfig.getInstance();
+    const genesisBlock = genesisConfig.generateGenesisBlock();
+
+    // Set initial token allocations
+    for (const [address, balance] of Object.entries(genesisConfig.initialTokenAllocations)) {
+      this.setBalance(Crypto.toBuffer(address), balance);
+    }
+
+    // Set initial validator set
+    const chain = Chain.getInstance();
+    for (const validator of genesisConfig.initialValidators) {
+      chain.addValidator(Crypto.toBuffer(validator));
     }
   }
 
-  async set(key: string, value: any): Promise<void> {
-    const release = await this.lock.writeLock();
-    try {
-      this.state.set(key, value);
-    } finally {
-      release();
-    }
+  public getBalance(address: Buffer): number {
+    const addressHex = Crypto.bufferToHex(address);
+    return this.state.get(addressHex) || 0;
   }
 
-  async delete(key: string): Promise<void> {
-    const release = await this.lock.writeLock();
-    try {
-      this.state.delete(key);
-    } finally {
-      release();
-    }
-  }
-
-  async clear(): Promise<void> {
-    const release = await this.lock.writeLock();
-    try {
-      this.state.clear();
-    } finally {
-      release();
-    }
+  public setBalance(address: Buffer, balance: number): void {
+    const addressHex = Crypto.bufferToHex(address);
+    this.state.set(addressHex, balance);
   }
 }
-
-export default StateManager;
