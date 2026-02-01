@@ -1,5 +1,7 @@
 import { VM } from './vm/vm';
 import { Wallet } from './wallet/wallet';
+import { Transaction } from './transaction';
+import { TransactionProcessor } from './transaction-processor';
 
 interface JsonRpcRequest {
   jsonrpc: '2.0';
@@ -24,10 +26,12 @@ interface JsonRpcError {
 class JsonRpcServer {
   private vm: VM;
   private wallet: Wallet;
+  private transactionProcessor: TransactionProcessor;
 
-  constructor(vm: VM, wallet: Wallet) {
+  constructor(vm: VM, wallet: Wallet, transactionProcessor: TransactionProcessor) {
     this.vm = vm;
     this.wallet = wallet;
+    this.transactionProcessor = transactionProcessor;
   }
 
   async handleRequest(request: JsonRpcRequest): Promise<JsonRpcResponse> {
@@ -57,10 +61,29 @@ class JsonRpcServer {
   }
 
   private async handleEthSendTransaction(params: any[]) {
-    // Implement eth_sendTransaction logic
-    const { from, to, value } = params[0];
-    await this.wallet.sendFunds(to, value);
-    return this.createSuccessResponse({ result: '0x1234567890abcdef' });
+    if (!params || params.length === 0 || !params[0]) {
+      return this.createErrorResponse(-32602, 'Invalid params');
+    }
+
+    const { from, to, value, data, nonce, gasLimit, gasPrice, signature } = params[0];
+
+    try {
+      const transaction = new Transaction({
+        from,
+        to,
+        value,
+        data,
+        nonce,
+        gasLimit,
+        gasPrice,
+        signature,
+      });
+
+      await this.transactionProcessor.processTransaction(transaction);
+      return this.createSuccessResponse({ result: transaction.hash });
+    } catch (error) {
+      return this.createErrorResponse(-32000, 'Error processing transaction', error);
+    }
   }
 
   private async handleEthGetBalance(params: any[]) {
