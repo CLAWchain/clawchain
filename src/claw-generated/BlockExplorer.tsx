@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Block } from '../types';
+import TransactionExplorer from './TransactionExplorer';
 
 const BlockExplorer: React.FC = () => {
   const [blocks, setBlocks] = useState<Block[]>([]);
@@ -42,6 +43,7 @@ const BlockExplorer: React.FC = () => {
           ))}
         </tbody>
       </table>
+      <TransactionExplorer />
     </div>
   );
 };
