@@ -1,23 +1,33 @@
-import { Ed25519Signature, Ed25519PublicKey, verifyEd25519Signature } from 'crypto';
+import { Ed25519Keypair } from '../crypto/ed25519';
 
 export class Transaction {
-  sender: Ed25519PublicKey;
-  recipient: Ed25519PublicKey;
-  amount: number;
-  signature: Ed25519Signature;
+  readonly type: string;
+  readonly from: string;
+  readonly to: string;
+  readonly amount: number;
+  readonly timestamp: number;
+  readonly signature?: string;
 
-  constructor(sender: Ed25519PublicKey, recipient: Ed25519PublicKey, amount: number, signature: Ed25519Signature) {
-    this.sender = sender;
-    this.recipient = recipient;
+  constructor(type: string, from: string, to: string, amount: number) {
+    this.type = type;
+    this.from = from;
+    this.to = to;
     this.amount = amount;
+    this.timestamp = Date.now();
+  }
+
+  serialize(): string {
+    return JSON.stringify({
+      type: this.type,
+      from: this.from,
+      to: this.to,
+      amount: this.amount,
+      timestamp: this.timestamp
+    });
+  }
+
+  sign(keypair: Ed25519Keypair): void {
+    const signature = keypair.sign(this.serialize());
     this.signature = signature;
-  }
-
-  verifySignature(): boolean {
-    return verifyEd25519Signature(this.sender, this.signature, this.toSignatureData());
-  }
-
-  toSignatureData(): Uint8Array {
-    return new TextEncoder().encode(`${this.sender}:${this.recipient}:${this.amount}`);
   }
 }
