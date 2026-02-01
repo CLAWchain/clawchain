@@ -1,25 +1,25 @@
 // src/claw-generated/wallet/index.ts
-import * as crypto from 'crypto';
-import * as bip39 from 'bip39';
-import * as ed25519 from 'ed25519-hd-key';
-import { base58 } from 'base-x';
 
-export interface Keypair {
+import { HardwareWalletManager } from './hardware';
+
+export interface WalletAccount {
+  address: string;
   publicKey: string;
-  privateKey: string;
 }
 
-export function generateKeypair(seed?: string): Keypair {
-  let masterKey;
-  if (seed) {
-    masterKey = ed25519.deriveMaster(bip39.mnemonicToSeedSync(seed));
-  } else {
-    masterKey = ed25519.deriveMaster(crypto.randomBytes(32));
+export class WalletManager {
+  private hardwareWalletManager: HardwareWalletManager;
+
+  constructor() {
+    this.hardwareWalletManager = new HardwareWalletManager();
   }
-  
-  const { key: publicKey, chainCode: privateKey } = ed25519.derive(masterKey, "m/44'/60'/0'/0/0");
-  return {
-    publicKey: base58.encode(publicKey),
-    privateKey: base58.encode(privateKey)
-  };
+
+  async getAccounts(): Promise<WalletAccount[]> {
+    const accounts = await this.hardwareWalletManager.getAccounts();
+    return accounts;
+  }
+
+  async signTransaction(account: WalletAccount, transaction: any): Promise<any> {
+    return await this.hardwareWalletManager.signTransaction(account, transaction);
+  }
 }
