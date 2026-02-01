@@ -1,0 +1,6 @@
+{
+  "from": "0x1234567890abcdef",
+  "to": "0x0987654321fedcba",
+  "value": 100,
+  "nonce": 1
+}

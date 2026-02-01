@@ -1318,10 +1318,10 @@ export default function App() {
               fontFamily: "'JetBrains Mono', monospace",
               cursor: 'pointer',
             }}
-            onClick={() => navigator.clipboard.writeText('coming soon')}
+            onClick={() => navigator.clipboard.writeText('BQ48k92gDbxDrpw8Zr7NtYA5Bi7kttZ5cDASnEZNpump')}
             title="Click to copy"
           >
-            coming soon
+            BQ48k92gDbxDrpw8Zr7NtYA5Bi7kttZ5cDASnEZNpump
           </span>
         </div>
         <span style={{ color: 'var(--text-muted)', fontSize: isMobile ? 11 : 13 }}>Powered by Claw.bot</span>

@@ -1,33 +1,40 @@
-import * as ed25519 from 'ed25519-hd-key';
-import bip39 from 'bip39';
-import bs58 from 'bs58';
+import { Ed25519KeyPair } from '../crypto/ed25519';
+import { Transaction, SignedTransaction } from './transaction';
 
 export class Wallet {
-  private _privateKey: Uint8Array;
-  private _publicKey: Uint8Array;
-  private _address: string;
+  private keyPair: Ed25519KeyPair;
+  private nonce: number = 0;
 
-  constructor(privateKey?: Uint8Array) {
-    if (privateKey) {
-      this._privateKey = privateKey;
-      this._publicKey = ed25519.derive(privateKey, 0).key;
-    } else {
-      const seed = bip39.mnemonicToSeedSync('');
-      this._privateKey = ed25519.derivePath(`m/44'/60'/0'/0/0`, seed).key;
-      this._publicKey = ed25519.derive(this._privateKey, 0).key;
+  constructor() {
+    this.keyPair = Ed25519KeyPair.generate();
+  }
+
+  getPublicKey(): Uint8Array {
+    return this.keyPair.publicKey;
+  }
+
+  getPrivateKey(): Uint8Array {
+    return this.keyPair.privateKey;
+  }
+
+  signTransaction(transaction: Transaction): SignedTransaction {
+    // Verify the transaction nonce is greater than the wallet's current nonce
+    if (transaction.nonce <= this.nonce) {
+      throw new Error('Transaction nonce is not greater than the wallet nonce');
     }
-    this._address = bs58.encode(this._publicKey);
-  }
 
-  get privateKey(): Uint8Array {
-    return this._privateKey;
+    const signature = this.keyPair.sign(transaction.serialize());
+    this.nonce = transaction.nonce;
+    return { transaction, signature };
   }
+}
 
-  get publicKey(): Uint8Array {
-    return this._publicKey;
-  }
+export interface Transaction {
+  serialize(): Uint8Array;
+  nonce: number;
+}
 
-  get address(): string {
-    return this._address;
-  }
+export interface SignedTransaction {
+  transaction: Transaction;
+  signature: Uint8Array;
 }

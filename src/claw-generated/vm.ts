@@ -1,76 +1,85 @@
-import { Instruction, VmState } from './types';
+import { Instruction } from './instructions';
+import { Contract } from './contracts/Contract';
 
 export class VirtualMachine {
-  private state: VmState = {
-    stack: [],
-    pc: 0,
-  };
+  private stack: any[] = [];
+  private pc: number = 0;
+  private contracts: { [address: string]: Contract } = {};
 
-  execute(instructions: Instruction[]) {
-    while (this.state.pc < instructions.length) {
-      const instruction = instructions[this.state.pc];
+  constructor() {
+    // Initialize the VM
+  }
+
+  execute(bytecode: Uint8Array) {
+    this.pc = 0;
+    while (this.pc < bytecode.length) {
+      const instruction = Instruction.decode(bytecode, this.pc);
       this.executeInstruction(instruction);
-      this.state.pc++;
+      this.pc += instruction.size;
     }
   }
 
-  private executeInstruction(instruction: Instruction) {
+  executeInstruction(instruction: Instruction) {
     switch (instruction.opcode) {
       case 'PUSH':
-        this.state.stack.push(instruction.operand);
+        this.push(instruction.operand);
         break;
       case 'POP':
-        this.state.stack.pop();
+        this.pop();
         break;
       case 'ADD':
-        const a = this.state.stack.pop();
-        const b = this.state.stack.pop();
-        this.state.stack.push(a + b);
+        this.add();
         break;
-      case 'MUL':
-        const c = this.state.stack.pop();
-        const d = this.state.stack.pop();
-        this.state.stack.push(c * d);
+      case 'SUB':
+        this.sub();
         break;
-      case 'LT':
-        const x = this.state.stack.pop();
-        const y = this.state.stack.pop();
-        this.state.stack.push(x < y ? 1 : 0);
+      case 'CALL':
+        this.call();
         break;
-      case 'GT':
-        const m = this.state.stack.pop();
-        const n = this.state.stack.pop();
-        this.state.stack.push(m > n ? 1 : 0);
-        break;
-      case 'EQ':
-        const p = this.state.stack.pop();
-        const q = this.state.stack.pop();
-        this.state.stack.push(p === q ? 1 : 0);
-        break;
-      case 'AND':
-        const r = this.state.stack.pop();
-        const s = this.state.stack.pop();
-        this.state.stack.push(r && s ? 1 : 0);
-        break;
-      case 'OR':
-        const t = this.state.stack.pop();
-        const u = this.state.stack.pop();
-        this.state.stack.push(t || u ? 1 : 0);
-        break;
-      case 'NOT':
-        const v = this.state.stack.pop();
-        this.state.stack.push(v ? 0 : 1);
-        break;
-      case 'JUMP':
-        this.state.pc = instruction.operand;
-        break;
-      case 'JUMPI':
-        const cond = this.state.stack.pop();
-        if (cond) {
-          this.state.pc = instruction.operand;
-        }
-        break;
-      // Add more instruction implementations here
+      default:
+        throw new Error(`Unknown opcode: ${instruction.opcode}`);
     }
+  }
+
+  push(value: any) {
+    this.stack.push(value);
+  }
+
+  pop(): any {
+    return this.stack.pop();
+  }
+
+  add() {
+    const b = this.pop();
+    const a = this.pop();
+    this.push(a + b);
+  }
+
+  sub() {
+    const b = this.pop();
+    const a = this.pop();
+    this.push(a - b);
+  }
+
+  call() {
+    const gas = this.pop(); // Amount of gas to forward
+    const address = this.pop(); // Target contract address
+    const argsLength = this.pop(); // Number of arguments
+    const args = [];
+    for (let i = 0; i < argsLength; i++) {
+      args.push(this.pop());
+    }
+
+    const contract = this.contracts[address];
+    if (!contract) {
+      throw new Error(`Contract at address ${address} not found`);
+    }
+
+    const result = contract.execute(gas, args);
+    this.push(result);
+  }
+
+  registerContract(address: string, contract: Contract) {
+    this.contracts[address] = contract;
   }
 }
