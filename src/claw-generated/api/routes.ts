@@ -35,6 +35,24 @@ export const routes = [
         res.status(404).json({ error: 'Transaction not found' });
       }
     }
+  },
+  {
+    path: '/health',
+    method: 'GET',
+    handler: (req, res) => {
+      // Check overall node health
+      const healthy = true; // Replace with actual health check logic
+      res.json({ healthy });
+    }
+  },
+  {
+    path: '/ready',
+    method: 'GET',
+    handler: (req, res) => {
+      // Check if the node is fully initialized and ready to process transactions
+      const ready = true; // Replace with actual readiness check logic
+      res.json({ ready });
+    }
   }
 ];
 
