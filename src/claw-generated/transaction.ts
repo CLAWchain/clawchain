@@ -48,7 +48,7 @@ export interface TransactionInput {
 }
 
 export interface TransactionOutput {
-  amount: number;
+  amount: bigint;
   recipient: Buffer;
 }
 
