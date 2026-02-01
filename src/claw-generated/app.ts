@@ -1,31 +1,26 @@
-import { Chain } from './chain';
-import { Wallet } from './wallet';
-import { FaucetService } from './faucet.service';
-import { VirtualMachine } from './vm/vm';
-import { JsonRpcServer, JsonRpcRequest, JsonRpcResponse } from './json-rpc';
+import React, { useState, useEffect } from 'react';
+import { Transaction } from './types/Transaction';
+import TransactionExplorer from './TransactionExplorer';
+import transactionRouter from './transaction';
 
-const chain = new Chain();
-const wallet = new Wallet();
-const faucetService = new FaucetService();
-const vm = new VirtualMachine();
+const App: React.FC = () => {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-const jsonRpcServer = new JsonRpcServer(chain, wallet, faucetService, vm);
+  useEffect(() => {
+    // Fetch transactions from the backend
+    const fetchTransactions = async () => {
+      const response = await fetch('/api/transactions');
+      const data = await response.json();
+      setTransactions(data);
+    };
+    fetchTransactions();
+  }, []);
 
-// Start the JSON-RPC server
-jsonRpcServer.start();
-
-// Sample JSON-RPC request
-const sampleRequest: JsonRpcRequest = {
-  jsonrpc: '2.0',
-  id: '1',
-  method: 'wallet_generateKeypair',
-  params: [],
+  return (
+    <div>
+      <TransactionExplorer transactions={transactions} />
+    </div>
+  );
 };
 
-jsonRpcServer.handleRequest(sampleRequest)
-  .then((response: JsonRpcResponse) => {
-    console.log('JSON-RPC Response:', response);
-  })
-  .catch((error) => {
-    console.error('JSON-RPC Error:', error);
-  });
+export default App;
