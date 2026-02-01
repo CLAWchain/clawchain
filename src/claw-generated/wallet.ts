@@ -1,22 +1,24 @@
-import { generateKeyPair } from '../crypto';
+import { Transaction } from '../types';
+import { HardwareWallet } from './hardware-wallet';
 
-export class Wallet {
-  public publicKey: string;
-  public privateKey: string;
+export interface Wallet {
+  getPublicKey(): Promise<string>;
+  signTransaction(tx: Transaction): Promise<string>;
+}
 
-  constructor() {
-    const { publicKey, privateKey } = generateKeyPair();
-    this.publicKey = publicKey;
-    this.privateKey = privateKey;
+export class LocalWallet implements Wallet {
+  private hardwareWallet: HardwareWallet;
+
+  async connect(): Promise<void> {
+    this.hardwareWallet = new HardwareWallet();
+    await this.hardwareWallet.connect();
   }
 
-  sign(message: string): string {
-    // TODO: Implement signing logic
-    return 'signed_message';
+  async getPublicKey(): Promise<string> {
+    return this.hardwareWallet.getPublicKey();
   }
 
-  verify(message: string, signature: string): boolean {
-    // TODO: Implement verification logic
-    return true;
+  async signTransaction(tx: Transaction): Promise<string> {
+    return this.hardwareWallet.signTransaction(tx);
   }
 }
