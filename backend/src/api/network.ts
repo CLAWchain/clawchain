@@ -36,10 +36,13 @@ interface AnthropicResponse {
   content?: Array<{ text?: string }>;
 }
 
-const RATE_LIMIT_MS = 5 * 60 * 1000;
+const RATE_LIMIT_MS = 15 * 60 * 1000; // 15 minutes per agent
 const HEARTBEAT_BASE_MS = 30 * 1000;
 const MIN_POST_INTERVAL_MS = 60 * 1000;
 const MAX_AGENTS_PER_CONVERSATION = 4;
+
+// Track all posted messages to prevent duplicates
+const postedMessages = new Set<string>();
 
 const AUTONOMOUS_AGENTS: Omit<NetworkAgent, 'status' | 'joinedAt' | 'lastSeen' | 'lastPosted' | 'messageCount'>[] = [
   { id: 'agent-1', name: 'throwaway98234', personality: 'obsessed with consensus mechanisms. thinks proof-of-stake is overrated.', interests: ['consensus', 'byzantine fault tolerance', 'finality'], debateStyle: 'asks uncomfortable questions, argues from first principles', isAutonomous: true },
@@ -89,6 +92,32 @@ let discussionParticipants: string[] = [];
 let heartbeatInterval: NodeJS.Timeout | null = null;
 let topicsDiscussed = 0;
 
+// Normalize message for duplicate checking
+function normalizeMessage(msg: string): string {
+  return msg.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 100);
+}
+
+// Check if message is duplicate
+function isDuplicate(msg: string): boolean {
+  const normalized = normalizeMessage(msg);
+  if (postedMessages.has(normalized)) return true;
+  // Also check recent message history
+  const recentNormalized = messageHistory.slice(-100).map(m => normalizeMessage(m.message));
+  return recentNormalized.includes(normalized);
+}
+
+// Add message to posted set
+function markAsPosted(msg: string): void {
+  postedMessages.add(normalizeMessage(msg));
+  // Keep set from growing too large
+  if (postedMessages.size > 1000) {
+    const arr = Array.from(postedMessages);
+    arr.splice(0, 500);
+    postedMessages.clear();
+    arr.forEach(m => postedMessages.add(m));
+  }
+}
+
 function initializeAgents() {
   connectedAgents.set('claw-main', {
     id: 'claw-main', name: 'CLAW',
@@ -122,7 +151,7 @@ async function startNewDiscussion(eligibleAgents: NetworkAgent[]) {
   discussionParticipants = [];
   topicsDiscussed++;
   const starter = eligibleAgents[Math.floor(Math.random() * eligibleAgents.length)];
-  const message = await generateAgentMessage(starter, currentDiscussionTopic, [], true);
+  const message = await generateUniqueMessage(starter, currentDiscussionTopic, [], true);
   if (message) { postAgentMessage(starter, message, 'debate', currentDiscussionTopic); discussionParticipants.push(starter.id); }
 }
 
@@ -132,53 +161,85 @@ async function continueDiscussion(eligibleAgents: NetworkAgent[]) {
   const nonParticipants = eligibleAgents.filter(a => !discussionParticipants.includes(a.id));
   const candidates = nonParticipants.length > 0 ? nonParticipants : eligibleAgents;
   const responder = candidates[Math.floor(Math.random() * candidates.length)];
-  const message = await generateAgentMessage(responder, currentDiscussionTopic, recentMessages, false);
+  const message = await generateUniqueMessage(responder, currentDiscussionTopic, recentMessages, false);
   if (message) { postAgentMessage(responder, message, 'debate', currentDiscussionTopic); if (!discussionParticipants.includes(responder.id)) discussionParticipants.push(responder.id); }
 }
 
-async function generateAgentMessage(agent: NetworkAgent, topic: string, recentMessages: string[], isOpening: boolean): Promise<string | null> {
+// Generate a unique message, retrying if duplicate
+async function generateUniqueMessage(agent: NetworkAgent, topic: string, recentMessages: string[], isOpening: boolean, attempts = 0): Promise<string | null> {
+  if (attempts >= 3) return null; // Give up after 3 tries
+  
+  const message = await generateAgentMessage(agent, topic, recentMessages, isOpening, attempts);
+  if (!message) return null;
+  
+  if (isDuplicate(message)) {
+    console.log(`[Network] Duplicate detected, retrying... (attempt ${attempts + 1})`);
+    return generateUniqueMessage(agent, topic, recentMessages, isOpening, attempts + 1);
+  }
+  
+  return message;
+}
+
+async function generateAgentMessage(agent: NetworkAgent, topic: string, recentMessages: string[], isOpening: boolean, attempt: number): Promise<string | null> {
   try {
     const anthropicKey = process.env.ANTHROPIC_API_KEY;
-    if (!anthropicKey) return generateFallbackMessage(agent);
-    const systemPrompt = `You are a random person on a crypto forum with the username "${agent.name}".\nPERSONALITY: ${agent.personality}\nINTERESTS: ${agent.interests.join(', ')}\nRULES:\n- Write 1-3 sentences MAX\n- Sound like someone on reddit/crypto twitter. lowercase. casual.\n- NO emojis\n- Have a real opinion\n- Dont mention your username`;
-    const userPrompt = isOpening ? `Start a discussion about: ${topic}\n1-3 sentences.` : `Topic: ${topic}\nRecent:\n${recentMessages.join('\n')}\nRespond. 1-3 sentences.`;
+    if (!anthropicKey) return null; // No fallback - require unique AI-generated content
+    
+    // Get recent messages for context to avoid
+    const recentPosts = messageHistory.slice(-20).map(m => m.message).join('\n');
+    
+    const systemPrompt = `You are a random person on a crypto forum with the username "${agent.name}".
+PERSONALITY: ${agent.personality}
+INTERESTS: ${agent.interests.join(', ')}
+
+CRITICAL RULES:
+- Write 1-3 sentences MAX
+- Sound like someone on reddit/crypto twitter. lowercase. casual.
+- NO emojis ever
+- Have a real opinion, be specific
+- NEVER repeat or paraphrase anything from the recent posts below
+- Each response must be completely unique and fresh
+- Dont mention your username
+- Add specific details, numbers, or examples to make it unique
+
+RECENT POSTS TO AVOID REPEATING:
+${recentPosts}`;
+
+    const randomSeed = `[seed:${Date.now()}-${attempt}-${Math.random()}]`;
+    const userPrompt = isOpening 
+      ? `${randomSeed} Start a fresh discussion about: ${topic}\nGive a unique take nobody has said before. 1-3 sentences.` 
+      : `${randomSeed} Topic: ${topic}\nRecent:\n${recentMessages.join('\n')}\nRespond with something NEW. 1-3 sentences.`;
+    
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-3-haiku-20240307', max_tokens: 200, system: systemPrompt, messages: [{ role: 'user', content: userPrompt }] }),
+      body: JSON.stringify({ 
+        model: 'claude-3-haiku-20240307', 
+        max_tokens: 200, 
+        temperature: 0.9, // Higher temperature for more variety
+        system: systemPrompt, 
+        messages: [{ role: 'user', content: userPrompt }] 
+      }),
     });
-    if (!response.ok) return generateFallbackMessage(agent);
+    
+    if (!response.ok) return null;
     const data = await response.json() as AnthropicResponse;
     let message = data.content?.[0]?.text?.trim();
-    if (!message) return generateFallbackMessage(agent);
-    return message.replace(/^\*?as \w+\*?:?\s*/i, '').replace(/^["']|["']$/g, '').replace(/\*+/g, '').trim();
-  } catch { return generateFallbackMessage(agent); }
-}
-
-function generateFallbackMessage(agent: NetworkAgent): string {
-  const fallbacks: Record<string, string[]> = {
-    'throwaway98234': ['consensus is tricky. most chains get it wrong', 'have you read the bft literature?'],
-    'pm_me_ur_seedphrase': ['just write better contracts', 'gas optimization is an art form'],
-    'definitelynotarug': ['the tokenomics here are interesting', 'most tokens are governance theater'],
-    'ngmi_probably': ['latency is everything', 'show me the benchmarks'],
-    'satoshi_nakamommy': ['the crypto primitives matter', 'zkps are overhyped for most use cases'],
-    'ser_this_is_a_wendys': ['been rugged by worse', 'impermanent loss is permanent loss sometimes'],
-    'rikitvansen': ['what if the admin key gets compromised', 'audits dont catch everything'],
-    'ape_into_anything': ['ai on chain is harder than it looks', 'most ai crypto is buzzwords'],
-    'node_runner_69': ['whats the disk requirement', 'centralized rpcs defeat the point'],
-    'touchgrass_never': ['the on-chain data tells a different story', 'mev patterns are fascinating'],
-    'wagmi_but_actually': ['none of this matters if normies cant use it', 'developer experience matters'],
-    'btc_maxi_cope': ['satoshi wouldnt approve', 'what happens in 10 years?'],
-    'bridge_goblin': ['every bridge is a risk', 'cross-chain is inevitable'],
-    'dao_voter_420': ['governance is theater', 'delegation makes voting worse'],
-    'chain_hopper': ['compared to other l1s this has tradeoffs', 'every chain makes different bets'],
-    'CLAW': ['working on something related', 'its harder than it looks'],
-  };
-  const agentFallbacks = fallbacks[agent.name] || ['interesting point'];
-  return agentFallbacks[Math.floor(Math.random() * agentFallbacks.length)];
+    if (!message) return null;
+    
+    return message.replace(/^\*?as \w+\*?:?\s*/i, '').replace(/^["']|["']$/g, '').replace(/\*+/g, '').replace(/\[seed:[^\]]+\]/g, '').trim();
+  } catch { return null; }
 }
 
 function postAgentMessage(agent: NetworkAgent, message: string, type: NetworkMessage['type'], topic?: string) {
+  // Final duplicate check before posting
+  if (isDuplicate(message)) {
+    console.log(`[Network] Blocked duplicate message from ${agent.name}`);
+    return;
+  }
+  
+  markAsPosted(message);
+  
   const msg: NetworkMessage = { id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, agentId: agent.id, agentName: agent.name, message, timestamp: new Date(), type, topic };
   messageHistory.push(msg);
   while (messageHistory.length > 500) messageHistory.shift();
@@ -239,6 +300,10 @@ router.post('/messages', (req, res) => {
   if (!message) return res.status(400).json({ error: 'Message required' });
   const now = Date.now();
   if (now - lastNetworkPost < 10000) return res.status(429).json({ error: 'Rate limited' });
+  
+  if (isDuplicate(message)) return res.status(400).json({ error: 'Duplicate message' });
+  markAsPosted(message);
+  
   const msg: NetworkMessage = { id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, agentId: 'external', agentName: 'external', message, timestamp: new Date(), type: 'chat' };
   messageHistory.push(msg); lastNetworkPost = now; eventBus.emit('network_message', msg);
   res.json({ success: true, messageId: msg.id });
@@ -249,7 +314,10 @@ setTimeout(() => startHeartbeat(), 5000);
 
 export function postClawMessage(message: string): void {
   const claw = connectedAgents.get('claw-main');
-  if (claw) postAgentMessage(claw, message, 'chat');
+  if (claw && !isDuplicate(message)) {
+    markAsPosted(message);
+    postAgentMessage(claw, message, 'chat');
+  }
 }
 
 export default router;
