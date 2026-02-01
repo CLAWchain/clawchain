@@ -1,43 +1,28 @@
-import { hash } from '../utils/crypto';
+export const MAX_BLOCK_SIZE = 1000000; // 1 MB
+export const MIN_BLOCK_SIZE = 100000; // 100 KB
 
 export class Block {
-  timestamp: number;
-  previousHash: string;
-  transactions: any[];
-  nonce: number;
-
-  constructor(timestamp: number, previousHash: string, transactions: any[], nonce: number) {
-    this.timestamp = timestamp;
-    this.previousHash = previousHash;
-    this.transactions = transactions;
-    this.nonce = nonce;
+  constructor(
+    public index: number,
+    public timestamp: number,
+    public data: any,
+    public previousHash: string,
+    public hash: string
+  ) {
+    this.validateBlockSize();
   }
 
-  getHash(): string {
-    return hash(
-      this.timestamp,
-      this.previousHash,
-      JSON.stringify(this.transactions),
-      this.nonce
-    );
-  }
+  private validateBlockSize() {
+    const blockSize = JSON.stringify(this).length;
+    if (blockSize > MAX_BLOCK_SIZE) {
+      throw new Error(`Block size (${blockSize} bytes) exceeds maximum of ${MAX_BLOCK_SIZE} bytes`);
+    }
 
-  isValid(): boolean {
-    // TODO: Implement block validation logic
-    return true;
-  }
-
-  serialize(): string {
-    return JSON.stringify({
-      timestamp: this.timestamp,
-      previousHash: this.previousHash,
-      transactions: this.transactions,
-      nonce: this.nonce
-    });
-  }
-
-  static deserialize(data: string): Block {
-    const { timestamp, previousHash, transactions, nonce } = JSON.parse(data);
-    return new Block(timestamp, previousHash, transactions, nonce);
+    // Adjust block size limit based on network conditions
+    if (blockSize > MAX_BLOCK_SIZE * 0.8) {
+      MAX_BLOCK_SIZE = Math.max(MAX_BLOCK_SIZE * 1.1, MIN_BLOCK_SIZE);
+    } else if (blockSize < MAX_BLOCK_SIZE * 0.5) {
+      MAX_BLOCK_SIZE = Math.max(MAX_BLOCK_SIZE * 0.9, MIN_BLOCK_SIZE);
+    }
   }
 }
