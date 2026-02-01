@@ -7,9 +7,11 @@ export class Block {
     public timestamp: number,
     public data: any,
     public previousHash: string,
-    public hash: string
+    public hash: string,
+    public isUncle: boolean = false
   ) {
     this.validateBlockSize();
+    this.validateUncleBlock();
   }
 
   private validateBlockSize() {
@@ -23,6 +25,15 @@ export class Block {
       MAX_BLOCK_SIZE = Math.max(MAX_BLOCK_SIZE * 1.1, MIN_BLOCK_SIZE);
     } else if (blockSize < MAX_BLOCK_SIZE * 0.5) {
       MAX_BLOCK_SIZE = Math.max(MAX_BLOCK_SIZE * 0.9, MIN_BLOCK_SIZE);
+    }
+  }
+
+  private validateUncleBlock() {
+    // Check if the block is an uncle block
+    if (this.isUncle) {
+      // Perform additional validation checks for uncle blocks
+      // e.g., ensure the block meets the uncle block difficulty, timestamp, etc.
+      // Throw an error if the uncle block is invalid
     }
   }
 }
