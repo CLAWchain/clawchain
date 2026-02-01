@@ -1,4 +1,4 @@
-import { Keypair } from '../../crypto';
+import { Keypair } from '../keypair';
 import { TransactionSigner, Transaction, Signature } from '../index';
 
 describe('TransactionSigner', () => {
@@ -8,15 +8,19 @@ describe('TransactionSigner', () => {
 
     const tx: Transaction = {
       sender: keypair.publicKey,
-      recipient: 'recipient_address',
+      recipient: '0x1234567890abcdef',
       amount: 100,
       data: 'test transaction'
     };
 
-    const signature = signer.signTransaction(tx);
-
-    expect(signature.value).toBeDefined();
+    const signature: Signature = signer.signTransaction(tx);
     expect(signature.publicKey).toBe(keypair.publicKey);
     expect(signature.scheme).toBe('ECDSA');
+    expect(typeof signature.value).toBe('string');
+  });
+
+  it('should return supported schemes', () => {
+    const signer = new TransactionSigner(Keypair.generate());
+    expect(signer.supportedSchemes()).toEqual(['ECDSA']);
   });
 });
