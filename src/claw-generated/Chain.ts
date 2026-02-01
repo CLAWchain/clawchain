@@ -1,40 +1,36 @@
-import { Block } from './Block';
-import { GenesisConfig } from './GenesisConfig';
 import { StateManager } from './StateManager';
-import { Crypto } from './Crypto';
+import { VotingManager } from './governance/VotingManager';
 
 export class Chain {
-  private static instance: Chain;
-  private validators: Buffer[];
-  private currentBlock: Block;
+  private stateManager: StateManager;
+  private votingManager: VotingManager;
 
-  private constructor() {
-    this.validators = [];
-    this.currentBlock = this.getGenesisBlock();
+  constructor(stateManager: StateManager) {
+    this.stateManager = stateManager;
+    this.votingManager = new VotingManager(stateManager);
   }
 
-  public static getInstance(): Chain {
-    if (!Chain.instance) {
-      Chain.instance = new Chain();
-    }
-    return Chain.instance;
+  async handleNewBlock(block: any) {
+    // Existing block processing logic
+    await this.stateManager.processBlock(block);
+
+    // Check for any new votes or proposals
+    await this.votingManager.checkVotingEvents(block.number);
   }
 
-  private getGenesisBlock(): Block {
-    const genesisConfig = GenesisConfig.getInstance();
-    return genesisConfig.generateGenesisBlock();
+  async proposeProtocolUpgrade(description: string, endBlock: number) {
+    const proposalId = await this.votingManager.createProposal(description, endBlock);
+    // Notify the network about the new proposal
+    await this.broadcastProposal(proposalId);
   }
 
-  public addValidator(validatorAddress: Buffer): void {
-    this.validators.push(validatorAddress);
+  async castVote(proposalId: string, support: boolean, weight: BigNumber) {
+    await this.votingManager.castVote(proposalId, support, weight);
+    // Update the chain state with the new vote
+    await this.stateManager.updateVoteState(proposalId, support, weight);
   }
 
-  public getCurrentBlock(): Block {
-    return this.currentBlock;
-  }
-
-  public appendBlock(block: Block): void {
-    // Validate the block and add it to the chain
-    this.currentBlock = block;
+  private async broadcastProposal(proposalId: string) {
+    // Implement logic to notify the network about the new proposal
   }
 }
