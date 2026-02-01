@@ -1,5 +1,6 @@
 import { KeyPair } from './keypair';
 import { Hash } from '../crypto/hash';
+import * as ed25519 from 'ed25519-hd-key';
 
 export class Transaction {
   public inputs: TransactionInput[];
@@ -15,12 +16,14 @@ export class Transaction {
 
   public sign(keypair: KeyPair): void {
     const message = this.toMessage();
-    this.signature = keypair.sign(message);
+    const signature = ed25519.sign(Buffer.from(message), keypair.privateKey);
+    this.signature = Buffer.from(signature).toString('hex');
   }
 
   public verify(publicKey: string): boolean {
     const message = this.toMessage();
-    return new KeyPair({ publicKey }).verify(message, this.signature);
+    const signature = Buffer.from(this.signature, 'hex');
+    return ed25519.verify(Buffer.from(message), signature, Buffer.from(publicKey, 'hex'));
   }
 
   private toMessage(): string {
