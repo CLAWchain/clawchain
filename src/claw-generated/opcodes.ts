@@ -1,0 +1,7 @@
+export enum Opcode {
+  PUSH = 0x01,
+  POP = 0x02,
+  ADD = 0x03,
+  SUB = 0x04,
+  JUMP = 0x05
+}
