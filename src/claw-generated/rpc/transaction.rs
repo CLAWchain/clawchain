@@ -1,12 +1,9 @@
-use crate::chain::Transaction;
+use crate::state::account::Account;
+use crate::state::transaction::Transaction;
 
-pub fn get_transaction(signature: &str) -> Option<Transaction> {
-    // Fetch transaction from chain state by signature
-    let transaction = match ChainState::get_transaction(signature) {
-        Some(tx) => tx,
-        None => return None,
-    };
-
-    // Return the transaction with metadata
-    Some(transaction)
+pub async fn simulate_transaction(
+    account: &Account,
+    transaction: &Transaction,
+) -> Result<(Vec<String>, u64), anyhow::Error> {
+    crate::rpc::transaction::simulate_transaction(account, transaction).await
 }
