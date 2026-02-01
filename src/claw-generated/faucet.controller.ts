@@ -1,6 +1,6 @@
 import { Body, Controller, Post, Req } from '@nestjs/common';
-import { FaucetService } from './faucet.service';
 import { FaucetRequestDto } from './dto/faucet-request.dto';
+import { FaucetService } from './faucet.service';
 import { Request } from 'express';
 
 @Controller('faucet')

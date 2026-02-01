@@ -3,13 +3,18 @@ import { FaucetRequestDto } from './dto/faucet-request.dto';
 import { Request } from 'express';
 import { ClawTokenService } from '../claw-token/claw-token.service';
 import { FaucetRepository } from './faucet.repository';
+import { RateLimiter } from './rate-limiter';
 
 @Injectable()
 export class FaucetService {
+  private rateLimiter: RateLimiter;
+
   constructor(
     private clawTokenService: ClawTokenService,
     private faucetRepository: FaucetRepository
-  ) {}
+  ) {
+    this.rateLimiter = new RateLimiter();
+  }
 
   async dispenseTokens(req: Request, faucetRequest: FaucetRequestDto) {
     const { address } = faucetRequest;
@@ -20,14 +25,19 @@ export class FaucetService {
       return { message: 'You can only receive tokens once per day' };
     }
 
-    // Mint and transfer tokens
-    const amount = 10;
-    await this.clawTokenService.mint(address, amount);
+    // Check if the request is within the rate limit
+    if (await this.rateLimiter.isWithinLimit(req.ip, address)) {
+      // Mint and transfer tokens
+      const amount = 10;
+      await this.clawTokenService.mint(address, amount);
 
-    // Record the transaction
-    await this.faucetRepository.recordDispense(address, amount);
+      // Record the transaction
+      await this.faucetRepository.recordDispense(address, amount);
 
-    return { message: `Sent ${amount} CLAW tokens to ${address}` };
+      return { message: `Sent ${amount} CLAW tokens to ${address}` };
+    } else {
+      return { message: 'Too many requests. Please try again later.' };
+    }
   }
 
   private isWithinOneDay(lastDispensed: Date): boolean {
