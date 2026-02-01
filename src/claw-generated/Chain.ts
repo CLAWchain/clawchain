@@ -1,36 +1,57 @@
-import { StateManager } from './StateManager';
-import { VotingManager } from './governance/VotingManager';
+import { StateManager, StateChannelManager } from './StateManager';
+import { Transaction, Block } from './Block';
+import { TransactionReceipt } from './TransactionReceipt';
+import { TransactionPool } from './TransactionPool';
 
 export class Chain {
   private stateManager: StateManager;
-  private votingManager: VotingManager;
+  private stateChannelManager: StateChannelManager;
+  private transactionPool: TransactionPool;
 
-  constructor(stateManager: StateManager) {
-    this.stateManager = stateManager;
-    this.votingManager = new VotingManager(stateManager);
+  constructor() {
+    this.stateManager = new StateManager();
+    this.stateChannelManager = new StateChannelManager();
+    this.transactionPool = new TransactionPool();
   }
 
-  async handleNewBlock(block: any) {
-    // Existing block processing logic
-    await this.stateManager.processBlock(block);
-
-    // Check for any new votes or proposals
-    await this.votingManager.checkVotingEvents(block.number);
+  async initialize(): Promise<void> {
+    await this.stateManager.initialize();
+    await this.stateChannelManager.initialize();
+    // Initialize other components...
   }
 
-  async proposeProtocolUpgrade(description: string, endBlock: number) {
-    const proposalId = await this.votingManager.createProposal(description, endBlock);
-    // Notify the network about the new proposal
-    await this.broadcastProposal(proposalId);
+  async processBlock(block: Block): Promise<TransactionReceipt[]> {
+    const receipts: TransactionReceipt[] = [];
+
+    // Process on-chain transactions
+    for (const tx of block.transactions) {
+      const receipt = await this.processTransaction(tx, block.height);
+      receipts.push(receipt);
+    }
+
+    // Process state channel-related transactions
+    for (const tx of block.stateChannelTransactions) {
+      const receipt = await this.processStateChannelTransaction(tx, block.height);
+      receipts.push(receipt);
+    }
+
+    // Apply block reward
+    await this.stateManager.applyBlockReward(block.producer, block.height);
+
+    // Update state root
+    this.stateManager.stateRoot = this.stateManager.calculateStateRoot();
+    this.stateChannelManager.stateRoot = this.stateChannelManager.calculateStateRoot();
+
+    return receipts;
   }
 
-  async castVote(proposalId: string, support: boolean, weight: BigNumber) {
-    await this.votingManager.castVote(proposalId, support, weight);
-    // Update the chain state with the new vote
-    await this.stateManager.updateVoteState(proposalId, support, weight);
+  private async processTransaction(tx: Transaction, blockHeight: number): Promise<TransactionReceipt> {
+    const success = await this.stateManager.applyTransaction(tx, blockHeight);
+    return new TransactionReceipt(tx, success);
   }
 
-  private async broadcastProposal(proposalId: string) {
-    // Implement logic to notify the network about the new proposal
+  private async processStateChannelTransaction(tx: Transaction, blockHeight: number): Promise<TransactionReceipt> {
+    const success = await this.stateChannelManager.applyStateChannelTransaction(tx, blockHeight);
+    return new TransactionReceipt(tx, success);
   }
 }
