@@ -1,1 +1,2 @@
-export * from './keypair';
+export * from './keyPair';
+export * from './transactionSigner';
