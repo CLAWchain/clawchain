@@ -1,36 +1,44 @@
-import { Account } from '../account/account';
+import { KeyPair } from './keypair';
+import { Hash } from '../crypto/hash';
 
 export class Transaction {
-  readonly from: Account;
-  readonly to: Account;
-  readonly amount: number;
-  readonly nonce: number;
-  readonly signature: string;
+  public inputs: TransactionInput[];
+  public outputs: TransactionOutput[];
+  public timestamp: number;
+  public signature: string;
 
-  constructor(from: Account, to: Account, amount: number, nonce: number, signature: string) {
-    this.from = from;
-    this.to = to;
-    this.amount = amount;
-    this.nonce = nonce;
-    this.signature = signature;
+  constructor(inputs: TransactionInput[], outputs: TransactionOutput[], timestamp: number) {
+    this.inputs = inputs;
+    this.outputs = outputs;
+    this.timestamp = timestamp;
   }
 
-  validate(): boolean {
-    // Verify the signature
-    if (!this.from.verifySignature(this.signature)) {
-      return false;
-    }
-
-    // Validate the nonce
-    if (this.nonce !== this.from.nonce) {
-      return false;
-    }
-
-    // Validate the sender's balance
-    if (this.from.balance < this.amount) {
-      return false;
-    }
-
-    return true;
+  public sign(keypair: KeyPair): void {
+    const message = this.toMessage();
+    this.signature = keypair.sign(message);
   }
+
+  public verify(publicKey: string): boolean {
+    const message = this.toMessage();
+    return new KeyPair({ publicKey }).verify(message, this.signature);
+  }
+
+  private toMessage(): string {
+    return JSON.stringify({
+      inputs: this.inputs,
+      outputs: this.outputs,
+      timestamp: this.timestamp
+    });
+  }
+}
+
+export interface TransactionInput {
+  prevTxHash: Hash;
+  outputIndex: number;
+  unlockingScript: string;
+}
+
+export interface TransactionOutput {
+  value: number;
+  lockingScript: string;
 }
