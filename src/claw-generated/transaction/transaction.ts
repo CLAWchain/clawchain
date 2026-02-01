@@ -3,10 +3,12 @@ import { WalletKeypair } from '../wallet/keypair';
 export class AccountState {
   readonly address: Uint8Array;
   nonce: number;
+  balance: number;
 
-  constructor(address: Uint8Array, nonce: number) {
+  constructor(address: Uint8Array, nonce: number, balance: number) {
     this.address = address;
     this.nonce = nonce;
+    this.balance = balance;
   }
 }
 
@@ -16,13 +18,15 @@ export class Transaction {
   readonly amount: number;
   readonly nonce: number;
   readonly signature: Uint8Array;
+  readonly fee: number;
 
-  constructor(from: Uint8Array, to: Uint8Array, amount: number, nonce: number) {
+  constructor(from: Uint8Array, to: Uint8Array, amount: number, nonce: number, fee: number) {
     this.from = from;
     this.to = to;
     this.amount = amount;
     this.nonce = nonce;
     this.signature = new Uint8Array(0);
+    this.fee = fee;
   }
 
   serialize(): Uint8Array {
@@ -31,7 +35,8 @@ export class Transaction {
       ...this.from,
       ...this.to,
       this.amount,
-      this.nonce
+      this.nonce,
+      this.fee
     ]);
     return data;
   }
@@ -43,5 +48,9 @@ export class Transaction {
 
   verifyNonce(accountState: AccountState): boolean {
     return this.nonce === accountState.nonce + 1;
+  }
+
+  verifyBalance(accountState: AccountState): boolean {
+    return accountState.balance >= this.amount + this.fee;
   }
 }
