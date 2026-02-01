@@ -1,17 +1,31 @@
-import { Ed25519KeyPair } from './keypair';
+import { Keypair, ecdsa } from '../crypto';
 
-export class Wallet {
-  private keyPair: Ed25519KeyPair;
+export class TransactionSigner {
+  constructor(private keypair: Keypair) {}
 
-  constructor() {
-    this.keyPair = new Ed25519KeyPair();
+  signTransaction(tx: Transaction): Signature {
+    const signature = ecdsa.sign(tx, this.keypair.privateKey);
+    return {
+      value: signature,
+      publicKey: this.keypair.publicKey,
+      scheme: 'ECDSA'
+    };
   }
 
-  getPublicKey(): Uint8Array {
-    return this.keyPair.publicKey;
+  supportedSchemes(): string[] {
+    return ['ECDSA'];
   }
+}
 
-  getPrivateKey(): Uint8Array {
-    return this.keyPair.privateKey;
-  }
+export interface Transaction {
+  sender: string;
+  recipient: string;
+  amount: number;
+  data?: string;
+}
+
+export interface Signature {
+  value: string;
+  publicKey: string;
+  scheme: string;
 }
