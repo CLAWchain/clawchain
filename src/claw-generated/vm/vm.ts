@@ -1,14 +1,35 @@
 export type Instruction = {
   opcode: string;
   operand?: number;
+  gas: number;
+};
+
+const GAS_COSTS: { [key: string]: number } = {
+  PUSH: 3,
+  POP: 2,
+  ADD: 5,
+  SUB: 5,
+  MUL: 10,
+  DIV: 10,
 };
 
 export class VirtualMachine {
   private stack: number[] = [];
+  private gas: number;
+  private gasLimit: number;
+
+  constructor(gasLimit: number) {
+    this.gasLimit = gasLimit;
+    this.gas = gasLimit;
+  }
 
   execute(bytecode: Instruction[]) {
     for (const instruction of bytecode) {
+      if (this.gas < instruction.gas) {
+        throw new Error('Ran out of gas');
+      }
       this.executeInstruction(instruction);
+      this.gas -= instruction.gas;
     }
   }
 
