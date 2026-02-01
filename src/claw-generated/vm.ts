@@ -32,6 +32,44 @@ export class VirtualMachine {
         const d = this.state.stack.pop();
         this.state.stack.push(c * d);
         break;
+      case 'LT':
+        const x = this.state.stack.pop();
+        const y = this.state.stack.pop();
+        this.state.stack.push(x < y ? 1 : 0);
+        break;
+      case 'GT':
+        const m = this.state.stack.pop();
+        const n = this.state.stack.pop();
+        this.state.stack.push(m > n ? 1 : 0);
+        break;
+      case 'EQ':
+        const p = this.state.stack.pop();
+        const q = this.state.stack.pop();
+        this.state.stack.push(p === q ? 1 : 0);
+        break;
+      case 'AND':
+        const r = this.state.stack.pop();
+        const s = this.state.stack.pop();
+        this.state.stack.push(r && s ? 1 : 0);
+        break;
+      case 'OR':
+        const t = this.state.stack.pop();
+        const u = this.state.stack.pop();
+        this.state.stack.push(t || u ? 1 : 0);
+        break;
+      case 'NOT':
+        const v = this.state.stack.pop();
+        this.state.stack.push(v ? 0 : 1);
+        break;
+      case 'JUMP':
+        this.state.pc = instruction.operand;
+        break;
+      case 'JUMPI':
+        const cond = this.state.stack.pop();
+        if (cond) {
+          this.state.pc = instruction.operand;
+        }
+        break;
       // Add more instruction implementations here
     }
   }
