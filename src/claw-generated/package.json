@@ -1,0 +1,17 @@
+{
+  "name": "clawchain",
+  "version": "1.0.0",
+  "description": "ClawChain - a decentralized blockchain platform",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {
+    "zlib": "^1.0.5",
+    "fs": "^0.0.1-security",
+    "path": "^0.12.7"
+  },
+  "devDependencies": {
+    "jest": "^26.6.3"
+  }
+}
