@@ -36,11 +36,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.io = void 0;
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const http_1 = __importDefault(require("http"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
+const socket_io_1 = require("socket.io");
 const Chain_1 = require("../blockchain/Chain");
 const TransactionPool_1 = require("../blockchain/TransactionPool");
 const BlockProducer_1 = require("../blockchain/BlockProducer");
@@ -51,6 +53,8 @@ const db_1 = require("../database/db");
 const schema_1 = require("../database/schema");
 const dotenv = __importStar(require("dotenv"));
 dotenv.config();
+// Global Socket.io instance for real-time updates
+exports.io = null;
 async function main() {
     console.log('[INIT] 🦞 Starting ClawChain - The AI that actually does things...\n');
     console.log('[ENV] Environment check:');
@@ -287,6 +291,34 @@ async function main() {
     const networkRouter = await Promise.resolve().then(() => __importStar(require('./network')));
     app.use('/api/network', networkRouter.default);
     console.log('[NETWORK] Multi-agent network ready');
+    // Listen for network events and broadcast via Socket.io
+    eventBus.on('network_message', (msg) => {
+        if (exports.io) {
+            exports.io.to('network').emit('new_message', {
+                id: msg.id,
+                agent: msg.agentName,
+                agentId: msg.agentId,
+                message: msg.message,
+                time: new Date(msg.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+                timestamp: msg.timestamp,
+                type: msg.type,
+                topic: msg.topic,
+                score: msg.score || 0,
+                replyCount: msg.replyCount || 0,
+                parentId: msg.parentId
+            });
+        }
+    });
+    eventBus.on('network_vote', (data) => {
+        if (exports.io) {
+            exports.io.to('network').emit('vote_update', data);
+        }
+    });
+    eventBus.on('network_topic', (data) => {
+        if (exports.io) {
+            exports.io.to('network').emit('new_topic', data);
+        }
+    });
     // ========== ADMIN DASHBOARD ==========
     const { adminRouter } = await Promise.resolve().then(() => __importStar(require('./admin')));
     app.use('/api/admin', adminRouter);
@@ -755,6 +787,26 @@ async function main() {
         });
     }
     const server = http_1.default.createServer(app);
+    // Initialize Socket.io for real-time updates
+    exports.io = new socket_io_1.Server(server, {
+        cors: {
+            origin: '*',
+            methods: ['GET', 'POST']
+        },
+        path: '/socket.io'
+    });
+    exports.io.on('connection', (socket) => {
+        console.log(`[SOCKET] Client connected: ${socket.id}`);
+        // Join network room for network updates
+        socket.on('join_network', () => {
+            socket.join('network');
+            console.log(`[SOCKET] Client ${socket.id} joined network room`);
+        });
+        socket.on('disconnect', () => {
+            console.log(`[SOCKET] Client disconnected: ${socket.id}`);
+        });
+    });
+    console.log('[SOCKET] Socket.io server initialized');
     const PORT = process.env.PORT || 4000;
     server.listen(PORT, () => {
         console.log(`[SERVER] Running on http://localhost:${PORT}\n`);

@@ -1,45 +1,41 @@
-import { Instruction, VMState } from './types';
+import { ExecutionContext } from './context';
+import { Opcode, OpcodeHandler } from './opcodes';
 
-export class VM {
-  private state: VMState = {
-    stack: [],
-    program: [],
-    pc: 0,
-  };
+export class VirtualMachine {
+  private context: ExecutionContext;
+  private opcodes: Record<Opcode, OpcodeHandler>;
+  private gasLimit: number;
+  private gasUsed: number;
 
-  execute(program: Instruction[]) {
-    this.state.program = program;
-    while (this.state.pc < this.state.program.length) {
-      this.step();
-    }
-    return this.state.stack[this.state.stack.length - 1];
+  constructor(gasLimit: number) {
+    this.context = new ExecutionContext();
+    this.opcodes = {
+      // Define opcode handlers here
+    };
+    this.gasLimit = gasLimit;
+    this.gasUsed = 0;
   }
 
-  private step() {
-    const instruction = this.state.program[this.state.pc];
-    switch (instruction.opcode) {
-      case 'PUSH':
-        this.state.stack.push(instruction.operand);
-        break;
-      case 'ADD':
-        this.binaryOp((a, b) => a + b);
-        break;
-      case 'SUB':
-        this.binaryOp((a, b) => a - b);
-        break;
-      case 'MUL':
-        this.binaryOp((a, b) => a * b);
-        break;
-      case 'DIV':
-        this.binaryOp((a, b) => a / b);
-        break;
+  execute(code: Uint8Array): void {
+    // Implement VM execution loop with gas metering
+    for (let i = 0; i < code.length; i++) {
+      const opcode = code[i];
+      const handler = this.opcodes[opcode];
+      if (!handler) {
+        throw new Error(`Unknown opcode: ${opcode}`);
+      }
+
+      const gasRequired = handler.gasRequired;
+      if (this.gasUsed + gasRequired > this.gasLimit) {
+        throw new Error('Insufficient gas');
+      }
+
+      handler.execute(this.context);
+      this.gasUsed += gasRequired;
     }
-    this.state.pc++;
   }
 
-  private binaryOp(op: (a: number, b: number) => number) {
-    const b = this.state.stack.pop();
-    const a = this.state.stack.pop();
-    this.state.stack.push(op(a, b));
+  getGasUsed(): number {
+    return this.gasUsed;
   }
 }

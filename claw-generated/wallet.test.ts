@@ -1,63 +1,22 @@
-import { PublicKey, Signature } from '@claw/crypto';
-import { MultisigWallet, Transaction } from './wallet';
+import { Wallet } from './wallet';
 
-describe('MultisigWallet', () => {
-  let wallet: MultisigWallet;
-  const publicKeys: PublicKey[] = ['0x123', '0x456', '0x789'];
-  const threshold = 2;
+describe('Wallet', () => {
+  it('should generate a valid keypair from a mnemonic', () => {
+    const mnemonic = 'abandon amount expire adjust cage candy arch gather drum buyer index expire adjust';
+    const wallet = Wallet.generateFromMnemonic(mnemonic);
 
-  beforeEach(() => {
-    wallet = new MultisigWallet(publicKeys, threshold);
+    expect(wallet.getPrivateKey().length).toEqual(32);
+    expect(wallet.getPublicKey().length).toEqual(32);
+    expect(wallet.getAddress().length).toBeGreaterThan(0);
   });
 
-  describe('addSignature', () => {
-    it('should aggregate signatures', () => {
-      const signature1: Signature = '0xabc';
-      const signature2: Signature = '0xdef';
+  it('should generate the same keypair from the same mnemonic', () => {
+    const mnemonic = 'abandon amount expire adjust cage candy arch gather drum buyer index expire adjust';
+    const wallet1 = Wallet.generateFromMnemonic(mnemonic);
+    const wallet2 = Wallet.generateFromMnemonic(mnemonic);
 
-      expect(wallet.addSignature(signature1)).toBe(false);
-      expect(wallet.addSignature(signature2)).toBe(true);
-    });
-
-    it('should handle threshold being met', () => {
-      const signature1: Signature = '0xabc';
-      const signature2: Signature = '0xdef';
-      const signature3: Signature = '0xghi';
-
-      expect(wallet.addSignature(signature1)).toBe(false);
-      expect(wallet.addSignature(signature2)).toBe(true);
-      expect(wallet.addSignature(signature3)).toBe(false);
-    });
-
-    it('should handle adding signature when already aggregated', () => {
-      const signature1: Signature = '0xabc';
-      const signature2: Signature = '0xdef';
-
-      expect(wallet.addSignature(signature1)).toBe(false);
-      expect(wallet.addSignature(signature2)).toBe(true);
-      expect(wallet.addSignature(signature1)).toBe(false);
-    });
-  });
-
-  describe('verify', () => {
-    it('should verify a valid transaction', () => {
-      const signature1: Signature = '0xabc';
-      const signature2: Signature = '0xdef';
-      const transaction = new Transaction('test data');
-
-      expect(wallet.addSignature(signature1)).toBe(false);
-      expect(wallet.addSignature(signature2)).toBe(true);
-      expect(wallet.verify(transaction)).toBe(true);
-    });
-
-    it('should fail to verify an invalid transaction', () => {
-      const signature1: Signature = '0xabc';
-      const signature2: Signature = '0xdef';
-      const transaction = new Transaction('invalid data');
-
-      expect(wallet.addSignature(signature1)).toBe(false);
-      expect(wallet.addSignature(signature2)).toBe(true);
-      expect(wallet.verify(transaction)).toBe(false);
-    });
+    expect(wallet1.getPrivateKey()).toEqual(wallet2.getPrivateKey());
+    expect(wallet1.getPublicKey()).toEqual(wallet2.getPublicKey());
+    expect(wallet1.getAddress()).toEqual(wallet2.getAddress());
   });
 });

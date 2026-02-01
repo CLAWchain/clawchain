@@ -3,6 +3,7 @@ import cors from 'cors';
 import http from 'http';
 import path from 'path';
 import fs from 'fs';
+import { Server as SocketIOServer } from 'socket.io';
 import { Chain } from '../blockchain/Chain';
 import { TransactionPool } from '../blockchain/TransactionPool';
 import { BlockProducer } from '../blockchain/BlockProducer';
@@ -14,6 +15,9 @@ import { createTables } from '../database/schema';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
+
+// Global Socket.io instance for real-time updates
+export let io: SocketIOServer | null = null;
 
 async function main() {
   console.log('[INIT] 🦞 Starting ClawChain - The AI that actually does things...\n');
@@ -282,6 +286,37 @@ async function main() {
   const networkRouter = await import('./network');
   app.use('/api/network', networkRouter.default);
   console.log('[NETWORK] Multi-agent network ready');
+
+  // Listen for network events and broadcast via Socket.io
+  eventBus.on('network_message', (msg: any) => {
+    if (io) {
+      io.to('network').emit('new_message', {
+        id: msg.id,
+        agent: msg.agentName,
+        agentId: msg.agentId,
+        message: msg.message,
+        time: new Date(msg.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        timestamp: msg.timestamp,
+        type: msg.type,
+        topic: msg.topic,
+        score: msg.score || 0,
+        replyCount: msg.replyCount || 0,
+        parentId: msg.parentId
+      });
+    }
+  });
+
+  eventBus.on('network_vote', (data: any) => {
+    if (io) {
+      io.to('network').emit('vote_update', data);
+    }
+  });
+
+  eventBus.on('network_topic', (data: any) => {
+    if (io) {
+      io.to('network').emit('new_topic', data);
+    }
+  });
 
   // ========== ADMIN DASHBOARD ==========
   const { adminRouter } = await import('./admin');
@@ -807,6 +842,31 @@ async function main() {
   }
 
   const server = http.createServer(app);
+
+  // Initialize Socket.io for real-time updates
+  io = new SocketIOServer(server, {
+    cors: {
+      origin: '*',
+      methods: ['GET', 'POST']
+    },
+    path: '/socket.io'
+  });
+
+  io.on('connection', (socket) => {
+    console.log(`[SOCKET] Client connected: ${socket.id}`);
+    
+    // Join network room for network updates
+    socket.on('join_network', () => {
+      socket.join('network');
+      console.log(`[SOCKET] Client ${socket.id} joined network room`);
+    });
+    
+    socket.on('disconnect', () => {
+      console.log(`[SOCKET] Client disconnected: ${socket.id}`);
+    });
+  });
+
+  console.log('[SOCKET] Socket.io server initialized');
 
   const PORT = process.env.PORT || 4000;
   server.listen(PORT, () => {

@@ -999,7 +999,7 @@ export default function App() {
   );
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', overflow: isMobile ? 'visible' : 'hidden' }}>
       {/* Header */}
       <header style={{ 
         background: 'rgba(8, 8, 16, 0.95)',
@@ -1190,7 +1190,8 @@ export default function App() {
         flex: 1, 
         display: 'flex', 
         flexDirection: isMobile ? 'column' : 'row',
-        overflow: 'hidden',
+        overflow: isMobile ? 'visible' : 'hidden',
+        minHeight: isMobile ? 'auto' : 0,
       }}>
         {/* Left: Navigation + Content */}
         <div style={{ 
@@ -1198,7 +1199,8 @@ export default function App() {
           display: 'flex', 
           flexDirection: 'column',
           minWidth: 0,
-          overflow: 'hidden',
+          overflow: isMobile ? 'visible' : 'hidden',
+          minHeight: isMobile ? 'auto' : 0,
         }}>
           {/* Desktop Tabs */}
           {!isMobile && (
@@ -1234,7 +1236,8 @@ export default function App() {
           {/* Content */}
           <main style={{ 
             flex: 1, 
-            overflow: 'auto',
+            overflow: isMobile ? 'visible' : 'auto',
+            minHeight: isMobile ? 'auto' : 0,
           }}>
             {renderContent()}
           </main>

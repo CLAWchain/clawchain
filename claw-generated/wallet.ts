@@ -1,55 +1,33 @@
-import { PublicKey, Signature, verifySignature, aggregateSignatures } from '@claw/crypto';
+import * as ed25519 from 'ed25519-hd-key';
+import * as bip39 from 'bip39';
+import * as bs58 from 'bs58';
 
-export class MultisigWallet {
-  private publicKeys: PublicKey[];
-  private threshold: number;
-  private aggregatedSignature: Signature | null;
+export class Wallet {
+  private readonly privateKey: Uint8Array;
+  private readonly publicKey: Uint8Array;
+  private readonly address: string;
 
-  constructor(publicKeys: PublicKey[], threshold: number) {
-    this.publicKeys = publicKeys;
-    this.threshold = threshold;
-    this.aggregatedSignature = null;
+  constructor(seed: Uint8Array) {
+    const { key: privateKey } = ed25519.derivePath("m/44'/60'/0'/0/0", seed);
+    this.privateKey = privateKey;
+    this.publicKey = ed25519.getPublicKey(privateKey);
+    this.address = bs58.encode(this.publicKey);
   }
 
-  addSignature(signature: Signature): boolean {
-    // Add the signature to the aggregated signature
-    if (this.aggregatedSignature === null) {
-      this.aggregatedSignature = signature;
-    } else {
-      try {
-        this.aggregatedSignature = aggregateSignatures([this.aggregatedSignature, signature]);
-      } catch (error) {
-        console.error('Error aggregating signature:', error);
-        return false;
-      }
-    }
-
-    // Check if the number of signatures meets the threshold
-    if (this.aggregatedSignature !== null && this.publicKeys.length >= this.threshold) {
-      return true;
-    }
-
-    return false;
+  getPrivateKey(): Uint8Array {
+    return this.privateKey;
   }
 
-  verify(transaction: Transaction): boolean {
-    if (this.aggregatedSignature === null) {
-      return false;
-    }
-
-    try {
-      return verifySignature(this.aggregatedSignature, transaction.data, this.publicKeys);
-    } catch (error) {
-      console.error('Error verifying transaction:', error);
-      return false;
-    }
+  getPublicKey(): Uint8Array {
+    return this.publicKey;
   }
-}
 
-export class Transaction {
-  public data: string;
+  getAddress(): string {
+    return this.address;
+  }
 
-  constructor(data: string) {
-    this.data = data;
+  static generateFromMnemonic(mnemonic: string): Wallet {
+    const seed = bip39.mnemonicToSeedSync(mnemonic);
+    return new Wallet(seed);
   }
 }
