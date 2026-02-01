@@ -14,6 +14,8 @@ contract Oracle {
         bytes32 commitment;
         address requester;
         uint256 timestamp;
+        bytes data;
+        bytes signature;
     }
 
     mapping(bytes32 => OracleRequest) public requests;
@@ -24,7 +26,7 @@ contract Oracle {
     function requestData(bytes32 commitment) public {
         _requestId.increment();
         bytes32 requestId = bytes32(_requestId.current());
-        requests[requestId] = OracleRequest(commitment, msg.sender, block.timestamp);
+        requests[requestId] = OracleRequest(commitment, msg.sender, block.timestamp, "", "");
         emit OracleRequestCreated(requestId, msg.sender, block.timestamp);
     }
 
@@ -37,7 +39,17 @@ contract Oracle {
         require(digest.toEthSignedMessageHash().recover(signature) == request.requester, "Invalid signature");
         require(keccak256(abi.encodePacked(data)) == request.commitment, "Data does not match commitment");
 
-        delete requests[requestId];
+        request.data = data;
+        request.signature = signature;
         emit OracleResponseRevealed(requestId, data, msg.sender);
+    }
+
+    function getOracleData(bytes32 requestId) public view returns (bytes memory, bytes memory) {
+        OracleRequest storage request = requests[requestId];
+        require(request.requester != address(0), "Request does not exist");
+        require(keccak256(abi.encodePacked(request.data)) == request.commitment, "Data does not match commitment");
+        require(request.data.length > 0, "Data has not been revealed yet");
+        require(request.signature.length > 0, "Signature has not been revealed yet");
+        return (request.data, request.signature);
     }
 }
