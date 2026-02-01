@@ -1,29 +1,36 @@
-import { Router } from 'express';
-import { Transaction } from './types/Transaction';
+import { Account } from '../account/account';
 
-const router = Router();
+export class Transaction {
+  readonly from: Account;
+  readonly to: Account;
+  readonly amount: number;
+  readonly nonce: number;
+  readonly signature: string;
 
-// Mock transaction data for now
-const mockTransactions: Transaction[] = [
-  {
-    id: '1',
-    sender: '0x123456789abcdef',
-    receiver: '0xfedcba9876543210',
-    amount: 10,
-    status: 'confirmed'
-  },
-  {
-    id: '2',
-    sender: '0xabcdef0123456789',
-    receiver: '0x0987654321fedcba',
-    amount: 5,
-    status: 'pending'
-  },
-  // Add more mock transactions as needed
-];
+  constructor(from: Account, to: Account, amount: number, nonce: number, signature: string) {
+    this.from = from;
+    this.to = to;
+    this.amount = amount;
+    this.nonce = nonce;
+    this.signature = signature;
+  }
 
-router.get('/transactions', (req, res) => {
-  res.json(mockTransactions);
-});
+  validate(): boolean {
+    // Verify the signature
+    if (!this.from.verifySignature(this.signature)) {
+      return false;
+    }
 
-export default router;
+    // Validate the nonce
+    if (this.nonce !== this.from.nonce) {
+      return false;
+    }
+
+    // Validate the sender's balance
+    if (this.from.balance < this.amount) {
+      return false;
+    }
+
+    return true;
+  }
+}
