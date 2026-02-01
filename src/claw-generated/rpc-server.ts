@@ -36,10 +36,6 @@ export class RPCServer {
   }
 
   private async handleSingleRequest(request: any): Promise<any> {
-    // Implement logic to handle a single JSON-RPC 2.0 request
-    // Call appropriate methods on blockchain, wallet, and transactions
-    // Return the response or error
-
     const { method, params, id } = request;
 
     switch (method) {
@@ -47,11 +43,23 @@ export class RPCServer {
         const balance = await this.wallet.getBalance(params.address);
         return { result: balance, id };
       case 'sendTransaction':
-        const txHash = await this.transactions.sendTransaction(params.transaction);
+        const txHash = await this.handleSendTransaction(params.transaction);
         return { result: txHash, id };
       default:
         throw new Error(`Method ${method} is not implemented`);
     }
+  }
+
+  private async handleSendTransaction(rawTransaction: string): Promise<string> {
+    // 1. Validate the signed transaction data
+    const transaction = await this.transactions.parseTransaction(rawTransaction);
+    await this.transactions.validateTransaction(transaction);
+
+    // 2. Broadcast the valid transaction to the network
+    const txHash = await this.blockchain.broadcastTransaction(transaction);
+
+    // 3. Return the transaction hash
+    return txHash;
   }
 
   private formatError(err: any): any {
