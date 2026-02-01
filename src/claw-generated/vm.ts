@@ -1,29 +1,31 @@
-import { Contract } from './contract';
+import { TransactionReceipt } from "./transaction/TransactionReceipt";
 
 export class VM {
-  execute(contract: Contract, opcode: string, params: any): any {
-    switch (opcode) {
-      case 'CALL':
-        return this.handleCall(contract, params);
-      // Other opcodes...
-      default:
-        throw new Error(`Unknown opcode: ${opcode}`);
-    }
+  decode_transaction(transactionStr: string): Transaction {
+    // Decode the transaction from the input string
+    // ...
   }
 
-  private handleCall(contract: Contract, params: any): any {
-    // Extract call parameters
-    const { target, method, gas } = params;
+  simulate_transaction(tx: Transaction): Result<TransactionReceipt, string> {
+    // Simulate the transaction execution
+    // - Execute the transaction instructions
+    // - Collect the transaction logs
+    // - Compute the total compute units used
+    // - Return the TransactionReceipt
 
-    // Allocate gas for the call
-    const callGas = gas || 1000000; // Default to 1 million gas
+    const logs = [];
+    let computeUnitsUsed = 0;
 
-    // Execute the target contract
-    const result = contract.call(target, method, { gas: callGas });
+    // Simulate the transaction instructions
+    for (const instruction of tx.instructions) {
+      // Execute the instruction
+      // Update logs and compute units
+    }
 
-    // Forward any remaining gas back to the calling contract
-    contract.refundGas(callGas - result.gasUsed);
-
-    return result.returnValue;
+    return Ok(new TransactionReceipt(
+      tx.signature,
+      logs,
+      computeUnitsUsed
+    ));
   }
 }
