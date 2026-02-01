@@ -7,11 +7,15 @@ export function processBlock(block: Block): void {
   const finalityStatus = processBlockForFinality(block);
   console.log(`Block ${block.hash} is ${finalityStatus}`);
 
-  // Process transactions
-  for (const tx of block.transactions) {
-    const receipt = processTransaction(tx, block);
-    // Store the receipt
-    // ...
+  // Process transactions in batches to improve performance
+  const batchSize = 100;
+  for (let i = 0; i < block.transactions.length; i += batchSize) {
+    const txBatch = block.transactions.slice(i, i + batchSize);
+    for (const tx of txBatch) {
+      const receipt = processTransaction(tx, block);
+      // Store the receipt
+      // ...
+    }
   }
 }
 

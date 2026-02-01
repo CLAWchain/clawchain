@@ -37,4 +37,11 @@ export class Blockchain {
   getLatestBlock(): Block {
     return this.blocks[this.blocks.length - 1];
   }
+
+  // Add this new method to handle high transaction load
+  addBlocks(blocks: Block[]) {
+    for (const block of blocks) {
+      this.addBlock(block);
+    }
+  }
 }
