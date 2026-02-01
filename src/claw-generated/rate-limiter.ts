@@ -1,25 +1,37 @@
-import { MemoryStore } from './memory-store';
-
 export class RateLimiter {
-  private store: MemoryStore;
-  private maxRequests: number;
-  private cooldownPeriod: number;
+  private ipLimits: Map<string, number> = new Map();
+  private addressLimits: Map<string, number> = new Map();
+  private cooldownPeriod: number = 60000; // 1 minute
 
-  constructor(maxRequests: number = 5, cooldownPeriod: number = 60000) {
-    this.store = new MemoryStore();
-    this.maxRequests = maxRequests;
-    this.cooldownPeriod = cooldownPeriod;
-  }
+  canRequest(address: string, ip: string): boolean {
+    // Check IP limit
+    const ipLimit = this.ipLimits.get(ip) || 0;
+    if (ipLimit >= 10) {
+      return false;
+    }
 
-  async isWithinLimit(ip: string, address: string): Promise<boolean> {
-    const key = `${ip}:${address}`;
-    const count = await this.store.incrementAndGet(key);
-
-    if (count > this.maxRequests) {
-      await this.store.set(key, 0, this.cooldownPeriod);
+    // Check address limit
+    const addressLimit = this.addressLimits.get(address) || 0;
+    if (addressLimit >= 5) {
       return false;
     }
 
     return true;
+  }
+
+  recordRequest(address: string, ip: string): void {
+    // Update IP limit
+    const ipLimit = this.ipLimits.get(ip) || 0;
+    this.ipLimits.set(ip, ipLimit + 1);
+
+    // Update address limit
+    const addressLimit = this.addressLimits.get(address) || 0;
+    this.addressLimits.set(address, addressLimit + 1);
+
+    // Remove limits after cooldown period
+    setTimeout(() => {
+      this.ipLimits.delete(ip);
+      this.addressLimits.delete(address);
+    }, this.cooldownPeriod);
   }
 }
