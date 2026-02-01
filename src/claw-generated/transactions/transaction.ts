@@ -1,4 +1,6 @@
 import { Wallet } from '../crypto/wallet';
+import * as ed25519 from 'ed25519-hd-key';
+import { base58 } from 'bs58';
 
 export interface Transaction {
   id: string;
@@ -24,5 +26,18 @@ export class TransactionValidator {
       console.error('Error verifying transaction signature:', error);
       return false;
     }
+  }
+
+  static signTransaction(transaction: Transaction, wallet: Wallet): Transaction {
+    const { sender, recipient, amount } = transaction;
+    const transactionData = `${sender}:${recipient}:${amount}`;
+    const signature = ed25519.sign(
+      Buffer.from(transactionData),
+      Buffer.from(wallet.privateKey, 'base64')
+    );
+    return {
+      ...transaction,
+      signature: base58.encode(signature),
+    };
   }
 }
