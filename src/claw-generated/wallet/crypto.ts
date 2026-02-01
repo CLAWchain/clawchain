@@ -16,3 +16,13 @@ export function deriveAddress(publicKey: Uint8Array): string {
   const address = sodium.to_base58(publicKey);
   return address;
 }
+
+export function verifySignature(message: Uint8Array, signature: Uint8Array, publicKey: Uint8Array): boolean {
+  await sodium.ready;
+  try {
+    return sodium.crypto_sign_verify_detached(signature, message, publicKey);
+  } catch (error) {
+    console.error('Error verifying signature:', error);
+    return false;
+  }
+}
