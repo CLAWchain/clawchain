@@ -1,5 +1,15 @@
 import { WalletKeypair } from '../wallet/keypair';
 
+export class AccountState {
+  readonly address: Uint8Array;
+  nonce: number;
+
+  constructor(address: Uint8Array, nonce: number) {
+    this.address = address;
+    this.nonce = nonce;
+  }
+}
+
 export class Transaction {
   readonly from: Uint8Array;
   readonly to: Uint8Array;
@@ -29,5 +39,9 @@ export class Transaction {
   sign(keypair: WalletKeypair): void {
     // Sign the serialized transaction data
     this.signature = keypair.sign(this.serialize());
+  }
+
+  verifyNonce(accountState: AccountState): boolean {
+    return this.nonce === accountState.nonce + 1;
   }
 }
