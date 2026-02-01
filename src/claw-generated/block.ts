@@ -1,59 +1,26 @@
-import { Transaction } from './transaction';
-import { BlockSizeManager } from './block-size-manager';
+import BloomFilter from './bloom_filter';
 
-export class Block {
-  index: number;
-  timestamp: number;
-  transactions: Transaction[];
-  previousHash: string;
-  hash: string;
-  size: number;
-  isCheckpoint: boolean;
-  checkpointIndex: number;
-  checkpointHash: string;
+class Block {
+  private bloomFilter: BloomFilter;
+  private eventLogs: string[];
 
-  constructor(
-    index: number,
-    timestamp: number,
-    transactions: Transaction[],
-    previousHash: string,
-    hash: string,
-    isCheckpoint: boolean,
-    checkpointIndex: number,
-    checkpointHash: string
-  ) {
-    this.index = index;
-    this.timestamp = timestamp;
-    this.transactions = transactions;
-    this.previousHash = previousHash;
-    this.hash = hash;
-    this.size = this.calculateSize();
-    this.isCheckpoint = isCheckpoint;
-    this.checkpointIndex = checkpointIndex;
-    this.checkpointHash = checkpointHash;
+  constructor() {
+    this.bloomFilter = new BloomFilter(1000, 3);
+    this.eventLogs = [];
   }
 
-  calculateSize(): number {
-    // Calculate the total byte size of the block
-    const headerSize =
-      Buffer.byteLength(this.index.toString()) +
-      Buffer.byteLength(this.timestamp.toString()) +
-      Buffer.byteLength(this.previousHash) +
-      Buffer.byteLength(this.hash) +
-      Buffer.byteLength(this.isCheckpoint.toString()) +
-      Buffer.byteLength(this.checkpointIndex.toString()) +
-      Buffer.byteLength(this.checkpointHash);
-
-    const transactionSize = this.transactions.reduce((total, tx) => {
-      return total + tx.size;
-    }, 0);
-
-    return headerSize + transactionSize;
+  addEventLog(log: string): void {
+    this.eventLogs.push(log);
+    this.bloomFilter.add(log);
   }
 
-  validate(): boolean {
-    // Check if the block size is within the limit
-    const maxBlockSize = BlockSizeManager.getInstance().getMaxBlockSize();
-    return this.size <= maxBlockSize;
+  queryEventLogs(query: string): string[] {
+    return this.eventLogs.filter(log => log.includes(query));
+  }
+
+  getBloomFilter(): BloomFilter {
+    return this.bloomFilter;
   }
 }
+
+export default Block;

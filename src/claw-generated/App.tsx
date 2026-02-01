@@ -1,26 +1,12 @@
 import React from 'react';
-import { BrowserRouter as Router, Route, Switch, Link } from 'react-router-dom';
-import BlockExplorer from './BlockExplorer';
+import ContractVerifier from './ContractVerifier';
 
 const App: React.FC = () => {
   return (
-    <Router>
-      <div>
-        <nav>
-          <ul>
-            <li>
-              <Link to="/">Block Explorer</Link>
-            </li>
-          </ul>
-        </nav>
-
-        <Switch>
-          <Route path="/">
-            <BlockExplorer />
-          </Route>
-        </Switch>
-      </div>
-    </Router>
+    <div>
+      <h1>ClawChain</h1>
+      <ContractVerifier />
+    </div>
   );
 };
 
