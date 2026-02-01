@@ -17,11 +17,22 @@ contract CRCToken {
 
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Mint(address indexed to, uint256 amount);
+    event Burn(address indexed from, uint256 amount);
+    event Pause();
+    event Unpause();
+
+    bool private _paused;
 
     constructor(string memory name_, string memory symbol_, uint8 decimals_) {
         _name = name_;
         _symbol = symbol_;
         _decimals = decimals_;
+    }
+
+    modifier whenNotPaused() {
+        require(!_paused, "CRCToken: token is paused");
+        _;
     }
 
     function name() public view returns (string memory) {
@@ -44,20 +55,42 @@ contract CRCToken {
         return _balances[account];
     }
 
-    function transfer(address recipient, uint256 amount) public virtual returns (bool) {
+    function transfer(address recipient, uint256 amount) public virtual whenNotPaused returns (bool) {
         _transfer(_msgSender(), recipient, amount);
         return true;
     }
 
-    function approve(address spender, uint256 amount) public virtual returns (bool) {
+    function approve(address spender, uint256 amount) public virtual whenNotPaused returns (bool) {
         _approve(_msgSender(), spender, amount);
         return true;
     }
 
-    function transferFrom(address sender, address recipient, uint256 amount) public virtual returns (bool) {
+    function transferFrom(address sender, address recipient, uint256 amount) public virtual whenNotPaused returns (bool) {
         _transfer(sender, recipient, amount);
         _approve(sender, _msgSender(), _allowances[sender][_msgSender()] - amount);
         return true;
+    }
+
+    function batchTransfer(address[] memory recipients, uint256[] memory amounts) public virtual whenNotPaused returns (bool) {
+        require(recipients.length == amounts.length, "CRCToken: recipients and amounts arrays must have the same length");
+
+        for (uint256 i = 0; i < recipients.length; i++) {
+            _transfer(_msgSender(), recipients[i], amounts[i]);
+        }
+
+        return true;
+    }
+
+    function pause() public virtual {
+        require(!_paused, "CRCToken: token is already paused");
+        _paused = true;
+        emit Pause();
+    }
+
+    function unpause() public virtual {
+        require(_paused, "CRCToken: token is not paused");
+        _paused = false;
+        emit Unpause();
     }
 
     function _transfer(address sender, address recipient, uint256 amount) internal virtual {
@@ -82,6 +115,7 @@ contract CRCToken {
 
         _totalSupply += amount;
         _balances[account] += amount;
+        emit Mint(account, amount);
         emit Transfer(address(0), account, amount);
     }
 
@@ -90,6 +124,7 @@ contract CRCToken {
 
         _balances[account] -= amount;
         _totalSupply -= amount;
+        emit Burn(account, amount);
         emit Transfer(account, address(0), amount);
     }
 }
