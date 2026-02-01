@@ -3,6 +3,8 @@ import { randomBytes } from 'crypto';
 import nacl from 'tweetnacl';
 import { Wallet } from './wallet';
 import { Transaction, TransactionInput, TransactionOutput } from './transaction';
+import { Account } from './account';
+import { MerklePatriciaTrie } from '../trie/trie';
 
 class Block {
   hash: string;
@@ -36,26 +38,28 @@ class Block {
 class Blockchain {
   private chain: Block[] = [];
   private mempool: Transaction[] = [];
+  private accountTrie: MerklePatriciaTrie;
   private wallets: { [key: string]: Wallet } = {};
 
   constructor() {
     // Create the genesis block
     this.chain.push(new Block('0', []));
+    this.accountTrie = new MerklePatriciaTrie();
   }
 
   addTransaction(tx: Transaction): boolean {
-    const senderWallet = this.wallets[tx.from];
-    if (senderWallet && this.verifyTransaction(tx, senderWallet)) {
+    const senderAccount = this.getAccount(tx.from);
+    if (senderAccount && this.verifyTransaction(tx, senderAccount)) {
       this.mempool.push(tx);
-      senderWallet.incrementNonce();
+      senderAccount.incrementNonce();
       return true;
     }
     return false;
   }
 
-  verifyTransaction(tx: Transaction, wallet: Wallet): boolean {
+  verifyTransaction(tx: Transaction, account: Account): boolean {
     // Verify the transaction signature against the 'from' public key
-    const publicKey = wallet.getPublicKey();
+    const publicKey = Buffer.from(account.address, 'hex');
     const signature = Buffer.from(tx.signature, 'hex');
     const message = Buffer.from(`${tx.from}${tx.to}${tx.amount}${tx.nonce}`);
     return nacl.sign.detached.verify(message, signature, publicKey);
@@ -63,15 +67,28 @@ class Blockchain {
 
   registerWallet(wallet: Wallet): void {
     this.wallets[wallet.getPublicKey().toString('hex')] = wallet;
+    this.createAccount(wallet.getPublicKey().toString('hex'), 0);
+  }
+
+  createAccount(address: string, initialBalance: number): void {
+    const account = new Account(address, initialBalance);
+    this.accountTrie.set(address, JSON.stringify(account));
+  }
+
+  getAccount(address: string): Account | undefined {
+    const accountData = this.accountTrie.get(address);
+    return accountData ? JSON.parse(accountData) : undefined;
   }
 
   mineBlock(): void {
     // Process transactions from the mempool, verifying signatures and nonces
     const transactions: Transaction[] = [];
     for (const tx of this.mempool) {
-      const senderWallet = this.wallets[tx.from];
-      if (senderWallet && this.verifyTransaction(tx, senderWallet) && tx.nonce === senderWallet.getNonce()) {
+      const senderAccount = this.getAccount(tx.from);
+      if (senderAccount && this.verifyTransaction(tx, senderAccount) && tx.nonce === senderAccount.nonce) {
         transactions.push(tx);
+        senderAccount.addTransaction(tx);
+        this.updateAccount(senderAccount);
       } else {
         // Discard invalid transactions
       }
@@ -94,6 +111,10 @@ class Blockchain {
   getBlockFinality(blockHash: string): number {
     const block = this.chain.find((b) => b.hash === blockHash);
     return block ? block.finality : 0;
+  }
+
+  private updateAccount(account: Account): void {
+    this.accountTrie.set(account.address, JSON.stringify(account));
   }
 }
 
