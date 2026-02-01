@@ -1,41 +1,21 @@
 import { Request, Response } from 'express';
-import { WalletAddress } from '../wallet/types';
-import { RateLimiter } from './rateLimiter';
+import { getTokenBalance, mintTokens } from './blockchain';
+import { addFaucetRequest, checkFaucetRequest } from './db';
 
-export class FaucetController {
-  private rateLimiter: RateLimiter;
+export const faucetEndpoint = async (req: Request, res: Response) => {
+  const { address } = req.body;
 
-  constructor() {
-    this.rateLimiter = new RateLimiter();
+  // Check if address has already received tokens in the last 24 hours
+  const hasRequestedRecently = await checkFaucetRequest(address);
+  if (hasRequestedRecently) {
+    return res.status(429).json({ error: 'You can only request from the faucet once per day' });
   }
 
-  async handleFaucetRequest(req: Request, res: Response) {
-    const ipAddress = req.ip;
-    const walletAddress = req.body.walletAddress as WalletAddress;
+  // Mint 10 CLAW tokens and send to the address
+  await mintTokens(address, 10);
 
-    // Check rate limits
-    if (!this.rateLimiter.canMakeRequest(ipAddress, walletAddress)) {
-      res.status(429).json({ error: 'Too many requests' });
-      return;
-    }
+  // Record the faucet request
+  await addFaucetRequest(address);
 
-    // Generate a captcha
-    const { captchaId, captchaImage } = await this.rateLimiter.generateCaptcha();
-    res.json({ captchaId, captchaImage });
-
-    // Wait for the client to solve the captcha
-    const { captchaSolution } = await req.body;
-    if (!this.rateLimiter.verifyCaptcha(captchaId, captchaSolution)) {
-      res.status(403).json({ error: 'Invalid captcha' });
-      return;
-    }
-
-    // Perform faucet logic
-    // ...
-
-    // Record the successful request
-    this.rateLimiter.recordRequest(ipAddress, walletAddress);
-
-    res.json({ success: true });
-  }
-}
+  return res.json({ message: 'Tokens sent to your address' });
+};
