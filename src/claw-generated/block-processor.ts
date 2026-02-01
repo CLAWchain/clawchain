@@ -3,6 +3,7 @@ import { Block, Transaction, TransactionReceipt } from '../types';
 import { Bloom } from './bloom-filter';
 import { StateManager } from './state-manager';
 import { Registry, Counter, Histogram } from 'prom-client';
+import { TransactionMempool } from './transaction_mempool';
 
 // Set up Prometheus metrics registry
 const registry = new Registry();
@@ -47,22 +48,23 @@ export function processBlock(block: Block): void {
   blocksProcessedCounter.inc({ status: finalityStatus });
   blockProcessingDuration.observe(blockProcessingTime);
 
-  // Process transactions in batches to improve performance
-  const batchSize = 100;
-  for (let i = 0; i < block.transactions.length; i += batchSize) {
-    const txBatch = block.transactions.slice(i, i + batchSize);
-    for (const tx of txBatch) {
-      const startTxTime = Date.now();
-      const receipt = processTransaction(tx, block);
-      const txProcessingTime = (Date.now() - startTxTime) / 1000;
+  // Process transactions in fair order
+  const transactionMempool = new TransactionMempool();
+  block.transactions.forEach(tx => transactionMempool.addTransaction(tx));
+  const transactions = transactionMempool.getAll();
 
-      // Update transaction processing metrics
-      transactionsProcessedCounter.inc({ status: receipt.status ? 'success' : 'failure' });
-      transactionProcessingDuration.observe(txProcessingTime);
+  // Process transactions in the fair order
+  for (const tx of transactions) {
+    const startTxTime = Date.now();
+    const receipt = processTransaction(tx, block);
+    const txProcessingTime = (Date.now() - startTxTime) / 1000;
 
-      // Store the receipt
-      // ...
-    }
+    // Update transaction processing metrics
+    transactionsProcessedCounter.inc({ status: receipt.status ? 'success' : 'failure' });
+    transactionProcessingDuration.observe(txProcessingTime);
+
+    // Store the receipt
+    // ...
   }
 }
 
