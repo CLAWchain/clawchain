@@ -1,7 +1,17 @@
-export class PeerDiscovery {
+import { PeerManager } from './peer-manager';
+import { BlockPropagator } from './block-propagator';
+
+export class NetworkManager {
+  peerManager: PeerManager;
+  blockPropagator: BlockPropagator;
+
   constructor() {
-    // Implement basic peer discovery protocol
+    this.peerManager = new PeerManager();
+    this.blockPropagator = new BlockPropagator(this.peerManager);
   }
 
-  // Add methods for finding peers, maintaining routing table, etc.
+  start() {
+    this.peerManager.start();
+    this.blockPropagator.start();
+  }
 }
