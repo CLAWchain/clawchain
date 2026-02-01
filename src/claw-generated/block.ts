@@ -1,26 +1,27 @@
-import BloomFilter from './bloom_filter';
+import { Transaction } from './transaction';
 
-class Block {
-  private bloomFilter: BloomFilter;
-  private eventLogs: string[];
+export class Block {
+  transactions: Transaction[];
+  previousHash: string;
+  hash: string;
 
-  constructor() {
-    this.bloomFilter = new BloomFilter(1000, 3);
-    this.eventLogs = [];
+  constructor(transactions: Transaction[], previousHash: string) {
+    this.transactions = transactions;
+    this.previousHash = previousHash;
+    this.hash = this.calculateHash();
   }
 
-  addEventLog(log: string): void {
-    this.eventLogs.push(log);
-    this.bloomFilter.add(log);
+  calculateHash(): string {
+    // TODO: Implement hash calculation
+    return 'placeholder-hash';
   }
 
-  queryEventLogs(query: string): string[] {
-    return this.eventLogs.filter(log => log.includes(query));
-  }
-
-  getBloomFilter(): BloomFilter {
-    return this.bloomFilter;
+  verifyTransactions(): boolean {
+    for (const tx of this.transactions) {
+      if (!tx.verifySignature()) {
+        return false;
+      }
+    }
+    return true;
   }
 }
-
-export default Block;
