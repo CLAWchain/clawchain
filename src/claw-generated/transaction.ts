@@ -1,47 +1,36 @@
-import { KeyPair } from './keypair';
-import { Hash } from '../crypto/hash';
-import * as ed25519 from 'ed25519-hd-key';
+import { PublicKey } from './wallet';
 
-export class Transaction {
-  public inputs: TransactionInput[];
-  public outputs: TransactionOutput[];
-  public timestamp: number;
-  public signature: string;
+export interface Transaction {
+  from: PublicKey;
+  to: PublicKey;
+  amount: number;
+  nonce: number;
+  signature: string;
+}
 
-  constructor(inputs: TransactionInput[], outputs: TransactionOutput[], timestamp: number) {
-    this.inputs = inputs;
-    this.outputs = outputs;
-    this.timestamp = timestamp;
-  }
+export interface TransactionNonces {
+  [key: string]: number;
+}
 
-  public sign(keypair: KeyPair): void {
-    const message = this.toMessage();
-    const signature = ed25519.sign(Buffer.from(message), keypair.privateKey);
-    this.signature = Buffer.from(signature).toString('hex');
-  }
+let transactionNonces: TransactionNonces = {};
 
-  public verify(publicKey: string): boolean {
-    const message = this.toMessage();
-    const signature = Buffer.from(this.signature, 'hex');
-    return ed25519.verify(Buffer.from(message), signature, Buffer.from(publicKey, 'hex'));
-  }
-
-  private toMessage(): string {
-    return JSON.stringify({
-      inputs: this.inputs,
-      outputs: this.outputs,
-      timestamp: this.timestamp
-    });
+export function createTransaction(from: PublicKey, to: PublicKey, amount: number, nonce: number): Transaction {
+  const fromString = from.toString();
+  if (!transactionNonces[fromString] || nonce > transactionNonces[fromString]) {
+    transactionNonces[fromString] = nonce;
+    return {
+      from,
+      to,
+      amount,
+      nonce,
+      signature: ''
+    };
+  } else {
+    throw new Error(`Nonce ${nonce} is less than or equal to the last used nonce ${transactionNonces[fromString]} for account ${fromString}`);
   }
 }
 
-export interface TransactionInput {
-  prevTxHash: Hash;
-  outputIndex: number;
-  unlockingScript: string;
-}
-
-export interface TransactionOutput {
-  value: number;
-  lockingScript: string;
+export function getTransactionNonce(publicKey: PublicKey): number {
+  const publicKeyString = publicKey.toString();
+  return transactionNonces[publicKeyString] || 0;
 }
