@@ -1,29 +1,21 @@
-import * as crypto from 'crypto';
-import * as bip39 from 'bip39';
-import * as nacl from 'tweetnacl';
-import * as bs58 from 'bs58';
+import { Ed25519KeyPair } from 'crypto-types';
 
-export interface Keypair {
-  publicKey: string;
-  privateKey: string;
-}
+export class WalletKeypair {
+  private keypair: Ed25519KeyPair;
 
-export function generateKeypair(): Keypair {
-  const seed = crypto.randomBytes(32);
-  const keyPair = nacl.sign.keyPair.fromSeed(seed);
+  constructor() {
+    this.keypair = Ed25519KeyPair.generate();
+  }
 
-  return {
-    publicKey: bs58.encode(Buffer.from(keyPair.publicKey)),
-    privateKey: bs58.encode(Buffer.from(keyPair.secretKey)),
-  };
-}
+  get publicKey(): Uint8Array {
+    return this.keypair.publicKey;
+  }
 
-export function recoverKeypairFromSeedPhrase(seedPhrase: string): Keypair {
-  const seed = bip39.mnemonicToSeedSync(seedPhrase);
-  const keyPair = nacl.sign.keyPair.fromSeed(seed.slice(0, 32));
+  get privateKey(): Uint8Array {
+    return this.keypair.privateKey;
+  }
 
-  return {
-    publicKey: bs58.encode(Buffer.from(keyPair.publicKey)),
-    privateKey: bs58.encode(Buffer.from(keyPair.secretKey)),
-  };
+  sign(message: Uint8Array): Uint8Array {
+    return this.keypair.sign(message);
+  }
 }
