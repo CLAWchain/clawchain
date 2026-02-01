@@ -7,6 +7,7 @@ export class Wallet {
   private _privateKey: Uint8Array;
   private _publicKey: Uint8Array;
   private _address: string;
+  private _nonce: number;
 
   constructor(seed?: Uint8Array) {
     if (seed) {
@@ -14,6 +15,7 @@ export class Wallet {
     } else {
       this.initNew();
     }
+    this._nonce = 0;
   }
 
   initNew() {
@@ -39,5 +41,13 @@ export class Wallet {
 
   get address(): string {
     return this._address;
+  }
+
+  getNonce(): number {
+    return this._nonce;
+  }
+
+  incrementNonce(): void {
+    this._nonce++;
   }
 }
