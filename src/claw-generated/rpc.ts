@@ -1,10 +1,19 @@
-import { simulateTransaction } from './simulate_transaction';
+import { Account } from '../account/account';
 
-export async function handleRpcRequest(method: string, params: any): Promise<any> {
-  switch (method) {
-    case 'simulateTransaction':
-      return await simulateTransaction(params.transactionData);
-    default:
-      throw new Error(`Unknown RPC method: ${method}`);
+export class RPCServer {
+  async getAccountInfo(pubkey: string): Promise<Account | null> {
+    // Look up account data by pubkey
+    const account = await Account.getByPubkey(pubkey);
+    if (!account) {
+      return null;
+    }
+
+    // Return account data, lamports, owner, and executable flag
+    return {
+      pubkey: account.pubkey,
+      lamports: account.lamports,
+      owner: account.owner,
+      executable: account.executable
+    };
   }
 }
